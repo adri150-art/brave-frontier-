@@ -1,0 +1,4041 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Brave Frontier Clicker</title>
+    <meta name="description" content="Un jeu Clicker RPG Idle inspiré de Brave Frontier. Cliquez, composez votre équipe active, affrontez des boss, gérez vos jauges BC/HC et faites évoluer physiquement vos héros !">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/rpg-awesome@0.2.0/css/rpg-awesome.min.css" rel="stylesheet">
+    <style>
+/* ============================================= */
+/* BASE & DYNAMIC BACKGROUND                     */
+/* ============================================= */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+    height: 100%; height: 100dvh;
+}
+body {
+    height: 100%; min-height: 100svh;
+    overflow: hidden;
+    background: #060810;
+    display: flex; justify-content: center; align-items: center;
+    font-family: 'Montserrat', sans-serif; color: #e0e6f0;
+    user-select: none; -webkit-user-select: none;
+}
+
+/* Fond d'écran PC dynamique flouté */
+#dynamic-pc-bg {
+    position: fixed;
+    inset: -30px;
+    z-index: -10;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(40px) brightness(0.4);
+    transition: background-image 0.8s ease, filter 0.8s ease;
+    pointer-events: none;
+}
+
+/* ── GAME WINDOW — Mobile-first flex column ── */
+#game-window {
+    width: 100vw;
+    height: 100vh; height: 100dvh;
+    position: relative;
+    display: flex; flex-direction: column;
+    background: url('assets/ui/game_bg.png') center/cover;
+    overflow: hidden;
+    border-radius: 0; border: none;
+}
+
+/* Desktop Symmetrical Triple-Panel Layout */
+@media (min-width: 1024px) {
+    body { 
+        align-items: center; 
+        justify-content: center;
+    }
+    #game-window {
+        width: 99vw;
+        max-width: 1850px;
+        height: 98vh;
+        max-height: 1020px;
+        display: grid;
+        grid-template-columns: 1fr 550px 1fr;
+        gap: 20px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 4px 0;
+    }
+}
+
+/* Petits écrans < 380px */
+@media (max-width: 380px) {
+    .tab-btn  { font-size: 7px; }
+    .tab-icon { font-size: 12px; }
+    .currency { font-size: 13px; gap: 3px; }
+}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a3560; border-radius: 4px; }
+
+/* ============================================= */
+/* HEADER                                        */
+/* ============================================= */
+#header {
+    /* Flex child — ne rétrécit jamais */
+    flex-shrink: 0;
+    /* Safe-area pour encoche/Dynamic Island */
+    padding: max(8px, env(safe-area-inset-top, 0px)) 14px 4px;
+    min-height: 98px; height: auto;
+    background: linear-gradient(180deg, rgba(12,16,30,0.95) 0%, rgba(10,13,24,0.85) 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex; flex-direction: column; gap: 4px; z-index: 10; position: relative;
+}
+.header-top {
+    display: flex; justify-content: space-between; align-items: center;
+}
+.zone-info { display: flex; flex-direction: column; }
+.zone-name {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(11px, 2.6vw, 14px);
+    color: #f1c40f; text-shadow: 0 0 8px rgba(241,196,15,0.3);
+}
+.zone-progress { font-size: clamp(9px, 2vw, 11px); color: #7a8ba8; }
+.zone-elem-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+    margin-top: 2px; display: inline-block; width: fit-content; text-shadow: 0 1px 2px #000;
+    background: rgba(0,0,0,0.4); color: #fff; /* défaut neutre — écrasé par JS au premier tick */
+    min-width: 40px; min-height: 16px;
+}
+.currency-bar { display: flex; gap: 14px; align-items: center; }
+.currency { display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: clamp(13px, 2.8vw, 15px); }
+.currency.gold { color: #f1c40f; }
+.currency.gems { color: #00d2ff; }
+.currency.honor { color: #a78bfa; text-shadow: 0 0 8px rgba(167,139,250,0.5); }
+.stats-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: #6a7a9a; margin-top: 4px;
+}
+.dps-display { color: #2ecc71; font-weight: 700; font-size: clamp(11px, 2.4vw, 13px); }
+.combo-display {
+    color: #ff6b6b; font-weight: 700; font-size: 13px;
+    transition: transform 0.15s; display: inline-block;
+}
+.tap-dmg-display { color: #a0b0c0; }
+
+/* ============================================= */
+/* MONSTER ZONE                                  */
+/* ============================================= */
+#monster-zone {
+    flex: 1;
+    min-height: 220px;
+    position: relative; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; overflow: hidden;
+    /* Pas de background ici — géré par #monster-bg pour pouvoir filtrer séparément */
+}
+/* Layer de fond dédié : reçoit l'image ET le filtre de couleur élémentaire */
+#monster-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: filter 0.7s ease;
+}
+#monster-zone::before {
+    content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.28); pointer-events: none;
+}
+/* Spotlight derrière le monstre */
+#monster-zone::after {
+    content: ''; position: absolute;
+    width: 340px; height: 340px;
+    top: 46%; left: 50%; transform: translate(-50%, -50%);
+    background: radial-gradient(ellipse at center,
+        rgba(255,255,220,0.13) 0%,
+        rgba(255,210,120,0.06) 35%,
+        transparent 68%);
+    pointer-events: none; z-index: 1;
+    animation: spotlightPulse 3s ease-in-out infinite;
+}
+@keyframes spotlightPulse {
+    0%,100% { opacity: 0.75; transform: translate(-50%,-50%) scale(1); }
+    50%      { opacity: 1;    transform: translate(-50%,-50%) scale(1.1); }
+}
+#particle-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+.monster-container { display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 2; position: relative; }
+#monster-emoji-container { position: relative; }
+#monster-emoji {
+    height: clamp(140px, 32vh, 250px);
+    object-fit: contain;
+    /* L'animation de respiration est définie en JS via _applyMonsterFilter pour le filter */
+    animation: monsterIdle 4s ease-in-out infinite;
+    transition: filter 0.3s ease;
+    transform-origin: center bottom;
+}
+
+/* ── ANIMATION DE RESPIRATION / FLOTTAISON ── */
+@keyframes monsterIdle {
+    0%   { transform: translateY(0px)   scaleX(1.000) scaleY(1.000); }
+    12%  { transform: translateY(-3px)  scaleX(0.990) scaleY(1.020); } /* inhale — s'étire */
+    35%  { transform: translateY(-10px) scaleX(0.978) scaleY(1.032); } /* pic d'inhale */
+    55%  { transform: translateY(-11px) scaleX(0.982) scaleY(1.028); } /* flottaison */
+    72%  { transform: translateY(-6px)  scaleX(0.995) scaleY(1.012); } /* exhale */
+    88%  { transform: translateY(-1px)  scaleX(1.003) scaleY(0.996); } /* compression légère */
+    100% { transform: translateY(0px)   scaleX(1.000) scaleY(1.000); } /* repos */
+}
+
+/* Ombre au sol qui pulse avec le monstre */
+#monster-emoji-container {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+}
+#monster-emoji-container::after {
+    content: '';
+    position: absolute; bottom: -8px; left: 50%;
+    width: 75px; height: 16px;
+    background: radial-gradient(ellipse, rgba(0,0,0,0.55) 0%, transparent 70%);
+    animation: monsterShadow 4s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes monsterShadow {
+    0%,100% { transform: translateX(-50%) scaleX(1.00); opacity: 0.55; }
+    35%     { transform: translateX(-50%) scaleX(0.62); opacity: 0.18; }
+    55%     { transform: translateX(-50%) scaleX(0.58); opacity: 0.14; }
+}
+#monster-name { font-family: 'Cinzel', serif; font-size: clamp(13px, 2.8vw, 15px); font-weight: 700; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.7); }
+.boss-label {
+    display: none; font-size: 9px; font-weight: 700; color: #000;
+    background: linear-gradient(135deg, #f1c40f, #e67e22); padding: 1px 8px; border-radius: 4px; letter-spacing: 2px;
+    font-family: 'Cinzel', serif;
+}
+.boss-label.visible { display: inline-block; animation: bossLabelPulse 1s infinite; }
+@keyframes bossLabelPulse { 0%,100% { box-shadow: 0 0 6px rgba(241,196,15,0.4); } 50% { box-shadow: 0 0 18px rgba(241,196,15,0.8); } }
+.hp-bar-container {
+    width: clamp(220px, 56vw, 300px);
+    height: 16px; background: rgba(0,0,0,0.6); border-radius: 8px;
+    border: 1.5px solid rgba(255,255,255,0.1); overflow: hidden; position: relative;
+}
+#hp-bar-fill {
+    height: 100%; border-radius: 8px; background: linear-gradient(90deg, #e74c3c, #ff6b6b);
+    transition: width 0.15s ease-out; box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 0 10px rgba(231,76,60,0.4);
+}
+#hp-text {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px #000;
+}
+#boss-timer { display: none; font-size: 11px; font-weight: 700; color: #e74c3c; margin-top: 1px; }
+
+/* Damage numbers */
+.dmg-text {
+    position: absolute; z-index: 10; pointer-events: none; font-family: 'Cinzel', serif; font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8); animation: dmgFloat 0.9s ease-out forwards;
+}
+@keyframes dmgFloat { 0% { opacity: 1; transform: translateY(0) scale(0.5); } 20% { transform: translateY(-15px) scale(1.3); } 100% { opacity: 0; transform: translateY(-80px) scale(0.8); } }
+
+/* ============================================= */
+/* TAB BAR & CONTENT                             */
+/* ============================================= */
+#combat-arena {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+}
+
+#tab-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(52px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    display: flex;
+    background: rgba(8, 10, 20, 0.98);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    z-index: 110;
+}
+.tab-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; font-size: 9px; font-weight: 700; color: #5a6a8a; cursor: pointer;
+    transition: all 0.2s; border: none; background: none; font-family: 'Montserrat', sans-serif;
+}
+.tab-btn:hover { color: #8a9ac0; }
+.tab-btn.active { color: #00f0ff; border-bottom: 2px solid #00f0ff; background: rgba(0,240,255,0.04); }
+.tab-icon { font-size: 16px; }
+
+#tab-content {
+    position: absolute;
+    bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+    left: 0;
+    right: 0;
+    height: 75%;
+    max-height: 80%;
+    z-index: 100;
+    background: linear-gradient(180deg, rgba(16, 20, 38, 0.98) 0%, rgba(8, 10, 20, 0.99) 100%);
+    border-top: 3px solid #f1c40f;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.85);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+#tab-content.collapsed {
+    transform: translateY(110%);
+    opacity: 0;
+    pointer-events: none;
+}
+.tab-panel {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    overflow-y: auto;
+    flex: 1;
+}
+.tab-panel.active { display: flex; }
+
+/* En-tête Tiroir mobile */
+.drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: linear-gradient(90deg, #1c2345 0%, #12162e 100%);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+}
+.drawer-title {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #f1c40f;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    letter-spacing: 1px;
+}
+.drawer-close-btn {
+    background: linear-gradient(180deg, #e74c3c 0%, #c0392b 100%);
+    border: 1px solid #7f0000;
+    color: #fff;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    transition: all 0.2s;
+}
+.drawer-close-btn:hover {
+    background: #ff5f49;
+}
+
+/* ============================================= */
+/* RESPONSIVE LAYOUT DESKTOP (Triple-Panneau)   */
+/* ============================================= */
+#left-wing, #right-wing {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    #left-wing, #right-wing {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    /* Force panels inside left-wing to display vertically */
+    #left-wing #panel-achievements,
+    #left-wing #panel-prestige {
+        display: flex !important;
+        background: rgba(10, 13, 24, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 14px;
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+    }
+    
+    #left-wing #panel-achievements {
+        flex: 2;
+        overflow-y: auto;
+    }
+    
+    #left-wing #panel-prestige {
+        flex: 1.2;
+        overflow-y: auto;
+    }
+    
+    #combat-arena {
+        width: 100%;
+        height: 100%;
+        padding-bottom: 0;
+        background: url('assets/ui/game_bg.png') center/cover;
+    }
+    
+    #right-wing-tab-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px;
+        background: rgba(10, 13, 24, 0.7);
+        border-radius: 0 0 12px 12px;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+        border-top: none;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #right-wing-tab-content .tab-panel {
+        display: none;
+        height: 100%;
+        flex-direction: column;
+    }
+
+    #right-wing-tab-content .tab-panel.active {
+        display: flex;
+    }
+
+    #tab-content {
+        display: none !important; /* Hide mobile drawer container */
+    }
+
+    .drawer-header {
+        display: none !important;
+    }
+    
+    /* Redonner sa puissance au Monstre sur grand écran */
+    #monster-emoji {
+        height: clamp(200px, 42vh, 360px) !important;
+    }
+    .hp-bar-container {
+        width: 400px !important;
+    }
+    .squad-party-hp-bar {
+        width: 400px !important;
+    }
+}
+
+/* ============================================= */
+/* CADRES FANTASY & BORDURES ORNEMENTALES       */
+/* ============================================= */
+@media (min-width: 1024px) {
+    .fantasy-panel {
+        background: linear-gradient(135deg, rgba(16, 22, 42, 0.96) 0%, rgba(8, 10, 20, 0.99) 100%);
+        border: 3.5px solid #b4934c; /* Ligne d'or centrale */
+        border-radius: 12px;
+        position: relative;
+        box-shadow: 
+            0 12px 36px rgba(0, 0, 0, 0.85),
+            inset 0 0 25px rgba(0, 0, 0, 0.95),
+            0 0 0 2px #1f1826, /* Ligne sombre externe */
+            inset 0 0 0 2px #1f1826; /* Ligne sombre interne */
+    }
+    
+    /* Separators for Header & Footer in Combat Arena */
+    #combat-arena #header {
+        border-bottom: 3.5px solid #b4934c;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    #combat-arena #footer {
+        border-top: 3.5px solid #b4934c;
+        box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
+    }
+
+    /* Gemmes d'angles lumineuses */
+    .corner-gem {
+        display: block;
+        position: absolute;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        border: 1.5px solid #b4934c;
+        z-index: 120;
+        pointer-events: none;
+    }
+    .corner-gem.top-left { top: 4px; left: 4px; }
+    .corner-gem.top-right { top: 4px; right: 4px; }
+    .corner-gem.bottom-left { bottom: 4px; left: 4px; }
+    .corner-gem.bottom-right { bottom: 4px; right: 4px; }
+
+    .corner-gem.gem-fire {
+        background: #e74c3c;
+        box-shadow: 0 0 6px #e74c3c, 0 0 12px #e74c3c, inset 0 1px 1px rgba(255,255,255,0.7);
+    }
+    .corner-gem.gem-water {
+        background: #3498db;
+        box-shadow: 0 0 6px #3498db, 0 0 12px #3498db, inset 0 1px 1px rgba(255,255,255,0.7);
+    }
+    .corner-gem.gem-earth {
+        background: #2ecc71;
+        box-shadow: 0 0 6px #2ecc71, 0 0 12px #2ecc71, inset 0 1px 1px rgba(255,255,255,0.7);
+    }
+    .corner-gem.gem-light {
+        background: #f1c40f;
+        box-shadow: 0 0 6px #f1c40f, 0 0 12px #f1c40f, inset 0 1px 1px rgba(255,255,255,0.7);
+    }
+}
+
+/* ============================================= */
+/* BARRE D'ONGLETS MÉTALLIQUE PC                 */
+/* ============================================= */
+@media (min-width: 1024px) {
+    /* Cache les onglets déjà affichés à gauche */
+    #tab-bar button[data-tab="achievements"],
+    #tab-bar button[data-tab="prestige"] {
+        display: none !important;
+    }
+    
+    #right-wing-tab-bar #tab-bar {
+        position: static;
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        height: 50px;
+        background: linear-gradient(180deg, #181d34 0%, #0d1122 100%);
+        border-bottom: 3.5px solid #b4934c; /* Gold bottom edge */
+        padding: 0;
+        z-index: 10;
+        border-top: none;
+        border-radius: 12px 12px 0 0;
+        overflow: hidden;
+    }
+
+    #right-wing-tab-bar #tab-bar .tab-btn {
+        flex: 1;
+        height: 100%;
+        border-bottom: none;
+        border-right: 1.5px solid #1f1826;
+        border-left: none;
+        border-radius: 8px 8px 0 0;
+        margin: 4px 2px 0;
+        height: calc(100% - 4px);
+        background: linear-gradient(180deg, #2b355a 0%, #171d33 100%);
+        border: 1px solid #3c497c;
+        border-bottom: none;
+        box-shadow: 
+            inset 0 1px 0 rgba(255,255,255,0.15),
+            inset 1px 0 0 rgba(255,255,255,0.05);
+        color: #8fa3c7;
+        font-family: 'Cinzel', serif;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: all 0.25s ease;
+    }
+
+    #right-wing-tab-bar #tab-bar .tab-btn:hover {
+        background: linear-gradient(180deg, #374474 0%, #1d2542 100%);
+        color: #fff;
+    }
+
+    #right-wing-tab-bar #tab-bar .tab-btn.active {
+        background: linear-gradient(180deg, #3c497c 0%, #1f2747 100%) !important;
+        border: 1.5px solid #b4934c !important;
+        border-bottom: none !important;
+        color: #f1c40f !important;
+        box-shadow: 
+            0 -4px 12px rgba(241,196,15,0.25),
+            inset 0 1px 0 rgba(255,255,255,0.2) !important;
+        text-shadow: 0 0 6px rgba(241,196,15,0.6);
+    }
+}
+
+/* --- SQUAD SELECTOR --- */
+.squad-slot-card {
+    aspect-ratio: 1; border-radius: 8px; border: 2px dashed #2a3560; display: flex;
+    flex-direction: column; align-items: center; justify-content: center; background: rgba(15,18,30,0.6);
+    position: relative; cursor: pointer; transition: all 0.2s; overflow: hidden;
+}
+.squad-slot-card.filled { border-style: solid; border-color: #00d2ff; background: #0f1221; }
+.squad-slot-card img { width: 100%; height: 100%; object-fit: cover; }
+.squad-slot-card .squad-stars { position: absolute; top: 2px; right: 4px; font-size: 8px; color: #f1c40f; text-shadow: 0 1px 2px #000; }
+.squad-slot-card .squad-badge { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.75); text-align: center; font-size: 8px; font-weight: 700; color: #fff; padding: 1px 0; }
+.squad-slot-card .bb-gauge-fill { position: absolute; bottom: 11px; left: 0; height: 3px; background: #00d2ff; box-shadow: 0 0 4px #00d2ff; transition: width 0.1s; }
+
+/* --- UNITÉS --- */
+.heroes-grid { display: flex; flex-direction: column; gap: 16px; padding: 10px 0; }
+.hero-portrait-card {
+    width: 100%; height: 260px; border-radius: 12px; border: 2px solid #2a3560; overflow: hidden; position: relative; cursor: pointer;
+    background: #0f1221; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.hero-portrait-card:hover { transform: translateY(-4px); border-color: #00d2ff; z-index: 2; box-shadow: 0 10px 20px rgba(0,210,255,0.2); }
+.hero-portrait-card img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.hero-portrait-card::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60%;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%); pointer-events: none; z-index: 1;
+}
+.hero-portrait-card.locked img { filter: brightness(0.2) grayscale(0.8); }
+.hero-portrait-card .hero-card-name {
+    position: absolute; bottom: 20px; left: 12px; font-family: 'Cinzel', serif; font-size: 22px; font-weight: 700;
+    color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.8); z-index: 2;
+}
+.hero-portrait-card .hero-level-badge {
+    position: absolute; bottom: 24px; right: 12px; font-size: 13px; font-weight: 700; color: #00d2ff; text-shadow: 0 1px 3px #000; z-index: 2;
+}
+.hero-portrait-card .hero-card-exp-bar {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(0,0,0,0.8); z-index: 2;
+}
+.hero-portrait-card .hero-card-exp-fill {
+    height: 100%; background: linear-gradient(90deg, #00d2ff, #3a7bd5); box-shadow: 0 0 8px #00d2ff; transition: width 0.3s;
+}
+.hero-portrait-card .hero-stars {
+    position: absolute; top: 12px; left: 12px; font-size: 16px; color: #f1c40f; text-shadow: 0 2px 4px rgba(0,0,0,0.8); letter-spacing: 2px; z-index: 2;
+}
+.hero-portrait-card .hero-type-badge {
+    position: absolute; top: 12px; right: 12px; font-size: 11px; font-weight: 700;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05)); border: 1px solid rgba(255,255,255,0.4);
+    padding: 3px 8px; border-radius: 6px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    box-shadow: 0 0 10px rgba(255,255,255,0.3); backdrop-filter: blur(4px); z-index: 2;
+}
+.hero-portrait-card.evo-4 { border-color: #c084fc; box-shadow: 0 0 15px rgba(192,132,252,0.4); }
+.hero-portrait-card.evo-5 { border-color: #f1c40f; box-shadow: 0 0 20px rgba(241,196,15,0.6); }
+.hero-portrait-card.evo-6 { border-color: #ff3366; box-shadow: 0 0 30px rgba(255,51,102,0.8); }
+
+.tap-upgrade-card {
+    background: linear-gradient(135deg, rgba(20,15,35,0.9), rgba(10,8,20,0.95)); border: 1px solid #3a2a5a;
+    border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+}
+.hm-btn {
+    padding: 12px; border: none; border-radius: 8px; font-family: 'Montserrat', sans-serif;
+    font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; transition: all 0.2s;
+}
+.hm-btn.levelup { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+.hm-btn.levelup:hover:not(:disabled) { transform: scale(1.05); }
+.hm-btn:disabled { background: #2a3545 !important; color: #6a7a8a !important; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+/* --- GACHA --- */
+.gacha-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 20px; }
+.gacha-gate {
+    width: 170px; height: 210px; background: url('assets/ui/summon_gate.png') center/cover;
+    border: 4px solid #2a1a4a; border-radius: 12px; box-shadow: 0 0 20px rgba(192,132,252,0.3);
+    position: relative; overflow: hidden; transition: all 0.3s;
+}
+.gacha-gate.summoning { animation: gateShake 0.5s ease-in-out infinite; box-shadow: 0 0 50px rgba(241,196,15,0.8); border-color: #f1c40f; }
+@keyframes gateShake { 0% { transform: translate(0,0) rotate(0); } 25% { transform: translate(-4px,2px) rotate(-1deg); } 50% { transform: translate(4px,-2px) rotate(1deg); } 75% { transform: translate(-2px,1px) rotate(-0.5deg); } 100% { transform: translate(0,0) rotate(0); } }
+.gacha-btn {
+    padding: 10px 20px; font-family: 'Cinzel', serif; font-size: 13px; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, #a855f7, #7c3aed); border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 15px rgba(168,85,247,0.4);
+}
+.gacha-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 6px 20px rgba(168,85,247,0.6); }
+
+/* --- SKILLS & ACTIVE SKILLS --- */
+.skill-card {
+    background: linear-gradient(135deg, rgba(18,12,35,0.9), rgba(10,8,22,0.95)); border: 1px solid #2a1a4a;
+    border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 10px;
+}
+.skill-icon { font-size: 32px; flex-shrink: 0; }
+.skill-info { flex: 1; }
+.skill-name { font-family: 'Cinzel', serif; font-size: 13px; color: #c084fc; font-weight: 700; }
+.skill-name.player { color: #f1c40f; }
+.skill-desc { font-size: 10px; color: #7a8a9a; }
+.skill-btn {
+    padding: 8px 16px; border: 2px solid #c084fc; border-radius: 8px;
+    background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(108,45,183,0.3));
+    color: #c084fc; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.skill-btn.player-skill { border-color: #f1c40f; background: linear-gradient(135deg, rgba(241,196,15,0.2), rgba(230,126,34,0.3)); color: #f1c40f; }
+.skill-btn:hover:not(:disabled) { background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; }
+.skill-btn.player-skill:hover:not(:disabled) { background: linear-gradient(135deg, #f1c40f, #e67e22); color: #fff; }
+.skill-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.skill-btn.ready { animation: skillReady 1.2s infinite; }
+@keyframes skillReady { 0%,100% { box-shadow: 0 0 6px rgba(192,132,252,0.3); } 50% { box-shadow: 0 0 20px rgba(192,132,252,0.8); border-color: #fff; } }
+
+/* --- ACHIEVEMENTS (QUÊTES) --- */
+.ach-card {
+    background: rgba(15,18,30,0.8); border: 1px solid #1e2a4a; border-radius: 8px; padding: 10px;
+    display: flex; align-items: center; gap: 10px;
+}
+.ach-card.claimed { opacity: 0.5; filter: grayscale(1); }
+.ach-info { flex: 1; }
+.ach-name { font-size: 13px; font-weight: 700; color: #fff; }
+.ach-desc { font-size: 11px; color: #6a7a9a; }
+.ach-prog { font-size: 10px; color: #00d2ff; font-weight: 700; margin-top: 4px; }
+.ach-btn {
+    padding: 6px 12px; border: none; border-radius: 6px; background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+    color: #fff; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; cursor: pointer;
+}
+.ach-btn:disabled { background: #2a3545; color: #6a7a8a; cursor: not-allowed; }
+
+/* --- PRESTIGE --- */
+.prestige-panel {
+    background: linear-gradient(135deg, rgba(25,15,40,0.9), rgba(10,5,20,0.95));
+    border: 1px solid #4a2a6a; border-radius: 12px; padding: 18px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.prestige-icon { font-size: 50px; }
+.prestige-title { font-family: 'Cinzel', serif; font-size: 20px; color: #c084fc; }
+.prestige-btn {
+    padding: 12px 36px; border: 2px solid #c084fc; border-radius: 10px;
+    background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; font-family: 'Cinzel', serif;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+}
+
+/* ============================================= */
+/* MODALS & OVERLAYS                             */
+/* ============================================= */
+#hero-modal {
+    position: absolute; inset: 0; z-index: 150; background: rgba(4,6,12,0.95);
+    display: none; flex-direction: column; opacity: 0; transition: opacity 0.2s;
+}
+#hero-modal.visible { display: flex; opacity: 1; }
+.hm-header {
+    height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.1); background: linear-gradient(180deg, #1a2035, #0f1221);
+}
+.hm-title { font-family: 'Cinzel', serif; font-size: 16px; color: #fff; }
+.hm-close { background: none; border: none; color: #a0b0c0; font-size: 24px; cursor: pointer; }
+.hm-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.hm-image-container { width: 100%; height: 400px; position: relative; overflow: hidden; border-bottom: 2px solid #2a3560; perspective: 1000px; }
+.hm-image { width: 100%; height: 100%; object-fit: cover; object-position: top; transform: scale(1.08); transition: transform 0.1s ease-out; will-change: transform; }
+.hm-stars { position: absolute; top: 15px; right: 15px; font-size: 18px; color: #f1c40f; text-shadow: 0 2px 4px #000; letter-spacing: 2px; }
+.hm-elem { position: absolute; top: 15px; left: 15px; font-size: 24px; filter: drop-shadow(0 2px 4px #000); }
+
+/* ── RPG Awesome — Couleurs élémentaires ── */
+.ra-fire        { color: #e74c3c; }
+.ra-droplet     { color: #3498db; }
+.ra-leaf        { color: #2ecc71; }
+.ra-lightning-bolt { color: #f1c40f; text-shadow: 0 0 8px rgba(241,196,15,0.6); }
+.ra-sun         { color: #fde68a; text-shadow: 0 0 8px rgba(253,230,138,0.5); }
+.ra-skull       { color: #9b59b6; }
+/* Ressources */
+.ra-gem         { color: #00d2ff; text-shadow: 0 0 6px rgba(0,210,255,0.4); }
+.ra-gold-bar    { color: #f1c40f; }
+/* Onglets — taille adaptée */
+.tab-icon .ra   { font-size: 17px; }
+/* Mini-cartes héros */
+.hero-mini-elem .ra { font-size: 15px; }
+/* Skill icon */
+.skill-icon .ra { font-size: 30px; }
+/* Footer BB */
+.footer-bb .ra  { font-size: 18px; }
+/* Tap */
+.tap-upgrade-icon .ra { font-size: 20px; }
+.hm-info { padding: 15px; }
+.hm-lore { font-size: 12px; color: #a0b0c0; font-style: italic; margin-bottom: 15px; line-height: 1.4; }
+.hm-stats {
+    background: rgba(15,18,30,0.8); border-radius: 8px; padding: 12px; border: 1px solid #1e2a4a;
+    display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px;
+}
+.hm-stat-row { display: flex; justify-content: space-between; font-size: 13px; color: #fff; }
+.hm-stat-row span:last-child { font-weight: 700; color: #2ecc71; }
+.hm-actions { display: flex; flex-direction: column; gap: 8px; padding: 0 15px 15px; }
+.hm-lvlup-row { display: flex; gap: 6px; width: 100%; }
+.hm-lvlup-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    padding: 9px 4px; gap: 2px; border-radius: 8px; border: none; cursor: pointer;
+    font-family: 'Montserrat', sans-serif; font-weight: 700; transition: all 0.15s;
+    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.hm-lvlup-btn .lvl-label  { font-size: 14px; font-weight: 800; }
+.hm-lvlup-btn .lvl-cost   { font-size: 9px; opacity: 0.82; font-weight: 600; }
+/* +1 — vert */
+.hm-lvlup-btn.x1 {
+    background: linear-gradient(180deg,#4ade80,#2ecc71 50%,#1ea85c);
+    border-top: 1px solid rgba(255,255,255,0.35); border-bottom: 2px solid #166b3a;
+    box-shadow: 0 4px 12px rgba(46,204,113,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+/* ×10 — bleu */
+.hm-lvlup-btn.x10 {
+    background: linear-gradient(180deg,#5dade2,#3498db 50%,#2060a0);
+    border-top: 1px solid rgba(255,255,255,0.3); border-bottom: 2px solid #14426e;
+    box-shadow: 0 4px 12px rgba(52,152,219,0.5), inset 0 1px 0 rgba(255,255,255,0.22);
+}
+/* MAX — or */
+.hm-lvlup-btn.xmax {
+    background: linear-gradient(180deg,#fde68a,#f59e0b 50%,#b45309);
+    border-top: 1px solid rgba(255,255,255,0.4); border-bottom: 2px solid #7c2d12;
+    box-shadow: 0 4px 14px rgba(245,158,11,0.6), inset 0 1px 0 rgba(255,255,255,0.3);
+    color: #1a0800; text-shadow: 0 1px 1px rgba(255,220,100,0.4);
+    animation: maxBtnGlow 2.5s ease-in-out infinite;
+}
+@keyframes maxBtnGlow {
+    0%,100% { box-shadow: 0 4px 14px rgba(245,158,11,0.6); }
+    50%      { box-shadow: 0 4px 24px rgba(245,158,11,1), 0 0 30px rgba(245,158,11,0.35); }
+}
+.hm-lvlup-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+.hm-lvlup-btn:active:not(:disabled){ transform: translateY(1px); }
+.hm-lvlup-btn:disabled { background: linear-gradient(180deg,#3a4255,#252d3d) !important;
+    color: #5a6a8a !important; cursor: not-allowed; transform: none !important;
+    box-shadow: none !important; animation: none !important; border-color: transparent !important; }
+.hm-actions-row2 { display: flex; gap: 8px; }
+.hm-btn.evolve { background: linear-gradient(135deg, #c084fc, #9b59b6); }
+.hm-btn.evolve:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 15px rgba(192,132,252,0.6); }
+
+#footer {
+    flex-shrink: 0;
+    min-height: 80px; height: auto;
+    /* Safe-area barre de gestes Android/iOS */
+    padding: 8px 12px max(8px, env(safe-area-inset-bottom, 0px));
+    background: rgba(6,8,16,0.98);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; flex-direction: column; gap: 6px;
+    align-items: center;
+}
+.footer-bb-slots { display: flex; gap: 6px; width: 100%; justify-content: center; overflow-x: auto; }
+.footer-bb {
+    width: 50px; height: 50px; border-radius: 10px; border: 2px solid #2a1a4a; background: rgba(15,10,25,0.9);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 20px;
+    cursor: pointer; transition: all 0.2s; position: relative; flex-shrink: 0; overflow: hidden;
+}
+.footer-bb.ready { border-color: #c084fc; animation: skillReady 1.2s infinite; }
+.footer-bb:not(.ready) { opacity: 0.4; cursor: not-allowed; }
+.footer-bb .bb-cd { position: absolute; bottom: 2px; font-size: 8px; color: #e74c3c; font-weight: 700; }
+.footer-bb .bb-label { font-size: 7px; color: #c084fc; font-weight: 700; }
+.footer-bb .bb-gauge-fill-slot { position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #00d2ff; box-shadow: 0 -1px 3px #00d2ff; }
+.settings-btn { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #2a3560; background: rgba(15,18,30,0.9); color: #6a7a9a; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+#bb-overlay { position: absolute; inset: 0; z-index: 100; display: none; pointer-events: none; }
+#bb-overlay.active { display: flex; align-items: center; justify-content: center; }
+.bb-bg { position: absolute; inset: 0; background: #000; opacity: 0; }
+.bb-stripe { position: absolute; width: 100%; height: 160px; background: linear-gradient(90deg, transparent, #c084fc33, transparent); transform: scaleY(0); }
+.bb-portrait { position: absolute; left: -200px; width: 150px; height: 150px; border-radius: 50%; object-fit: cover; filter: drop-shadow(0 0 30px rgba(192,132,252,0.6)); }
+.bb-text { position: absolute; right: -300px; font-family: 'Cinzel', serif; font-size: 32px; color: #fff; text-shadow: 0 0 20px #c084fc, 0 4px 8px #000; }
+.bb-dmg-text { position: absolute; bottom: 30%; font-size: 48px; font-family: 'Cinzel', serif; color: #c084fc; font-weight: 700; text-shadow: 0 0 30px #c084fc, 0 4px 10px #000; opacity: 0; transform: scale(0.3); }
+
+#summon-overlay { position: absolute; inset: 0; z-index: 200; background: #fff; display: none; opacity: 0; transition: opacity 0.5s; }
+#summon-overlay.active { display: block; opacity: 1; }
+#screen-flash { position: absolute; inset: 0; z-index: 90; pointer-events: none; opacity: 0; transition: opacity 0.1s; }
+.skill-active-overlay { position: absolute; top:0; left:0; right:0; background: rgba(241,196,15,0.2); font-size: 11px; text-align: center; color: #f1c40f; padding: 2px; display: none; z-index: 10; font-weight: 700; }
+
+.material-badge {
+    padding: 3px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000;
+}
+
+/* ============================================= */
+/* MINI HERO CARDS — Grille Compacte 3 colonnes  */
+/* ============================================= */
+.heroes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px 0; }
+
+.hero-mini-card {
+    border-radius: 10px; overflow: hidden; position: relative; cursor: pointer;
+    background: #0d1128; aspect-ratio: 3 / 4;
+    transition: transform 0.2s cubic-bezier(0.25,0.8,0.25,1), box-shadow 0.2s;
+}
+.hero-mini-card:hover  { transform: translateY(-4px) scale(1.04); }
+.hero-mini-card:active { transform: scale(0.96); }
+.hero-mini-card > img {
+    width: 100%; height: 100%; object-fit: cover; object-position: top;
+    display: block; position: absolute; inset: 0;
+}
+.hero-mini-card::before {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 58%;
+    background: linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.5) 45%, transparent 100%);
+    pointer-events: none; z-index: 1;
+}
+.hero-mini-info { position: absolute; bottom: 4px; left: 0; right: 0; padding: 0 6px 5px; z-index: 2; }
+.hero-mini-stars  { font-size: 7px; color: #f1c40f; letter-spacing: 1px; display: block; }
+.hero-mini-name   { font-size: 9px; font-weight: 700; color: #fff; font-family: 'Cinzel', serif;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
+                    text-shadow: 0 1px 3px #000; }
+.hero-mini-level  { font-size: 8px; color: #00d2ff; font-weight: 600; }
+.hero-mini-exp-bar  { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(0,0,0,0.6); z-index: 3; }
+.hero-mini-exp-fill { height: 100%; background: linear-gradient(90deg, #00d2ff, #3a7bd5); box-shadow: 0 0 5px #00d2ff; transition: width 0.3s; }
+.hero-mini-elem   { position: absolute; top: 5px; left: 6px; font-size: 14px; z-index: 2; filter: drop-shadow(0 1px 3px #000); }
+.hero-mini-squad-badge {
+    position: absolute; top: 5px; right: 5px; z-index: 2;
+    background: rgba(0,210,255,0.88); color: #000; font-size: 9px;
+    font-weight: 700; padding: 1px 4px; border-radius: 3px;
+}
+.hero-mini-adv { position: absolute; top: 24px; left: 5px; font-size: 10px; z-index: 2; filter: drop-shadow(0 1px 2px #000); }
+
+/* Locked state */
+.hero-mini-card.locked { cursor: default; border: 2px dashed #2a3560 !important; box-shadow: none !important; }
+.hero-mini-card.locked > img { filter: brightness(0.12) grayscale(1); }
+
+/* ============================================= */
+/* CADRES DE RARETÉ SKEUOMORPHIQUES              */
+/* ============================================= */
+.hero-mini-card.evo-3 {
+    border: 2px solid #a0622a;
+    box-shadow: 0 0 10px rgba(160,98,42,0.55), inset 0 1px 0 rgba(255,200,130,0.15);
+}
+.hero-mini-card.evo-4 {
+    border: 2px solid #9eb5c8;
+    box-shadow: 0 0 12px rgba(158,181,200,0.65), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.hero-mini-card.evo-5 {
+    border: 2px solid #e6bc00;
+    box-shadow: 0 0 16px rgba(230,188,0,0.75), 0 0 32px rgba(230,188,0,0.2), inset 0 1px 0 rgba(255,240,120,0.3);
+}
+.hero-mini-card.evo-6 {
+    border: 2px solid #ff3366;
+    animation: evo6Glow 2s linear infinite;
+}
+@keyframes evo6Glow {
+    0%   { border-color: #ff3366; box-shadow: 0 0 20px rgba(255,51,102,0.9), inset 0 0 8px rgba(255,51,102,0.2); }
+    33%  { border-color: #c084fc; box-shadow: 0 0 20px rgba(192,132,252,0.9), inset 0 0 8px rgba(192,132,252,0.2); }
+    66%  { border-color: #f1c40f; box-shadow: 0 0 20px rgba(241,196,15,0.9),  inset 0 0 8px rgba(241,196,15,0.2); }
+    100% { border-color: #ff3366; box-shadow: 0 0 20px rgba(255,51,102,0.9), inset 0 0 8px rgba(255,51,102,0.2); }
+}
+
+/* ============================================= */
+/* BOUTONS 3D AVEC RELIEF                        */
+/* ============================================= */
+.hm-btn {
+    padding: 12px; border: none; border-radius: 8px;
+    font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #fff;
+    cursor: pointer; transition: all 0.15s; position: relative;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+}
+.hm-btn.levelup {
+    background: linear-gradient(180deg, #4ade80 0%, #2ecc71 45%, #1ea85c 100%);
+    border-top: 1px solid rgba(255,255,255,0.38);
+    border-bottom: 2px solid #166b3a;
+    box-shadow: 0 5px 14px rgba(46,204,113,0.5), 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.28);
+}
+.hm-btn.levelup:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(46,204,113,0.6), inset 0 1px 0 rgba(255,255,255,0.28); }
+.hm-btn.levelup:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 2px 6px rgba(46,204,113,0.35); }
+.hm-btn.evolve {
+    background: linear-gradient(180deg, #d09cf8 0%, #c084fc 45%, #8b38cc 100%);
+    border-top: 1px solid rgba(255,255,255,0.35);
+    border-bottom: 2px solid #6820a0;
+    box-shadow: 0 5px 14px rgba(192,132,252,0.5), 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.hm-btn.evolve:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(192,132,252,0.6); }
+.hm-btn.evolve:active:not(:disabled) { transform: translateY(1px); }
+.hm-btn:disabled {
+    background: linear-gradient(180deg, #3a4255, #2a3245) !important; color: #5a6a8a !important;
+    cursor: not-allowed; transform: none !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important; border-color: transparent !important;
+}
+#hm-btn-squad {
+    background: linear-gradient(180deg, #5dade2 0%, #3498db 45%, #2060a0 100%) !important;
+    border-top: 1px solid rgba(255,255,255,0.3) !important;
+    border-bottom: 2px solid #14426e !important;
+    box-shadow: 0 5px 14px rgba(52,152,219,0.5), inset 0 1px 0 rgba(255,255,255,0.22) !important;
+    font-family: 'Montserrat', sans-serif !important; font-size: 13px !important;
+}
+#hm-btn-squad:hover:not(:disabled) { transform: translateY(-2px) !important; }
+#hm-btn-squad:active:not(:disabled) { transform: translateY(1px) !important; }
+
+#tap-btn {
+    background: linear-gradient(180deg, #5dade2 0%, #3498db 45%, #2060a0 100%);
+    border-top: 1px solid rgba(255,255,255,0.3);
+    border-bottom: 2px solid #14426e;
+    box-shadow: 0 4px 12px rgba(52,152,219,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+#tap-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.1); }
+#tap-btn:active:not(:disabled) { transform: translateY(1px); }
+
+.gacha-btn {
+    padding: 10px 20px; font-family: 'Cinzel', serif; font-size: 13px; font-weight: 700; color: #fff;
+    background: linear-gradient(180deg, #c47cf8 0%, #a855f7 45%, #7028e4 100%);
+    border: none; border-radius: 8px; cursor: pointer;
+    border-top: 1px solid rgba(255,255,255,0.3);
+    border-bottom: 2px solid #4c1db0;
+    box-shadow: 0 5px 16px rgba(168,85,247,0.5), inset 0 1px 0 rgba(255,255,255,0.22);
+    transition: all 0.15s;
+}
+.gacha-btn:hover:not(:disabled) { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 22px rgba(168,85,247,0.65); }
+.gacha-btn:active:not(:disabled) { transform: translateY(1px) scale(0.97); }
+
+.skill-btn {
+    padding: 8px 16px; border-radius: 8px;
+    font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s; text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    border-top: 1px solid rgba(255,255,255,0.18);
+    border-bottom: 1.5px solid rgba(0,0,0,0.5);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+    background: linear-gradient(180deg, rgba(210,120,255,0.38) 0%, rgba(120,40,200,0.45) 100%);
+    color: #c084fc;
+}
+.skill-btn.player-skill {
+    background: linear-gradient(180deg, rgba(255,220,50,0.32) 0%, rgba(210,150,10,0.45) 100%);
+    color: #f1c40f;
+    border-top-color: rgba(255,220,80,0.25);
+}
+.skill-btn.ready { animation: skillReady 1.2s infinite; }
+.skill-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.18); }
+.skill-btn:active:not(:disabled) { transform: translateY(1px); }
+.skill-btn:disabled { opacity: 0.28; cursor: not-allowed; transform: none; }
+
+.ach-btn {
+    padding: 6px 12px; border: none; border-radius: 6px;
+    background: linear-gradient(180deg, #4ae0ff 0%, #00d2ff 45%, #0090c0 100%);
+    border-top: 1px solid rgba(255,255,255,0.3);
+    border-bottom: 1.5px solid #006090;
+    box-shadow: 0 4px 10px rgba(0,210,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+    color: #fff; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+}
+.ach-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.1); }
+.ach-btn:active:not(:disabled) { transform: translateY(1px); }
+.ach-btn:disabled { background: linear-gradient(180deg, #3a4255, #2a3245); color: #6a7a8a; cursor: not-allowed; box-shadow: none; transform: none; border-color: transparent; }
+
+/* ============================================= */
+/* BARRES HP/BC STYLE CRISTAL LIQUIDE            */
+/* ============================================= */
+.hp-bar-container {
+    width: 300px; height: 18px; background: rgba(0,0,0,0.65); border-radius: 9px;
+    border: 1.5px solid rgba(255,255,255,0.1); overflow: hidden; position: relative;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04);
+}
+#hp-bar-fill {
+    height: 100%; border-radius: 9px; position: relative; overflow: hidden;
+    background: linear-gradient(90deg, #c0392b 0%, #e74c3c 55%, #ff7060 100%);
+    transition: width 0.15s ease-out;
+    box-shadow: 0 0 14px rgba(231,76,60,0.55);
+}
+#hp-bar-fill::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 46%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+    border-radius: 9px 9px 0 0;
+}
+#party-hp-bar-fill {
+    height: 100%; border-radius: 9px; position: relative; overflow: hidden;
+    background: linear-gradient(90deg, #1e8449 0%, #2ecc71 55%, #58d68d 100%) !important;
+    transition: width 0.15s ease-out;
+    box-shadow: 0 0 12px rgba(46,204,113,0.55) !important;
+}
+#party-hp-bar-fill::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 46%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.28) 0%, transparent 100%);
+    border-radius: 9px 9px 0 0;
+}
+.hp-bar-container::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 40%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+    pointer-events: none; z-index: 10; border-radius: 9px 9px 0 0;
+}
+
+/* ============================================= */
+/* SECOUSSE MONSTRE AU TAP                       */
+/* ============================================= */
+@keyframes monsterShake {
+    0%   { transform: translateX(0) translateY(0); }
+    15%  { transform: translateX(-7px) rotate(-1.5deg); }
+    30%  { transform: translateX(7px) rotate(1.5deg); }
+    45%  { transform: translateX(-4px) rotate(-0.8deg); }
+    60%  { transform: translateX(4px) rotate(0.8deg); }
+    80%  { transform: translateX(-2px); }
+    100% { transform: translateX(0); }
+}
+.monster-shake { animation: monsterShake 0.22s ease-out forwards !important; }
+/* Après le shake, reprend l'idle */
+#monster-emoji { animation: monsterIdle 4s ease-in-out infinite; }
+
+/* ============================================= */
+/* GACHA PANEL REDESIGNÉ                         */
+/* ============================================= */
+#panel-gacha { padding: 4px 0; }
+.gacha-banner {
+    width: 100%; height: 185px; position: relative; overflow: hidden; border-radius: 12px;
+    border: 2px solid #3a1a6a; margin-bottom: 2px;
+    background: linear-gradient(135deg, #0d0520 0%, #1a0840 45%, #0d1525 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    padding-bottom: 14px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.65), 0 0 40px rgba(168,85,247,0.12);
+}
+.gacha-banner-bg {
+    position: absolute; inset: 0;
+    background: url('assets/ui/summon_gate.png') center/cover no-repeat;
+    opacity: 0.5; filter: saturate(1.5) hue-rotate(-8deg);
+    transition: opacity 0.3s;
+}
+.gacha-banner-bg.summoning { animation: gateShake 0.5s ease-in-out infinite; opacity: 0.85; }
+.gacha-banner::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 68%;
+    background: linear-gradient(to top, rgba(8,4,20,0.96) 0%, transparent 100%);
+    pointer-events: none;
+}
+.gacha-banner-sub   { font-size: 9px; color: rgba(255,255,255,0.5); z-index: 2; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 3px; }
+.gacha-banner-title { font-family: 'Cinzel', serif; font-size: 22px; font-weight: 700; color: #f1c40f;
+                      text-shadow: 0 0 24px rgba(241,196,15,0.65), 0 2px 8px rgba(0,0,0,0.9);
+                      z-index: 2; letter-spacing: 3px; }
+.gacha-banner-stars { font-size: 13px; color: #f1c40f; z-index: 2; letter-spacing: 5px;
+                      text-shadow: 0 0 12px rgba(241,196,15,0.55); margin-top: 3px; }
+
+.gacha-options  { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.gacha-option {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.08);
+    background: linear-gradient(135deg, rgba(18,12,30,0.92), rgba(10,6,20,0.96));
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.gacha-option.rare   { border-color: rgba(168,85,247,0.35); }
+.gacha-option.honor  { border-color: rgba(0,210,255,0.35); }
+.gacha-option.rare:hover  { border-color: rgba(168,85,247,0.7); box-shadow: 0 0 16px rgba(168,85,247,0.2); }
+.gacha-option.honor:hover { border-color: rgba(0,210,255,0.7); box-shadow: 0 0 16px rgba(0,210,255,0.2); }
+.gacha-option-icon  { font-size: 28px; flex-shrink: 0; }
+.gacha-option-info  { flex: 1; }
+.gacha-option-title { font-family: 'Cinzel', serif; font-size: 13px; font-weight: 700; color: #fff; }
+.gacha-option-desc  { font-size: 10px; color: #6a7a9a; margin-top: 1px; }
+.gacha-btn-main {
+    padding: 10px 16px; border-radius: 8px; font-family: 'Montserrat', sans-serif;
+    font-size: 12px; font-weight: 700; color: #fff; cursor: pointer; transition: all 0.15s;
+    white-space: nowrap; flex-shrink: 0; border: none;
+}
+.gacha-btn-main.rare {
+    background: linear-gradient(180deg, #c47cf8 0%, #a855f7 45%, #7028e4 100%);
+    border-top: 1px solid rgba(255,255,255,0.3);
+    border-bottom: 2px solid #4c1db0;
+    box-shadow: 0 4px 14px rgba(168,85,247,0.55), inset 0 1px 0 rgba(255,255,255,0.22);
+}
+.gacha-btn-main.honor {
+    background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 45%, #0270b0 100%);
+    border-top: 1px solid rgba(255,255,255,0.3);
+    border-bottom: 2px solid #024e80;
+    box-shadow: 0 4px 14px rgba(14,165,233,0.55), inset 0 1px 0 rgba(255,255,255,0.22);
+}
+.gacha-btn-main:hover:not(:disabled) { transform: translateY(-2px) scale(1.04); filter: brightness(1.1); }
+.gacha-btn-main:active:not(:disabled) { transform: translateY(1px) scale(0.97); }
+.gacha-btn-main:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+.gacha-note { font-size: 10px; color: #5a6a8a; text-align: center; padding: 4px 0; }
+
+/* ============================================= */
+/* HEADER SETTINGS BUTTON                        */
+/* ============================================= */
+.header-settings-btn {
+    background: none; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+    color: #6a7a9a; font-size: 16px; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s; padding: 0; flex-shrink: 0;
+}
+.header-settings-btn:hover { color: #00d2ff; border-color: rgba(0,210,255,0.4); background: rgba(0,210,255,0.06); transform: rotate(30deg); }
+
+/* ============================================= */
+/* GACHA — DEUX BANNIÈRES PLEIN ÉCRAN            */
+/* ============================================= */
+#panel-gacha { gap: 10px; }
+
+.summon-banner {
+    position: relative; width: 100%; height: 158px;
+    border-radius: 14px; overflow: hidden; cursor: pointer;
+    border: 1.5px solid rgba(255,255,255,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex; align-items: flex-end;
+}
+.summon-banner:hover  { transform: translateY(-3px); }
+.summon-banner:active { transform: scale(0.98); }
+
+/* Fond arrière rare */
+.summon-rare-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #1a0535 0%, #4a1080 45%, #200840 100%);
+}
+.summon-rare-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: url('assets/ui/summon_gate.png') center/cover;
+    opacity: 0.28; mix-blend-mode: luminosity;
+}
+/* Vortex tournant */
+.summon-vortex {
+    position: absolute; width: 160%; height: 160%;
+    top: -30%; left: -30%;
+    background: conic-gradient(
+        from 0deg, transparent 0%, rgba(168,85,247,0.10) 12%, transparent 25%,
+        rgba(241,196,15,0.06) 40%, transparent 55%,
+        rgba(168,85,247,0.10) 70%, transparent 85%
+    );
+    border-radius: 50%; animation: vortexSpin 12s linear infinite; z-index: 1;
+}
+@keyframes vortexSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Fond arrière honor */
+.summon-honor-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #001018 0%, #003050 50%, #001828 100%);
+}
+.summon-honor-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 60% 50%, rgba(0,210,255,0.12) 0%, transparent 70%);
+}
+
+/* Gradient bas pour lisibilité */
+.summon-banner::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 75%;
+    background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 100%);
+    pointer-events: none; z-index: 2;
+}
+
+.summon-banner-content { position: relative; z-index: 3; padding: 0 14px 12px; flex: 1; }
+.summon-banner-tag  {
+    font-size: 8px; font-weight: 700; letter-spacing: 3px; color: rgba(255,255,255,0.5);
+    text-transform: uppercase; margin-bottom: 2px;
+}
+.summon-banner-title {
+    font-family: 'Cinzel', serif; font-size: 17px; font-weight: 700; color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+.summon-banner-stars { font-size: 11px; color: #f1c40f; margin-top: 1px; }
+.summon-banner-desc  { font-size: 9px; color: rgba(255,255,255,0.45); margin-top: 1px; }
+
+/* Bouton coût flottant */
+.summon-cost-btn {
+    position: relative; z-index: 3; flex-shrink: 0; margin: 0 14px 12px 0; align-self: flex-end;
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 16px; border-radius: 22px; border: none; cursor: pointer;
+    font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; color: #fff;
+    transition: all 0.15s; white-space: nowrap;
+}
+.summon-cost-btn.gems {
+    background: linear-gradient(180deg, #c47cf8 0%, #a855f7 45%, #7028e4 100%);
+    border-top: 1px solid rgba(255,255,255,0.3);
+    border-bottom: 2px solid #4c1db0;
+    box-shadow: 0 4px 16px rgba(168,85,247,0.6), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.summon-cost-btn.gems.can-afford { animation: gemsPulse 2s infinite; }
+@keyframes gemsPulse {
+    0%,100% { box-shadow: 0 4px 16px rgba(168,85,247,0.6); }
+    50%      { box-shadow: 0 4px 30px rgba(168,85,247,1), 0 0 40px rgba(168,85,247,0.4); }
+}
+.summon-cost-btn.gold {
+    background: linear-gradient(180deg, #fde68a 0%, #f59e0b 45%, #b45309 100%);
+    border-top: 1px solid rgba(255,255,255,0.3);
+    border-bottom: 2px solid #7c2d12;
+    box-shadow: 0 4px 16px rgba(245,158,11,0.6), inset 0 1px 0 rgba(255,255,255,0.25);
+    color: #1a0a00;
+}
+.summon-cost-btn:hover:not(:disabled)  { transform: translateY(-2px) scale(1.06); filter: brightness(1.1); }
+.summon-cost-btn:active:not(:disabled) { transform: translateY(1px) scale(0.97); }
+.summon-cost-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+.cost-icon { font-size: 18px; }
+
+/* ============================================= */
+/* SUMMON GATE ANIMATION OVERLAY                 */
+/* ============================================= */
+#summon-gate-overlay {
+    position: absolute; inset: 0; z-index: 210;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.94);
+}
+#summon-gate-overlay.active { display: flex; }
+.sg-vortex {
+    position: absolute; width: 440px; height: 440px; border-radius: 50%;
+    background: conic-gradient(
+        from 0deg, transparent, rgba(168,85,247,0.20), transparent,
+        rgba(241,196,15,0.10), transparent, rgba(168,85,247,0.15), transparent
+    );
+    animation: vortexSpin 2s linear infinite; z-index: 0;
+}
+.sg-gate {
+    position: relative; width: 190px; height: 235px; z-index: 2;
+    background: url('assets/ui/summon_gate.png') center/cover;
+    border-radius: 12px; animation: gateShake 0.5s ease-in-out infinite;
+}
+.sg-glow {
+    position: absolute; width: 340px; height: 340px; border-radius: 50%;
+    z-index: 1; transition: background 0.4s;
+}
+.sg-glow.rarity-3 { background: radial-gradient(ellipse, rgba(74,127,255,0.28) 0%, transparent 70%); }
+.sg-glow.rarity-4 { background: radial-gradient(ellipse, rgba(230,188,0,0.40) 0%, transparent 70%); }
+.sg-glow.rarity-5 { background: radial-gradient(ellipse, rgba(255,51,102,0.45) 0%, transparent 70%); }
+.sg-glow.rarity-6 { animation: rainbowGlowR 0.6s infinite; }
+@keyframes rainbowGlowR {
+    0%   { background: radial-gradient(ellipse, rgba(255,51,102,0.5) 0%, transparent 70%); }
+    33%  { background: radial-gradient(ellipse, rgba(192,132,252,0.5) 0%, transparent 70%); }
+    66%  { background: radial-gradient(ellipse, rgba(241,196,15,0.5) 0%, transparent 70%); }
+    100% { background: radial-gradient(ellipse, rgba(255,51,102,0.5) 0%, transparent 70%); }
+}
+
+/* ============================================= */
+/* HERO / MATERIAL REVEAL MODAL                  */
+/* ============================================= */
+#summon-reveal {
+    position: absolute; inset: 0; z-index: 220;
+    flex-direction: column; align-items: center; justify-content: flex-end;
+    opacity: 0; transition: opacity 0.4s; display: none;
+}
+#summon-reveal.visible { display: flex; opacity: 1; }
+#reveal-bg { position: absolute; inset: 0; }
+#reveal-portrait-wrap {
+    position: relative; z-index: 2; flex: 1; width: 100%;
+    display: flex; align-items: flex-end; justify-content: center;
+    animation: revealZoom 0.6s cubic-bezier(0.2,0.8,0.2,1) both;
+}
+@keyframes revealZoom {
+    from { transform: scale(0.55) translateY(50px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+#reveal-portrait {
+    max-height: 400px; max-width: 100%; object-fit: contain; object-position: top;
+    filter: drop-shadow(0 20px 50px rgba(0,0,0,0.9));
+}
+#reveal-material-emoji {
+    font-size: 100px; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.8));
+    animation: revealZoom 0.5s cubic-bezier(0.2,0.8,0.2,1) both;
+}
+#reveal-stars-container {
+    position: relative; z-index: 2; display: flex; gap: 8px;
+    min-height: 38px; align-items: center; justify-content: center;
+}
+.reveal-star {
+    font-size: 28px; opacity: 0;
+    animation: starPop 0.4s cubic-bezier(0.3,1.4,0.5,1) forwards;
+}
+@keyframes starPop {
+    from { transform: translateY(-40px) scale(0.2) rotate(-20deg); opacity: 0; }
+    to   { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+}
+#reveal-hero-name {
+    position: relative; z-index: 2; font-family: 'Cinzel', serif;
+    font-size: 24px; font-weight: 700; text-align: center; padding: 0 16px;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.9);
+    animation: revealSlide 0.4s 0.2s ease-out both;
+}
+@keyframes revealSlide {
+    from { transform: translateY(18px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+#reveal-hero-info {
+    position: relative; z-index: 2; font-size: 11px;
+    color: rgba(255,255,255,0.6); text-align: center; padding: 4px 16px 0;
+}
+#reveal-continue-btn {
+    position: relative; z-index: 2; margin: 14px 0 22px;
+    padding: 12px 48px; border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.12); backdrop-filter: blur(6px);
+    color: #fff; font-family: 'Montserrat', sans-serif;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s; letter-spacing: 1px;
+}
+#reveal-continue-btn:hover { background: rgba(255,255,255,0.24); transform: scale(1.04); }
+
+/* ============================================= */
+/* RESPONSIVE ANIMATIONS & POLISH                */
+/* ============================================= */
+
+/* Pulse ressources */
+@keyframes currencyPulse {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.22); filter: brightness(1.5); }
+    100% { transform: scale(1); filter: brightness(1); }
+}
+.currency.pulse { animation: currencyPulse 0.28s cubic-bezier(0.25,0.8,0.25,1); }
+
+/* Squad Section (remplace inline styles) */
+.squad-section {
+    background: rgba(12,16,30,0.85); border: 1px solid #1a2040;
+    border-radius: 10px; padding: 8px; margin-bottom: 8px;
+}
+.squad-title-row {
+    font-family: 'Cinzel', serif; font-size: 10px; color: #f1c40f; font-weight: 700;
+    margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;
+}
+#squad-ls-badge { font-size: 9px; color: #00d2ff; font-weight: 400; }
+#squad-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.squad-hint {
+    font-size: 11px; color: #a0b0c0; margin-bottom: 6px;
+    line-height: 1.3; text-align: center;
+}
+
+.squad-party-hp-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+.squad-party-hp-bar {
+    width: 100%;
+    max-width: 320px;
+    height: 14px;
+    border-radius: 6px;
+    border-color: rgba(46,204,113,0.4) !important;
+}
+#party-hp-text {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000;
+}
+
+/* Slot LEADER doré */
+.squad-slot-card.leader-slot {
+    border: 2.5px solid #e6bc00 !important;
+    box-shadow: 0 0 18px rgba(230,188,0,0.55), 0 0 6px rgba(230,188,0,0.25) !important;
+    transform: scale(1.065); z-index: 1;
+}
+.squad-slot-card.leader-slot .squad-badge {
+    background: linear-gradient(90deg, #e6bc00, #c07000) !important;
+    color: #000 !important; font-weight: 700 !important;
+}
+
+/* Tap upgrade card — nettoyage */
+.tap-upgrade-card {
+    background: linear-gradient(135deg, rgba(20,15,35,0.9), rgba(10,8,20,0.95));
+    border: 1px solid #3a2a5a; border-radius: 10px;
+    padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+    margin-bottom: 8px;
+}
+.tap-upgrade-icon { font-size: 22px; }
+.tap-upgrade-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.tap-upgrade-title { font-family: 'Cinzel', serif; font-size: 13px; font-weight: 700; color: #fff; }
+#tap-desc      { font-size: 10px; color: #6a7a9a; }
+#tap-next-ms   { font-size: 9px; color: #00d2ff; }
+
+/* Materials panel — nettoyage */
+#materials-container {
+    background: rgba(10,12,24,0.9); border: 1px solid #1e2a4a;
+    border-radius: 8px; padding: 8px; margin-top: 10px;
+}
+.materials-title {
+    font-family: 'Cinzel', serif; font-size: 10px; color: #fff;
+    margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding-bottom: 2px;
+}
+#materials-list { display: flex; flex-wrap: wrap; gap: 6px; font-size: 10px; color: #a0b0c0; }
+
+/* Squad card — lueur BB prêt */
+.squad-slot-card.bb-ready {
+    border-color: #c084fc !important;
+    animation: bbCardPulse 1.1s ease-in-out infinite !important;
+}
+.squad-slot-card.leader-slot.bb-ready {
+    border-color: #fff !important;
+    animation: bbCardPulseLead 1.1s ease-in-out infinite !important;
+}
+@keyframes bbCardPulse {
+    0%,100% { box-shadow: 0 0 8px rgba(192,132,252,0.4); border-color: #c084fc; }
+    50%      { box-shadow: 0 0 22px rgba(192,132,252,0.95), 0 0 6px rgba(255,255,255,0.3); border-color: #fff; }
+}
+@keyframes bbCardPulseLead {
+    0%,100% { box-shadow: 0 0 16px rgba(241,196,15,0.6), 0 0 8px rgba(192,132,252,0.4); }
+    50%      { box-shadow: 0 0 30px rgba(192,132,252,0.9), 0 0 40px rgba(241,196,15,0.4); border-color: #fff; }
+}
+
+/* Squad empty slot visual */
+.squad-slot-empty-icon { font-size: 30px; opacity: 0.12; filter: grayscale(1); }
+.squad-slot-empty-lbl  { font-size: 7px; color: #2a3550; font-weight: 700; letter-spacing: 1px; margin-top: 2px; }
+
+/* ============================================= */
+/* ONGLET PARAMÈTRES                             */
+/* ============================================= */
+#panel-settings { gap: 12px; }
+.settings-section {
+    background: rgba(10,13,25,0.9); border: 1px solid #1e2a4a; border-radius: 12px;
+    padding: 14px; display: flex; flex-direction: column; gap: 12px;
+}
+.settings-section-title {
+    font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700; color: #f1c40f;
+    border-bottom: 1px solid rgba(255,255,255,0.07); padding-bottom: 8px; margin-bottom: 2px;
+    letter-spacing: 1px;
+}
+.settings-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.settings-row-label { font-size: 13px; color: #c0d0e0; font-weight: 500; }
+.settings-row-sub   { font-size: 10px; color: #5a6a8a; margin-top: 1px; }
+
+/* Toggle switch pill */
+.toggle-btn {
+    min-width: 72px; padding: 7px 14px; border-radius: 20px; border: none;
+    font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
+}
+.toggle-btn.on {
+    background: linear-gradient(180deg, #4ade80 0%, #22a85c 100%);
+    color: #fff; box-shadow: 0 0 14px rgba(46,204,113,0.55), inset 0 1px 0 rgba(255,255,255,0.3);
+    border-top: 1px solid rgba(255,255,255,0.3); border-bottom: 2px solid #166b3a;
+}
+.toggle-btn.off {
+    background: linear-gradient(180deg, #3a4258, #252d3d);
+    color: #5a6a8a; box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+    border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 2px solid #161c28;
+}
+.toggle-btn:active { transform: scale(0.95); }
+
+/* Action buttons in settings */
+.settings-action-btn {
+    flex: 1; padding: 12px 10px; border: none; border-radius: 9px;
+    font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s; color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.settings-action-btn.save {
+    background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 45%, #0270b0 100%);
+    border-top: 1px solid rgba(255,255,255,0.3); border-bottom: 2px solid #024e80;
+    box-shadow: 0 4px 14px rgba(14,165,233,0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.settings-action-btn.danger {
+    background: linear-gradient(180deg, #f87171 0%, #ef4444 45%, #b91c1c 100%);
+    border-top: 1px solid rgba(255,255,255,0.28); border-bottom: 2px solid #7f1d1d;
+    box-shadow: 0 4px 14px rgba(239,68,68,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.settings-action-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+.settings-action-btn:active:not(:disabled) { transform: translateY(1px); }
+.settings-actions-row { display: flex; gap: 10px; }
+
+/* Version / credits */
+.settings-credits { font-size: 10px; color: #3a4a5a; text-align: center; padding: 6px 0 2px; }
+
+/* ============================================= */
+/* TOAST NOTIFICATION                            */
+/* ============================================= */
+#notif-toast {
+    position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: linear-gradient(135deg, rgba(20,26,48,0.97), rgba(12,16,30,0.97));
+    border: 1px solid rgba(0,210,255,0.35); border-radius: 20px;
+    padding: 8px 20px; font-size: 13px; font-weight: 600; color: #00d2ff;
+    white-space: nowrap; pointer-events: none; opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(0,210,255,0.15);
+    z-index: 300;
+}
+#notif-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Visual stress elements */
+.game-window-shake {
+    animation: gwShake 0.15s ease-in-out infinite;
+}
+@keyframes gwShake {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    20% { transform: translate(-8px, 5px) rotate(-1deg); }
+    40% { transform: translate(8px, -5px) rotate(1deg); }
+    60% { transform: translate(-6px, -3px) rotate(-0.5deg); }
+    80% { transform: translate(6px, 3px) rotate(0.5deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.bloody-dmg-text {
+    position: absolute;
+    z-index: 150;
+    pointer-events: none;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    animation: bloodyFloat 1.2s ease-in forwards;
+}
+@keyframes bloodyFloat {
+    0% { opacity: 0; transform: translateY(-20px) scale(0.6); }
+    15% { opacity: 1; transform: translateY(0px) scale(1.3); }
+    40% { transform: translateY(15px) scale(1.1); }
+    100% { opacity: 0; transform: translateY(60px) scale(0.9); }
+}
+
+#danger-vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 290;
+    pointer-events: none;
+    background: radial-gradient(circle, transparent 50%, rgba(231, 76, 60, 0.45) 100%);
+    box-shadow: inset 0 0 80px rgba(231, 76, 60, 0.8);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+#danger-vignette.active {
+    opacity: 1;
+    animation: dangerPulse 1.5s ease-in-out infinite alternate;
+}
+@keyframes dangerPulse {
+    0% { opacity: 0.45; }
+    100% { opacity: 0.95; }
+}
+    </style>
+</head>
+<body>
+
+    <!-- Danger vignette overlay -->
+    <div id="danger-vignette"></div>
+
+    <!-- Dynamic PC background -->
+    <div id="dynamic-pc-bg"></div>
+
+    <div id="game-window">
+        
+        <!-- AILE GAUCHE (PC uniquement) -->
+        <div id="left-wing" class="fantasy-panel">
+            <div class="corner-gem gem-fire top-left"></div>
+            <div class="corner-gem gem-water top-right"></div>
+            <div class="corner-gem gem-earth bottom-left"></div>
+            <div class="corner-gem gem-light bottom-right"></div>
+        </div>
+
+        <!-- ARÈNE DE COMBAT (Centrée sur PC, Plein écran sur Mobile) -->
+        <div id="combat-arena" class="fantasy-panel">
+            <div class="corner-gem gem-fire top-left"></div>
+            <div class="corner-gem gem-water top-right"></div>
+            <div class="corner-gem gem-earth bottom-left"></div>
+            <div class="corner-gem gem-light bottom-right"></div>
+        <!-- HEADER -->
+        <div id="header">
+            <div class="header-top">
+                <div class="zone-info">
+                    <div class="zone-name" id="zone-name">Zone 1 — Plaines de Mistral</div>
+                    <div class="zone-progress" id="zone-progress">Monstre 1 / 10</div>
+                    <div class="zone-elem-badge" id="zone-elem-badge"></div>
+                </div>
+                <div class="currency-bar">
+                    <div class="currency gems" id="gems-display"><i class="ra ra-gem"></i> 0</div>
+                    <div class="currency gold" id="gold-display"><i class="ra ra-gold-bar"></i> 0</div>
+                    <div class="currency honor" id="honor-display" title="Points d'Honneur — Gagnés en tuant des monstres">⚔️ 0 PH</div>
+                </div>
+            </div>
+            <div class="stats-row">
+                <span class="tap-dmg-display"><i class="ra ra-sword" style="color:#a0b0c0"></i> Tap : <b id="tap-dmg-val">1</b></span>
+                <span class="dps-display" id="dps-display">⚔ DPS : 0/s</span>
+                <span class="combo-display" id="combo-display"></span>
+            </div>
+        </div>
+
+        <!-- MONSTER ZONE -->
+        <div id="monster-zone">
+            <div id="monster-bg"></div>
+            <canvas id="particle-canvas"></canvas>
+            <div class="monster-container">
+                <span class="boss-label" id="boss-label">👑 BOSS</span>
+                <div id="monster-emoji-container">
+                    <img id="monster-emoji" src="assets/monster/biome 1/slime-de-lave-1.png" alt="Monster">
+                </div>
+                <div id="monster-name">Loup Gris</div>
+                
+                <!-- Monster HP Bar -->
+                <div class="hp-bar-container">
+                    <div id="hp-bar-fill" style="width:100%"></div>
+                    <div id="hp-text">10 / 10</div>
+                </div>
+                <div id="boss-timer">⏱ 30s</div>
+            </div>
+        </div>
+
+        <!-- FOOTER (Brave Bursts & Vie de l'équipe) -->
+        <div id="footer">
+            <div class="squad-party-hp-wrap">
+                <div class="hp-bar-container squad-party-hp-bar">
+                    <div id="party-hp-bar-fill" style="width:100%;"></div>
+                    <div id="party-hp-text">100 / 100</div>
+                </div>
+            </div>
+            <div class="footer-bb-slots" id="footer-bb-slots"></div>
+        </div>
+    </div>
+
+    <!-- TAB CONTENT (Le Tiroir à droite sur PC, Tiroir coulissant sur Mobile) -->
+    <div id="tab-content" class="collapsed">
+        <!-- En-tête du tiroir (mobile uniquement) -->
+        <div class="drawer-header">
+            <span class="drawer-title" id="drawer-title-lbl">UNITÉS</span>
+            <button class="drawer-close-btn" onclick="closeDrawer()" title="Réduire">Réduire ✕</button>
+        </div>
+
+            <div class="tab-panel active" id="panel-heroes">
+                <!-- Active Squad Section -->
+                <div class="squad-section">
+                    <div class="squad-title-row">
+                        <span>SQUAD ACTIVE (Max 4)</span>
+                        <span id="squad-ls-badge">Leader Skill: Aucun</span>
+                    </div>
+                    <div id="squad-grid"></div>
+                </div>
+
+                <div class="squad-hint">
+                    Avantage Élémentaire sur la zone → <b>+50% DPS</b> au héros !
+                </div>
+
+                <!-- Tap Upgrade -->
+                <div class="tap-upgrade-card">
+                    <div class="tap-upgrade-icon"><i class="ra ra-sword" style="color:#a0b0c0"></i></div>
+                    <div class="tap-upgrade-info">
+                        <div class="tap-upgrade-title">Puissance de Tap</div>
+                        <div id="tap-desc">Niv. 0 — Dégâts : 1</div>
+                        <div id="tap-next-ms">Prochain cap: x2 au Niv.10</div>
+                    </div>
+                    <button class="hm-btn levelup" id="tap-btn" style="flex:none; padding:8px 12px;" onclick="upgradeTap()">⬆ 10</button>
+                </div>
+
+                <div class="heroes-grid" id="heroes-grid"></div>
+                
+                <!-- Materials display -->
+                <div id="materials-container">
+                    <div class="materials-title">COMPOSANTS D'ÉVOLUTION</div>
+                    <div id="materials-list"></div>
+                </div>
+            </div>
+            
+            <div class="tab-panel" id="panel-gacha" style="flex-direction:column; gap:10px;">
+                <!-- Bannière Rare Summon -->
+            <div class="summon-banner">
+                <div class="summon-rare-bg"></div>
+                <div class="summon-vortex"></div>
+                <div class="summon-banner-content">
+                    <div class="summon-banner-tag">✦ RARE SUMMON ✦</div>
+                    <div class="summon-banner-title">Héros Légendaires</div>
+                    <div class="summon-banner-stars">3★ ·· 4★ ·· 5★ ·· 6★</div>
+                    <div class="summon-banner-desc">S: 5% (Sera, Magress) · A: 25% · B: 70%</div>
+                </div>
+                <button class="summon-cost-btn gems" id="rare-summon-btn" onclick="summonRare()">
+                    <i class="ra ra-gem"></i> 5
+                </button>
+            </div>
+
+            <!-- Bannière Honor Summon -->
+            <div class="summon-banner">
+                <div class="summon-honor-bg"></div>
+                <div class="summon-banner-content">
+                    <div class="summon-banner-tag" style="color:rgba(167,139,250,0.8);">✦ HONOR SUMMON ✦</div>
+                    <div class="summon-banner-title">Matériaux d'Évolution</div>
+                    <div class="summon-banner-stars" style="color:#a78bfa;">Cristaux · Idoles · Totems · Mimics</div>
+                    <div class="summon-banner-desc">⚔️ +1 PH/kill · +10 PH/boss · 500 PH = 1 invocation</div>
+                </div>
+                <button class="summon-cost-btn" id="honor-summon-btn" onclick="summonHonor()" style="background:linear-gradient(135deg,#4f1d96,#7c3aed); border:1px solid #a78bfa; color:#e9d5ff;">
+                    ⚔️ 500 PH
+                </button>
+            </div>
+
+            <div class="gacha-note">Doublez vos DPS avec des doublons · Évoluez jusqu'à 6★ pour débloquer les artworks !</div>
+        </div>
+        
+        <div class="tab-panel" id="panel-skills">
+            <div style="font-family:'Cinzel', serif; font-size:14px; color:#f1c40f; margin-bottom:6px;">Sorts d'Invocateur</div>
+            <div id="player-skills-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px;"></div>
+            <div style="font-family:'Cinzel', serif; font-size:14px; color:#c084fc; margin-bottom:6px; margin-top:10px;">Brave Bursts (Squad)</div>
+            <div id="hero-skills-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+        
+        <div class="tab-panel" id="panel-achievements">
+            <div style="font-family:'Cinzel', serif; font-size:14px; color:#fff; margin-bottom:10px; text-align:center;">Récupérez des Gemmes !</div>
+            <div id="achievements-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+        
+        <div class="tab-panel" id="panel-prestige"></div>
+
+        <!-- PARAMÈTRES -->
+        <div class="tab-panel" id="panel-settings">
+            <!-- Audio -->
+            <div class="settings-section">
+                <div class="settings-section-title">🔊 Audio</div>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Musique de fond</div>
+                        <div class="settings-row-sub">Thèmes combat, boss, menu…</div>
+                    </div>
+                    <button class="toggle-btn off" id="settings-bgm-toggle" onclick="toggleSettingsBGM()">OFF</button>
+                </div>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Bruitages (SFX)</div>
+                        <div class="settings-row-sub">Coups, level up, invocations…</div>
+                    </div>
+                    <button class="toggle-btn on" id="settings-sfx-toggle" onclick="toggleSettingsSFX()">ON</button>
+                </div>
+            </div>
+
+            <!-- Sauvegarde -->
+            <div class="settings-section">
+                <div class="settings-section-title">💾 Sauvegarde</div>
+                <div class="settings-actions-row">
+                    <button class="settings-action-btn save" onclick="saveGame(); showNotif('✅ Partie sauvegardée !')">💾 Sauvegarder</button>
+                    <button class="settings-action-btn danger" onclick="confirmReset()">🗑️ Supprimer</button>
+                </div>
+                <div class="settings-row-sub" style="text-align:center; color:#4a5a6a;">
+                    La suppression efface toute progression de façon permanente.
+                </div>
+            </div>
+
+            <!-- Infos -->
+            <div class="settings-credits">Brave Frontier Clicker · Sauvegarde locale (localStorage)</div>
+        </div>
+    </div>
+
+    <!-- AILE DROITE (PC uniquement) -->
+    <div id="right-wing" class="fantasy-panel">
+        <div class="corner-gem gem-fire top-left"></div>
+        <div class="corner-gem gem-water top-right"></div>
+        <div class="corner-gem gem-earth bottom-left"></div>
+        <div class="corner-gem gem-light bottom-right"></div>
+        <div id="right-wing-tab-bar"></div>
+        <div id="right-wing-tab-content"></div>
+    </div>
+
+    <!-- CONTENEUR DES ONGLETS MOBILES (Initialement hébergé ici) -->
+    <div id="mobile-tab-bar-container">
+        <div id="tab-bar">
+            <button class="tab-btn active" data-tab="heroes"><span class="tab-icon"><i class="ra ra-crossed-swords"></i></span> UNITÉS</button>
+            <button class="tab-btn" data-tab="gacha"><span class="tab-icon"><i class="ra ra-crystal-ball"></i></span> INVOC</button>
+            <button class="tab-btn" data-tab="skills"><span class="tab-icon"><i class="ra ra-fairy-wand"></i></span> SKILLS</button>
+            <button class="tab-btn" data-tab="achievements"><span class="tab-icon"><i class="ra ra-trophy"></i></span> SUCCÈS</button>
+            <button class="tab-btn" data-tab="prestige"><span class="tab-icon"><i class="ra ra-crown"></i></span> PRESTIGE</button>
+            <button class="tab-btn" data-tab="settings"><span class="tab-icon"><i class="ra ra-cog"></i></span> PARAM</button>
+        </div>
+    </div>
+
+</div> <!-- Fin de #game-window -->
+
+<!-- HERO FULL CARD MODAL -->
+<div id="hero-modal">
+    <div class="hm-header">
+        <div class="hm-title" id="hm-title">Ignis l'Épéiste</div>
+        <button class="hm-close" onclick="closeHeroModal()">×</button>
+    </div>
+        <div class="hm-content">
+            <div class="hm-image-container">
+                <img id="hm-image" class="hm-image" src="" alt="Hero">
+                <div class="hm-elem" id="hm-elem">🔥</div>
+                <div class="hm-stars" id="hm-stars">★★★</div>
+            </div>
+            <div class="hm-info">
+                <div class="hm-lore" id="hm-lore">"Une description épique..."</div>
+                <div class="hm-stats">
+                    <div class="hm-stat-row"><span>Type (Nature)</span><span id="hm-type" style="color:#f1c40f">Lord</span></div>
+                    <div class="hm-stat-row"><span>Niveau</span><span id="hm-lvl">1 / 50</span></div>
+                    <div class="hm-stat-row"><span>DPS total</span><span id="hm-dps">10</span></div>
+                    <div class="hm-stat-row"><span>HP / DEF Héros</span><span id="hm-hp-def">10 / 5</span></div>
+                    <div class="hm-stat-row" style="color:#f1c40f"><span>Bonus Doublons (Limit Break)</span><span id="hm-lb">+0%</span></div>
+                    <div class="hm-stat-row" style="color:#00d2ff; font-size:10px; margin-top:2px;"><span>Leader Skill</span><span id="hm-ls" style="color:#e0e6f0">Aucun</span></div>
+                    <div class="hm-stat-row" style="color:#a0b0c0; font-size:10px; margin-top:2px;"><span>Prochain palier</span><span id="hm-next-cap" style="color:#00d2ff"></span></div>
+                    <div class="hm-stat-row" id="hm-evo-mats-row" style="color:#e74c3c; font-size:10px; display:none; flex-direction:column; gap:2px; margin-top:4px;">
+                        <span>Matériaux Requis pour Évoluer :</span>
+                        <span id="hm-evo-mats-list" style="color:#a0b0c0"></span>
+                    </div>
+                </div>
+                <div class="hm-actions">
+                    <!-- Rangée 1 : niveau ×1 / ×10 / MAX -->
+                    <div class="hm-lvlup-row" id="hm-levelup-row">
+                        <button class="hm-lvlup-btn x1"   id="hm-btn-lvlup"    onclick="levelUpCurrentHero(1)">
+                            <span class="lvl-label">+1</span>
+                            <span class="lvl-cost"  id="hm-cost-1"></span>
+                        </button>
+                        <button class="hm-lvlup-btn x10"  id="hm-btn-lvlup10"  onclick="levelUpCurrentHero(10)">
+                            <span class="lvl-label">×10</span>
+                            <span class="lvl-cost"  id="hm-cost-10"></span>
+                        </button>
+                        <button class="hm-lvlup-btn xmax" id="hm-btn-lvlupmax" onclick="levelUpCurrentHero('max')">
+                            <span class="lvl-label">MAX</span>
+                            <span class="lvl-cost"  id="hm-cost-max"></span>
+                        </button>
+                    </div>
+                    <!-- Rangée 2 : évoluer + squad -->
+                    <div class="hm-actions-row2">
+                        <button class="hm-btn evolve" id="hm-btn-evolve" onclick="evolveCurrentHero()" style="flex:1;">Évoluer</button>
+                        <button class="hm-btn" id="hm-btn-squad" onclick="toggleSquadCurrentHero()" style="flex:1;">Squad</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAYS -->
+    <div id="bb-overlay">
+        <div class="bb-bg"></div>
+        <div class="bb-stripe"></div>
+        <img class="bb-portrait" id="bb-portrait-img" src="" alt="">
+        <div class="bb-text"></div>
+        <div class="bb-dmg-text"></div>
+    </div>
+    <div id="summon-overlay"></div>
+    <div id="screen-flash"></div>
+    <div id="notif-toast"></div>
+
+    <!-- SUMMON GATE ANIMATION -->
+    <div id="summon-gate-overlay">
+        <div class="sg-vortex"></div>
+        <div class="sg-glow" id="sg-glow"></div>
+        <div class="sg-gate"></div>
+    </div>
+
+    <!-- HERO / MATERIAL REVEAL -->
+    <div id="summon-reveal">
+        <div id="reveal-bg"></div>
+        <div id="reveal-portrait-wrap">
+            <img id="reveal-portrait" src="" alt="" style="display:none;">
+            <div id="reveal-material-emoji" style="display:none;"></div>
+        </div>
+        <div id="reveal-stars-container"></div>
+        <div id="reveal-hero-name"></div>
+        <div id="reveal-hero-info"></div>
+        <button id="reveal-continue-btn" onclick="closeReveal()">Continuer ▶</button>
+    </div>
+</div>
+
+<script>
+// =============================================================
+// GAME CONFIGURATION, CONSTANTS & STATE (First to avoid TDZ)
+// =============================================================
+const EVO_LEVEL_CAPS = [0, 0, 0, 50, 80, 100, 150];
+const EVO_COSTS = [0, 0, 0, 1000, 10000, 100000];
+// Zone minimale (maxZone) pour débloquer chaque palier d'évolution
+// index = nombre d'étoiles cibles (4★ = index 4, etc.)
+const EVO_ZONE_GATES = [0, 0, 0, 1, 16, 36, 61];
+
+const ELEMENT_ADVANTAGE = { 'Feu': 'Terre', 'Eau': 'Feu', 'Terre': 'Foudre', 'Foudre': 'Eau', 'Lumière': 'Ténèbres', 'Ténèbres': 'Lumière' };
+const ELEM_COLORS = { 'Feu': '#e74c3c', 'Eau': '#3498db', 'Terre': '#2ecc71', 'Foudre': '#f1c40f', 'Lumière': '#fff9c4', 'Ténèbres': '#9b59b6' };
+
+// Icônes élémentaires RPG Awesome (HTML) — utilisées dans toutes les vues
+const ELEM_ICONS = {
+    'Feu':      '<i class="ra ra-fire"></i>',
+    'Eau':      '<i class="ra ra-droplet"></i>',
+    'Terre':    '<i class="ra ra-leaf"></i>',
+    'Foudre':   '<i class="ra ra-lightning-bolt"></i>',
+    'Lumière':  '<i class="ra ra-sun"></i>',
+    'Ténèbres': '<i class="ra ra-skull"></i>',
+};
+
+// 12 héros — 2 par élément (1 Attaquant + 1 Utilitaire), triés par coût croissant
+const HERO_DEFS = [
+    // ── FEU ──
+    { id: 'ignis',   elem: 'Feu',      icon: '<i class="ra ra-fire"></i>',          baseDPS: 2,   baseCost: 50,
+      titles: ['Épéiste Ignis','Chevalier Ignis','Général Ignis','Dieu du Feu Ignis'],
+      lore: "Un guerrier impulsif maniant une épée enveloppée de flammes célestes." },
+    { id: 'vargas',  elem: 'Feu',      icon: '<i class="ra ra-fire"></i>',          baseDPS: 3,   baseCost: 80,
+      titles: ['Soldat Vargas','Vétéran Vargas','Commandant Vargas','Légendaire Vargas'],
+      lore: "Un ancien commandant qui galvanise ses alliés grâce à une aura de feu intérieur." },
+    // ── EAU ──
+    { id: 'selena',  elem: 'Eau',      icon: '<i class="ra ra-droplet"></i>', baseDPS: 5,   baseCost: 200,
+      titles: ['Mage Selena','Sirène Selena','Reine Selena','Déesse de Glace Selena'],
+      lore: "Héritière légendaire d'une ancienne lignée de prêtresses de l'eau." },
+    { id: 'elimo',   elem: 'Eau',      icon: '<i class="ra ra-droplet"></i>', baseDPS: 9,   baseCost: 380,
+      titles: ['Mage Elimo','Cryomage Elimo','Archimage Elimo','Maîtresse du Givre Elimo'],
+      lore: "Une enchanteresse qui transforme l'eau en lances de givre pour figer ses ennemis." },
+    // ── TERRE ──
+    { id: 'lance',   elem: 'Terre',    icon: '<i class="ra ra-leaf"></i>', baseDPS: 15,  baseCost: 800,
+      titles: ['Garde Lance','Lancier Lance','Protecteur Lance','Gaïa Lance'],
+      lore: "Un guerrier lié à l'Arbre Monde, armé d'une lance vivante." },
+    { id: 'zeln',    elem: 'Terre',    icon: '<i class="ra ra-leaf"></i>', baseDPS: 22,  baseCost: 1400,
+      titles: ['Chasseur Zeln','Traqueur Zeln','Maître des Bois Zeln','Esprit de la Forêt Zeln'],
+      lore: "Un chasseur furtif qui frappe à la vitesse d'une vigne-éclair dans la jungle de Gaïa." },
+    // ── FOUDRE ──
+    { id: 'karl',    elem: 'Foudre',   icon: '<i class="ra ra-lightning-bolt"></i>', baseDPS: 50,  baseCost: 3000,
+      titles: ['Dragon Karl','Cavalier Karl','Dragon Foudroyant Karl','Démon Karl'],
+      lore: "Mi-humain, mi-dragon, maîtrisant le souffle électrique tempétueux." },
+    { id: 'eze',     elem: 'Foudre',   icon: '<i class="ra ra-lightning-bolt"></i>', baseDPS: 85,  baseCost: 6000,
+      titles: ['Sauvage Eze','Guerrier Eze','Berserker Eze','Dieu Foudre Eze'],
+      lore: "Un gladiateur redoutable qui tire sa force brute de la foudre." },
+    // ── LUMIÈRE ──
+    { id: 'sera',    elem: 'Lumière',  icon: '<i class="ra ra-sun"></i>', baseDPS: 250, baseCost: 35000,
+      titles: ['Sainte Sera','Valkyrie Sera','Archange Sera','Déesse Créatrice Sera'],
+      lore: "La paladine sacrée descendue des cieux avec ses ailes de lumière." },
+    { id: 'atro',    elem: 'Lumière',  icon: '<i class="ra ra-sun"></i>', baseDPS: 400, baseCost: 55000,
+      titles: ['Paladin Atro','Seigneur Atro','Champion Céleste Atro','Dieu Solaire Atro'],
+      lore: "Un paladin d'élite dont l'épée sacrée dissout les ténèbres à chaque frappe." },
+    // ── TÉNÈBRES ──
+    { id: 'kikuri',  elem: 'Ténèbres', icon: '<i class="ra ra-skull"></i>', baseDPS: 500, baseCost: 72000,
+      titles: ['Apprentie Kikuri','Prêtresse Kikuri','Grande Prêtresse Kikuri','Déesse des Malédictions Kikuri'],
+      lore: "Une prêtresse liée aux forces spectrales, capable de maudire les ennemis et de drainer leur énergie vitale." },
+    { id: 'magress', elem: 'Ténèbres', icon: '<i class="ra ra-skull"></i>', baseDPS: 700, baseCost: 95000,
+      titles: ['Guerrier Magress','Chevalier Noir Magress','Seigneur des Ombres Magress','Démon Absolu Magress'],
+      lore: "Un ancien général de lumière corrompu par le Néant, dont l'épée dévore les âmes." },
+];
+
+// 6 Biomes — 1 par élément, 3 monstres communs + 1 boss
+const ZONE_THEMES = [
+    { name: "Cavernes d'Agni",    elem: 'Feu',      bossName: "Dragon d'Agni",
+      monsters: ["Slime de Lave","Chien d'Enfer","Élémentaire de Feu"],      bgHue: 0   },
+    { name: "Océan Éternel",      elem: 'Eau',      bossName: "Léviathan",
+      monsters: ["Méduse de Cristal","Éclaireur Squalide","Tortue de Récif"], bgHue: 185 },
+    { name: "Forêt de Gaïa",      elem: 'Terre',    bossName: "Colosse de Gaïa",
+      monsters: ["Loup de Gaïa","Plante Carnivore","Golem de Pierre"],        bgHue: 95  },
+    { name: "Pic Foudroyé",       elem: 'Foudre',   bossName: "Titan des Tempêtes",
+      monsters: ["Faucon Électrique","Scorpion Fulgurant","Cristal Vivant"],  bgHue: 50  },
+    { name: "Sanctuaire Céleste", elem: 'Lumière',  bossName: "Archange Corrompu",
+      monsters: ["Gardien de Marbre","Cherub Déchu","Oracle Aveugle"],        bgHue: 40  },
+    { name: "Néant des Ombres",   elem: 'Ténèbres', bossName: "Faucheur d'Âmes",
+      monsters: ["Squelette Maudit","Vampire Seigneur","Esprit Vengeur"],     bgHue: 270 },
+];
+
+// Prefixes de cycle (zone 7+ = même biomes mais plus durs)
+const TIER_PREFIXES = ['', 'Alfa ', 'Légendaire ', 'Mythique ', 'Divin '];
+
+// Fonds de biome — index correspond à ZONE_THEMES
+// null = utilise le biome 1 (Feu) comme fallback jusqu'à ce qu'un fond propre existe
+const BIOME_BGS = [
+    "assets/Biome/Biome 1 — Les Cavernes d'Agni (Feu).png",  // 0 — Feu      ✓
+    "assets/Biome/Biome 2 — L'Océan Éternel (Eau).png",      // 1 — Eau      ✓
+    null,  // 2 — Terre      (à ajouter)
+    null,  // 3 — Foudre     (à ajouter)
+    null,  // 4 — Lumière    (à ajouter)
+    null,  // 5 — Ténèbres   (à ajouter)
+];
+
+let _lastBiomeIdx = -1; // évite les rechargements inutiles
+
+function applyBiomeBg(biomeIdx) {
+    if (biomeIdx === _lastBiomeIdx) return;
+    _lastBiomeIdx = biomeIdx;
+
+    const hasOwnImg   = !!BIOME_BGS[biomeIdx];          // image propre au biome ?
+    const path        = BIOME_BGS[biomeIdx] || BIOME_BGS[0]; // fallback → biome 1
+    const theme       = ZONE_THEMES[biomeIdx];
+
+    // Double quotes + encode l'apostrophe pour ne pas casser url("...")
+    const safe = encodeURI(path).replace(/'/g, '%27');
+    const bg   = document.getElementById('monster-bg');
+
+    if (bg) {
+        bg.style.backgroundImage = `url("${safe}")`;
+        // Filtre de couleur élémentaire uniquement si on utilise un fallback
+        // (image propre → pas de filtre, les couleurs sont déjà bonnes)
+        if (hasOwnImg) {
+            bg.style.filter = 'none';
+        } else {
+            bg.style.filter = `hue-rotate(${theme.bgHue}deg) saturate(1.25) brightness(0.9)`;
+        }
+    }
+
+    // Fond d'écran dynamique global PC
+    const dynamicBg = document.getElementById('dynamic-pc-bg');
+    if (dynamicBg) {
+        dynamicBg.style.backgroundImage = `url("${safe}")`;
+        if (hasOwnImg) {
+            dynamicBg.style.filter = 'blur(40px) brightness(0.4)';
+        } else {
+            dynamicBg.style.filter = `hue-rotate(${theme.bgHue}deg) saturate(1.25) brightness(0.36) blur(40px)`;
+        }
+    }
+}
+
+// Images des monstres par biome : [commun1, commun2, commun3, boss]
+// Les numéros dans les noms de fichiers = ordre d'apparition
+// null = fallback vers les sprites du Biome 1 avec hue-rotate élémentaire
+const MONSTER_IMAGES = [
+    // 0 — Feu (Cavernes d'Agni) ✓
+    ["assets/monster/biome 1/slime-de-lave-1.png",
+     "assets/monster/biome 1/Canidé-d'enfer-2.png",
+     "assets/monster/biome 1/Élémentaire-de-Scorie.png",
+     "assets/monster/biome 1/BOSS _ Dragon d'Agni.png"],
+    // 1 — Eau (Océan Éternel) ✓
+    ["assets/monster/biome 2/Méduse de Cristal (Commun 1).png",
+     "assets/monster/biome 2/Éclaireur Squalide (Commun 2).png",
+     "assets/monster/biome 2/Tortue de Récif (Commun 3).png",
+     "assets/monster/biome 2/👑 BOSS _ Léviathan.png"],
+    // 2-5 — Terre, Foudre, Lumière, Ténèbres (à ajouter)
+    null, null, null, null,
+];
+
+const MILESTONES = [10, 25, 50, 100];
+const MILESTONE_LABELS = { 10: 'DPS ×3', 25: 'DPS ×4', 50: 'DPS ×8', 100: 'DPS ×20' };
+
+const ACHIEVEMENTS_DEFS = [
+    { id: 'k10', name: 'Débutant', desc: 'Tuez 10 Monstres', req: s=>s.totalKills>=10, reward: 5 },
+    { id: 'k100', name: 'Chasseur', desc: 'Tuez 100 Monstres', req: s=>s.totalKills>=100, reward: 10 },
+    { id: 'z10', name: 'Explorateur', desc: 'Atteignez la Zone 10', req: s=>s.maxZone>=10, reward: 15 },
+    { id: 'c1k', name: 'Clickeur', desc: 'Faites 1 000 Clics', req: s=>s.totalClicks>=1000, reward: 5 },
+    { id: 'b5', name: 'Tueur de Boss', desc: 'Tuez 5 Boss', req: s=>s.bossKills>=5, reward: 10 },
+    { id: 'sum3', name: 'Invocateur', desc: 'Possédez 3 Héros', req: s=>Object.keys(s.heroes).length>=3, reward: 10 },
+];
+
+const HERO_TYPES = ['Lord', 'Anima', 'Breaker', 'Guardian', 'Oracle'];
+const TYPE_MODS = {
+    'Lord': { dps: 1.0, hp: 1.0, def: 1.0 },
+    'Anima': { dps: 1.0, hp: 1.25, def: 0.85 },
+    'Breaker': { dps: 1.25, hp: 0.9, def: 0.85 },
+    'Guardian': { dps: 0.85, hp: 1.0, def: 1.25 },
+    'Oracle': { dps: 0.95, hp: 0.95, def: 0.9, heal: 1.3 }
+};
+
+const MATERIAL_DEFS = {
+    fire_crystal: { name: 'Cristal de Feu', color: '#e74c3c', rarity: '3★ Component' },
+    fire_idol: { name: 'Idole de Feu', color: '#c0392b', rarity: '4★ Component' },
+    fire_totem: { name: 'Totem de Feu', color: '#962d22', rarity: '5★ Component' },
+    water_crystal: { name: 'Cristal d\'Eau', color: '#3498db', rarity: '3★ Component' },
+    water_idol: { name: 'Idole d\'Eau', color: '#2980b9', rarity: '4★ Component' },
+    water_totem: { name: 'Totem d\'Eau', color: '#1a5276', rarity: '5★ Component' },
+    earth_crystal: { name: 'Cristal de Terre', color: '#2ecc71', rarity: '3★ Component' },
+    earth_idol: { name: 'Idole de Terre', color: '#27ae60', rarity: '4★ Component' },
+    earth_totem: { name: 'Totem de Terre', color: '#1e8449', rarity: '5★ Component' },
+    thunder_crystal: { name: 'Cristal Foudre', color: '#f1c40f', rarity: '3★ Component' },
+    thunder_idol: { name: 'Idole Foudre', color: '#d4ac0d', rarity: '4★ Component' },
+    thunder_totem: { name: 'Totem Foudre', color: '#9a7d0a', rarity: '5★ Component' },
+    light_crystal: { name: 'Cristal Lumière', color: '#fcf3cf', rarity: '3★ Component' },
+    light_idol: { name: 'Idole Lumière', color: '#f9e79f', rarity: '4★ Component' },
+    light_totem: { name: 'Totem Lumière', color: '#f7dc6f', rarity: '5★ Component' },
+    dark_crystal: { name: 'Cristal Ténèbres', color: '#9b59b6', rarity: '3★ Component' },
+    dark_idol: { name: 'Idole Ténèbres', color: '#8e44ad', rarity: '4★ Component' },
+    dark_totem: { name: 'Totem Ténèbres', color: '#6c3483', rarity: '5★ Component' },
+    mimic: { name: 'Mimic', color: '#a0b0c0', rarity: 'Universal Component' }
+};
+
+let G = {
+    gold: 0, gems: 15, honorPoints: 0, prestigeCrystals: 0, tapDamageLevel: 0, zone: 1, monsterIndex: 0, isBoss: false,
+    monsterHp: 10, monsterMaxHp: 10, bossTimer: 30, heroes: {}, bbCooldowns: {},
+    playerSkillsCd: { strike: 0, wealth: 0, frenzy: 0 },
+    playerSkillsActive: { wealth: 0, frenzy: 0 },
+    totalClicks: 0, totalKills: 0, bossKills: 0, totalGold: 0, totalPrestiges: 0, maxZone: 1, maxCombo: 0, 
+    achievementsClaimed: [], lastSave: Date.now(),
+    
+    // Squad System
+    squad: ['ignis', null, null, null],
+    leaderId: 'ignis',
+    materials: {},
+    bbGauges: {},
+    partyHp: 100,
+    partyMaxHp: 100,
+    partyDef: 10,
+    deathTimer: 0,
+    monsterFrozen: 0,   // secondes de gel (Elimo BB)
+    monsterDebuff: 0    // secondes de malédiction (Kikuri BB)
+};
+
+function pulseCurrency(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('pulse');
+    void el.offsetWidth;
+    el.classList.add('pulse');
+    setTimeout(() => el.classList.remove('pulse'), 280);
+}
+
+function fmt(n) {
+    if (n < 1000) return Math.floor(n).toLocaleString('fr-FR');
+    const SUFFIXES = ['','K','M','B','T','Qa','Qi'];
+    const exp = Math.floor(Math.log10(Math.abs(n))/3);
+    const val = n / Math.pow(1000, exp);
+    return val.toFixed(val<10?2:val<100?1:0) + SUFFIXES[Math.min(exp, SUFFIXES.length-1)];
+}
+
+// =============================================================
+// BGM MANAGER & SOUND EFFECT GENERATOR
+// =============================================================
+class BGMManagerClass {
+    constructor() {
+        this.currentTrack = null;
+        this.tracks = {
+            home: new window.Audio('music/home.mp3'),
+            combat: new window.Audio('music/combat.mp3'),
+            boss: new window.Audio('music/boss.mp3'),
+            map: new window.Audio('music/map.mp3')
+        };
+        Object.keys(this.tracks).forEach(key => {
+            this.tracks[key].loop = true;
+            this.tracks[key].volume = 0.35;
+        });
+        this.muted = true;
+    }
+
+    setMute(muted) {
+        this.muted = muted;
+        Object.keys(this.tracks).forEach(key => {
+            this.tracks[key].muted = muted;
+        });
+        this.update();
+    }
+
+    play(trackName) {
+        if (this.muted) return;
+        if (this.currentTrack === trackName) return;
+
+        const prev = this.currentTrack;
+        this.currentTrack = trackName;
+
+        // Crossfade: fade out old track, fade in new one
+        if (prev && this.tracks[prev]) {
+            const old = this.tracks[prev];
+            const fadeOut = setInterval(() => {
+                if (old.volume > 0.03) { old.volume = Math.max(0, old.volume - 0.05); }
+                else { old.pause(); old.volume = 0.35; clearInterval(fadeOut); }
+            }, 50);
+        }
+
+        const track = this.tracks[trackName];
+        track.volume = 0;
+        track.muted = false;
+        track.currentTime = 0;
+        track.play().catch(() => {});
+        const fadeIn = setInterval(() => {
+            if (track.volume < 0.32) { track.volume = Math.min(0.35, track.volume + 0.05); }
+            else { track.volume = 0.35; clearInterval(fadeIn); }
+        }, 50);
+    }
+
+    update() {
+        if (this.muted) {
+            Object.keys(this.tracks).forEach(k => this.tracks[k].pause());
+            this.currentTrack = null;
+            return;
+        }
+
+        const activeTab = document.querySelector('.tab-btn.active')?.dataset?.tab;
+        const isModalOpen = document.getElementById('hero-modal').classList.contains('visible');
+
+        if (activeTab === 'achievements' || activeTab === 'prestige' || activeTab === 'settings') {
+            this.play('map');
+        } else if (activeTab === 'gacha' || isModalOpen) {
+            this.play('home');
+        } else if (G.isBoss) {
+            this.play('boss');
+        } else {
+            this.play('combat');
+        }
+    }
+}
+const BGM = new BGMManagerClass();
+
+// Custom Sound Synthesizer Engine (Renamed to Sound to avoid shadowing native Audio)
+class SoundEngineClass {
+    constructor() { this.ctx = null; this.enabled = false; this.sfxMuted = false; }
+
+    _boot() {
+        if (this.ctx) return;
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.master = this.ctx.createGain();
+            this.master.gain.value = 0.28;
+            // Light reverb via convolver
+            this.reverb = this.ctx.createConvolver();
+            const len = this.ctx.sampleRate * 0.4;
+            const buf = this.ctx.createBuffer(2, len, this.ctx.sampleRate);
+            for (let c = 0; c < 2; c++) {
+                const d = buf.getChannelData(c);
+                for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+            }
+            this.reverb.buffer = buf;
+            const reverbGain = this.ctx.createGain(); reverbGain.gain.value = 0.18;
+            this.reverb.connect(reverbGain); reverbGain.connect(this.master);
+            this.master.connect(this.ctx.destination);
+            this.enabled = true;
+        } catch(e) {}
+    }
+
+    init() { this._boot(); if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); BGM.update(); }
+
+    _osc(f, type, t, dur, vol, freqEnd) {
+        if (!this.enabled) return;
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type; o.frequency.setValueAtTime(f, t);
+        if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t + dur);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g); g.connect(this.master); o.connect(this.reverb);
+        o.start(t); o.stop(t + dur + 0.05);
+    }
+
+    _noise(t, dur, vol, freq) {
+        if (!this.enabled) return;
+        const bufSize = Math.floor(this.ctx.sampleRate * dur);
+        const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass'; filter.frequency.value = freq || 2000; filter.Q.value = 1.5;
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        src.connect(filter); filter.connect(g); g.connect(this.master);
+        src.start(t); src.stop(t + dur);
+    }
+
+    // Sharp sword strike — metallic "clang" with noise burst
+    playHit() {
+        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        this._noise(t, 0.06, 0.5, 1800);
+        this._osc(220, 'sawtooth', t, 0.07, 0.3, 80);
+        this._osc(110, 'square', t, 0.05, 0.2);
+    }
+
+    // Critical hit — loud crack + high metallic ring
+    playCrit() {
+        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        this._noise(t, 0.04, 0.8, 3500);
+        this._osc(800, 'square', t, 0.03, 0.35, 200);
+        this._osc(1600, 'sine', t + 0.02, 0.18, 0.25, 400);
+        this._osc(440, 'sawtooth', t, 0.12, 0.2, 100);
+    }
+
+    // Monster kill — triumphant rising chime
+    playKill() {
+        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        const notes = [523, 659, 784, 1047];
+        notes.forEach((f, i) => this._osc(f, 'sine', t + i * 0.06, 0.25, 0.3));
+        this._osc(523, 'triangle', t, 0.35, 0.15);
+        this._noise(t, 0.05, 0.3, 800);
+    }
+
+    // Level up — classic RPG fanfare, bright and ascending
+    playLevelUp() {
+        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        const melody = [523, 659, 784, 1047, 1319];
+        melody.forEach((f, i) => {
+            this._osc(f, 'triangle', t + i * 0.07, 0.22, 0.3);
+            this._osc(f * 2, 'sine', t + i * 0.07, 0.12, 0.12);
+        });
+    }
+
+    // Brave Burst — massive explosion, deep bass + high shimmer
+    playBB() {
+        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        // Deep bass hit
+        this._osc(80, 'sine', t, 0.6, 0.5, 40);
+        this._osc(60, 'square', t, 0.4, 0.4, 30);
+        // Power chord
+        [261, 329, 392, 523].forEach((f, i) => this._osc(f, 'sawtooth', t + 0.03, 0.4, 0.2));
+        // High shimmer
+        this._osc(2093, 'sine', t + 0.05, 0.3, 0.15, 800);
+        // Noise burst
+        this._noise(t, 0.12, 0.7, 1200);
+        this._noise(t + 0.1, 0.2, 0.4, 400);
+    }
+
+    // Summon — magical sparkle rising, mystical
+    playSummon() {
+        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        const sparkle = [440, 554, 659, 880, 1108, 1318, 1760];
+        sparkle.forEach((f, i) => {
+            this._osc(f, 'sine', t + i * 0.08, 0.6, 0.25);
+            this._osc(f * 1.5, 'triangle', t + i * 0.08 + 0.03, 0.2, 0.1);
+        });
+        this._noise(t + 0.2, 0.4, 0.2, 5000);
+    }
+
+    // Claim reward — coin jingle, bright and satisfying
+    playClaim() {
+        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        [880, 1108, 1318].forEach((f, i) => this._osc(f, 'sine', t + i * 0.05, 0.18, 0.28));
+        this._osc(1760, 'triangle', t + 0.15, 0.25, 0.2);
+        this._noise(t, 0.04, 0.3, 4000);
+    }
+
+    // Prestige — dramatic orchestral swell + impact
+    playPrestige() {
+        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        // Low rumble
+        this._osc(55, 'sine', t, 0.8, 0.4, 110);
+        this._osc(110, 'square', t + 0.1, 0.6, 0.3);
+        // Mid choir-like swell
+        [220, 277, 330, 440].forEach((f, i) => this._osc(f, 'triangle', t + 0.2 + i * 0.05, 0.7, 0.2));
+        // Final high shimmer
+        this._osc(1760, 'sine', t + 0.5, 0.6, 0.2, 2200);
+        this._noise(t + 0.15, 0.5, 0.5, 600);
+        this._noise(t, 0.1, 0.6, 2000);
+    }
+}
+const Sound = new SoundEngineClass();
+
+function toggleBGM() {
+    Sound.init();
+    BGM.setMute(!BGM.muted);
+}
+
+// =============================================================
+// PARAMÈTRES
+// =============================================================
+function openSettingsTab() {
+    Sound.init();
+    openDrawer('settings');
+    BGM.update();
+}
+
+function toggleSettingsBGM() {
+    Sound.init();
+    BGM.setMute(!BGM.muted);
+    const btn = document.getElementById('settings-bgm-toggle');
+    btn.textContent = BGM.muted ? 'OFF' : 'ON';
+    btn.className = 'toggle-btn ' + (BGM.muted ? 'off' : 'on');
+}
+
+function toggleSettingsSFX() {
+    Sound.sfxMuted = !Sound.sfxMuted;
+    const btn = document.getElementById('settings-sfx-toggle');
+    btn.textContent = Sound.sfxMuted ? 'OFF' : 'ON';
+    btn.className = 'toggle-btn ' + (Sound.sfxMuted ? 'off' : 'on');
+    if (!Sound.sfxMuted) Sound.playClaim(); // petit son de confirmation
+}
+
+function renderSettingsPanel() {
+    const bgmBtn = document.getElementById('settings-bgm-toggle');
+    if (bgmBtn) {
+        bgmBtn.textContent = BGM.muted ? 'OFF' : 'ON';
+        bgmBtn.className = 'toggle-btn ' + (BGM.muted ? 'off' : 'on');
+    }
+    const sfxBtn = document.getElementById('settings-sfx-toggle');
+    if (sfxBtn) {
+        sfxBtn.textContent = Sound.sfxMuted ? 'OFF' : 'ON';
+        sfxBtn.className = 'toggle-btn ' + (Sound.sfxMuted ? 'off' : 'on');
+    }
+}
+
+function confirmReset() {
+    if (confirm('⚠️ Supprimer définitivement toute ta progression ?\n\nCette action est irréversible.')) {
+        localStorage.removeItem('bf_clicker_v4');
+        showNotif('🗑️ Sauvegarde supprimée…');
+        setTimeout(() => location.reload(), 800);
+    }
+}
+
+function showNotif(msg) {
+    const el = document.getElementById('notif-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('visible');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('visible'), 2200);
+}
+
+// =============================================================
+// PARTICLES & FLYING CRYSTALS ENGINE
+// =============================================================
+const pCanvas = document.getElementById('particle-canvas'); const pCtx = pCanvas.getContext('2d'); let particles = [];
+function resizeP() {
+    pCanvas.width  = pCanvas.offsetWidth  || 540;
+    pCanvas.height = pCanvas.offsetHeight || 380;
+}
+resizeP();
+window.addEventListener('resize', resizeP);
+function spawnParticles(x,y,opts={}) { const c=opts.count||10, s=opts.speed||250, col=opts.colors||['#fff'], sz=opts.size||3, l=opts.life||0.5, g=opts.gravity!==undefined?opts.gravity:250; for(let i=0;i<c;i++){ const a=Math.random()*Math.PI*2, sp=(Math.random()*0.7+0.3)*s; particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-s*0.3,life:l,maxLife:l,size:sz*(0.6+Math.random()*0.8),color:col[Math.floor(Math.random()*col.length)],gravity:g}); } }
+
+function spawnCrystalParticle(x, y, type) {
+    const color = type === 'BC' ? '#00d2ff' : '#2ecc71';
+    let targetX = 270;
+    let targetY = 930;
+    
+    if (type === 'HC') {
+        const hpBar = document.getElementById('party-hp-bar-fill');
+        if (hpBar) {
+            const rect = hpBar.getBoundingClientRect();
+            targetX = rect.left + rect.width / 2;
+            targetY = rect.top - 10;
+        }
+    } else {
+        const squadBar = document.getElementById('footer-bb-slots');
+        if (squadBar && squadBar.children.length > 0) {
+            const index = Math.floor(Math.random() * squadBar.children.length);
+            const rect = squadBar.children[index].getBoundingClientRect();
+            targetX = rect.left + rect.width / 2;
+            targetY = rect.top + rect.height / 2;
+        }
+    }
+    
+    particles.push({
+        x: x,
+        y: y,
+        vx: (Math.random() - 0.5) * 200,
+        vy: -150 - Math.random() * 100,
+        life: 1.5,
+        maxLife: 1.5,
+        size: 5,
+        color: color,
+        isCrystal: true,
+        crystalType: type,
+        targetX: targetX,
+        targetY: targetY
+    });
+}
+
+let lpt = performance.now();
+function updateP(now) {
+    const dt = Math.min(0.05, (now - lpt) / 1000);
+    lpt = now;
+    pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+    particles = particles.filter(p => {
+        p.life -= dt;
+        if (p.life <= 0) return false;
+        
+        if (p.isCrystal) {
+            const dx = p.targetX - p.x;
+            const dy = p.targetY - p.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist < 20 || p.life < 0.1) {
+                if (p.crystalType === 'BC') addBC(1);
+                else healParty(Math.ceil(G.partyMaxHp * 0.02));
+                return false;
+            }
+            
+            p.vx += (dx / dist) * 700 * dt;
+            p.vy += (dy / dist) * 700 * dt;
+            const speed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+            if (speed > 450) {
+                p.vx = (p.vx / speed) * 450;
+                p.vy = (p.vy / speed) * 450;
+            }
+        } else {
+            p.vy += p.gravity * dt;
+        }
+        
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        
+        const a = p.life / p.maxLife;
+        pCtx.globalAlpha = a;
+        pCtx.fillStyle = p.color;
+        pCtx.beginPath();
+        if (p.isCrystal) {
+            pCtx.moveTo(p.x, p.y - p.size);
+            pCtx.lineTo(p.x + p.size, p.y);
+            pCtx.lineTo(p.x, p.y + p.size);
+            pCtx.lineTo(p.x - p.size, p.y);
+        } else {
+            pCtx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2);
+        }
+        pCtx.fill();
+        return true;
+    });
+    pCtx.globalAlpha = 1;
+    requestAnimationFrame(updateP);
+}
+requestAnimationFrame(updateP);
+
+// =============================================================
+// INITIALIZATIONS, SAVING & UTILITIES
+// =============================================================
+function getHeroImage(id, stars) {
+    if (id === 'ignis') {
+        return `assets/heroes/ignis_${stars}.png`;
+    }
+    if (stars === 6) {
+        return `assets/heroes/${id}_6.png`;
+    }
+    return `assets/heroes/${id}.png`;
+}
+
+function initHero(forcedType = null) {
+    const t = forcedType || HERO_TYPES[Math.floor(Math.random() * HERO_TYPES.length)];
+    return { level: 1, stars: 3, duplicates: 0, type: t };
+}
+
+function loadGame() {
+    try { const d = localStorage.getItem('bf_clicker_v4'); if (d) { 
+        const parsed = JSON.parse(d);
+        G = { ...G, ...parsed }; 
+        if(!G.playerSkillsCd) G.playerSkillsCd = { strike: 0, wealth: 0, frenzy: 0 };
+        if(!G.playerSkillsActive) G.playerSkillsActive = { wealth: 0, frenzy: 0 };
+        if(!G.achievementsClaimed) G.achievementsClaimed = [];
+        if(!G.squad) G.squad = ['ignis', null, null, null];
+        if(!G.materials) G.materials = {};
+        if(!G.bbGauges) G.bbGauges = {};
+        if(!G.monsterFrozen) G.monsterFrozen = 0;
+        if(!G.monsterDebuff) G.monsterDebuff = 0;
+        if(G.honorPoints === undefined) G.honorPoints = 0;
+        return true; 
+    } } catch(e){}
+    return false;
+}
+function saveGame() {
+    G.lastSave = Date.now();
+    try { localStorage.setItem('bf_clicker_v4', JSON.stringify(G)); } catch(e){}
+}
+
+// =============================================================
+// STATS & ECONOMY BALANCING
+// =============================================================
+// Axe 2 : courbe XP plus raide selon le palier d'étoiles
+function getHeroLevelCost(def, hData) {
+    const rates = [0, 0, 0, 1.06, 1.09, 1.13, 1.18];
+    const rate = rates[hData.stars] || 1.06;
+    return Math.floor(def.baseCost * Math.pow(rate, hData.level));
+}
+
+// Calcule le coût total pour N niveaux à partir du niveau actuel (sans limite d'or)
+function calcBulkCost(def, h, levels) {
+    let total = 0;
+    for (let i = 0; i < levels; i++) total += getHeroLevelCost(def, { level: h.level + i });
+    return total;
+}
+
+// Calcule combien de niveaux on peut acheter avec l'or disponible (plafonné à maxLvl)
+function calcAffordableLevels(def, h, maxLevels) {
+    const cap = EVO_LEVEL_CAPS[h.stars];
+    const limit = Math.min(maxLevels, cap - h.level);
+    let total = 0, count = 0;
+    for (let i = 0; i < limit; i++) {
+        const cost = getHeroLevelCost(def, { level: h.level + i });
+        if (G.gold < total + cost) break;
+        total += cost; count++;
+    }
+    return { count, cost: total };
+}
+
+function getHeroDPS(def, hData) {
+    const tMod = TYPE_MODS[hData.type || 'Lord'];
+    let dps = def.baseDPS * hData.level * Math.pow(2, hData.stars - 3) * tMod.dps;
+    // Paliers progressifs — récompensent massivement l'investissement long terme
+    MILESTONES.forEach(m => {
+        if(hData.level >= m) {
+            if(m===10)  dps *= 3;
+            if(m===25)  dps *= 4;
+            if(m===50)  dps *= 8;
+            if(m===100) dps *= 20;
+        }
+    });
+    dps = dps * (1 + hData.duplicates * 0.10);
+    
+    const currentZoneElem = ZONE_THEMES[(G.zone-1)%ZONE_THEMES.length].elem;
+    if (ELEMENT_ADVANTAGE[def.elem] === currentZoneElem) dps *= 1.5;
+    
+    if (G.leaderId && G.heroes[G.leaderId]) {
+        const lDef = HERO_DEFS.find(d => d.id === G.leaderId);
+        if (!lDef) return Math.floor(dps);
+        // ── FEU ──
+        if (lDef.id === 'ignis'  && def.elem === 'Feu')     dps *= 1.50;
+        if (lDef.id === 'vargas')                            dps *= 1.20;
+        // ── EAU ──
+        if (lDef.id === 'selena')                            dps *= 1.10; // + gold bonus géré ailleurs
+        if (lDef.id === 'elimo'  && def.elem === 'Eau')      dps *= 1.35;
+        // ── TERRE ──
+        if (lDef.id === 'lance') { /* bonus DEF, léger DPS */ dps *= 1.05; }
+        if (lDef.id === 'zeln'   && def.elem === 'Terre')    dps *= 1.30;
+        // ── FOUDRE ──
+        if (lDef.id === 'karl'   && (def.elem === 'Foudre' || def.elem === 'Ténèbres')) dps *= 1.40;
+        if (lDef.id === 'eze')                               dps *= 1.10;
+        // ── LUMIÈRE ──
+        if (lDef.id === 'sera')                              dps *= 1.30;
+        if (lDef.id === 'atro'   && def.elem === 'Lumière')  dps *= 1.40;
+        else if (lDef.id === 'atro')                         dps *= 1.15;
+        // ── TÉNÈBRES ──
+        if (lDef.id === 'magress'&& def.elem === 'Ténèbres') dps *= 1.50;
+        if (lDef.id === 'kikuri')                            dps *= 1.10;
+    }
+    return Math.floor(dps);
+}
+
+function getTotalDPS() {
+    if (G.deathTimer > 0) return 0;
+    let total = 0;
+    G.squad.forEach(id => {
+        if (id && G.heroes[id]) {
+            const h = G.heroes[id]; const def = HERO_DEFS.find(d=>d.id===id);
+            total += getHeroDPS(def, h);
+        }
+    });
+    return Math.floor(total * (1 + G.prestigeCrystals * 0.01));
+}
+
+function getTapDamage() {
+    let tap = 1 + G.tapDamageLevel;
+    MILESTONES.forEach(m => {
+        if(G.tapDamageLevel >= m) {
+            if(m===10)  tap *= 3;
+            if(m===25)  tap *= 4;
+            if(m===50)  tap *= 8;
+            if(m===100) tap *= 20;
+        }
+    });
+    if (G.leaderId === 'eze') tap = Math.floor(tap * 1.20);
+    return Math.floor(tap * (1 + G.prestigeCrystals * 0.01));
+}
+
+function getMonsterMaxHp() {
+    const base = 10 * Math.pow(1.14, G.zone - 1);
+    return Math.ceil(G.isBoss ? base * 8 : base);
+}
+
+function getMonsterAttack() {
+    if (G.isBoss && G.zone >= 10) {
+        // Target exactly 35% net damage after flat DEF mitigation
+        // With zone scaling of 18% per zone starting from zone 10
+        const targetDmg = (G.partyMaxHp * 0.35) * Math.pow(1.18, G.zone - 10);
+        const baseAtk = targetDmg + (G.partyDef * 0.08);
+        return Math.ceil(baseAtk);
+    } else {
+        const base = 1.5 * Math.pow(1.10, G.zone - 1);
+        return Math.ceil(G.isBoss ? base * 4.5 : base);
+    }
+}
+
+function updatePartyStats() {
+    let maxHp = 100;
+    let totalDef = 1;
+    
+    G.squad.forEach(id => {
+        if (id && G.heroes[id]) {
+            const h = G.heroes[id];
+            const def = HERO_DEFS.find(d => d.id === id);
+            const tMod = TYPE_MODS[h.type || 'Lord'];
+            
+            let hHp = def.baseDPS * 18 * h.level * h.stars * tMod.hp;
+            let hDef = def.baseDPS * 1.5 * h.level * h.stars * tMod.def;
+            
+            maxHp += Math.floor(hHp);
+            totalDef += Math.floor(hDef);
+        }
+    });
+    
+    if (G.leaderId && G.heroes[G.leaderId]) {
+        const lId = G.leaderId;
+        if (lId === 'selena') maxHp = Math.floor(maxHp * 1.30);
+        if (lId === 'lance') { maxHp = Math.floor(maxHp * 1.20); totalDef = Math.floor(totalDef * 1.40); }
+    }
+    
+    G.partyMaxHp = maxHp;
+    G.partyDef = totalDef;
+    G.partyHp = Math.min(G.partyHp, G.partyMaxHp);
+    updatePartyHpBar();
+}
+
+function updatePartyHpBar() {
+    const bar = document.getElementById('party-hp-bar-fill');
+    if (bar) {
+        bar.style.width = Math.max(0, G.partyHp / G.partyMaxHp * 100) + '%';
+        document.getElementById('party-hp-text').textContent = `${fmt(Math.max(0, G.partyHp))} / ${fmt(G.partyMaxHp)} (DEF: ${fmt(G.partyDef)})`;
+    }
+    
+    // Danger vignette
+    const vignette = document.getElementById('danger-vignette');
+    if (vignette) {
+        const pct = G.partyHp / G.partyMaxHp;
+        if (pct <= 0.35 && G.partyHp > 0 && (!G.deathTimer || G.deathTimer <= 0)) {
+            vignette.classList.add('active');
+        } else {
+            vignette.classList.remove('active');
+        }
+    }
+}
+
+// =============================================================
+// BATTLE & TIMERS ENGINE
+// =============================================================
+function spawnMonster() {
+    if (G.monsterIndex >= 10) { G.isBoss = true; G.monsterIndex = 10; G.bossTimer = 30; }
+    G.monsterMaxHp = getMonsterMaxHp(); G.monsterHp = G.monsterMaxHp;
+    G.monsterFrozen = 0; G.monsterDebuff = 0; // réinitialise les statuts
+    
+    G.monsterSpawnTime = Date.now();
+    G.monsterFirstAttackDone = false;
+    G.bossUltimateTriggered = false;
+    
+    updateMonsterUI();
+    BGM.update();
+}
+
+function killMonster() {
+    let gold = Math.ceil(5 * Math.pow(1.11, G.zone - 1) * (G.isBoss ? 8 : 1));
+    if (G.playerSkillsActive.wealth > 0) gold *= 2;
+    if (G.leaderId === 'selena') gold = Math.floor(gold * 1.25);
+    
+    G.gold += gold; G.totalGold += gold; G.totalKills++; Sound.playKill();
+    pulseCurrency('gold-display');
+    
+    // Axe 1 : Points d'Honneur — déterministes (no RNG)
+    if (G.isBoss) {
+        G.honorPoints += 10;  // +10 PH par boss
+        G.bossKills++; G.gems += 1; screenFlash('#f1c40f');
+        pulseCurrency('gems-display'); pulseCurrency('honor-display');
+        G.isBoss = false; G.monsterIndex = 0; G.zone++; 
+        if(G.zone>G.maxZone) G.maxZone=G.zone; 
+    } else {
+        G.honorPoints += 1;   // +1 PH par monstre commun
+        pulseCurrency('honor-display');
+        G.monsterIndex++;
+    }
+    
+    spawnMonster();
+    renderAchievements();
+    const me = document.getElementById('monster-emoji'); me.style.transform = 'scale(0)';
+    setTimeout(()=>me.style.transform = 'scale(1)', 50);
+}
+
+function healParty(amount) {
+    if (G.deathTimer > 0) return;
+    G.partyHp = Math.min(G.partyMaxHp, G.partyHp + amount);
+    updatePartyHpBar();
+}
+
+function addBC(count) {
+    const active = G.squad.filter(id => id !== null && G.heroes[id]);
+    if (active.length === 0) return;
+    
+    const targetId = active[Math.floor(Math.random() * active.length)];
+    if (!G.bbGauges[targetId]) G.bbGauges[targetId] = 0;
+    G.bbGauges[targetId] = Math.min(100, G.bbGauges[targetId] + count);
+    
+    renderFooterBB();
+    if(document.querySelector('.tab-btn[data-tab="skills"]').classList.contains('active')) renderSkills();
+}
+
+let comboCount = 0, comboTimer = null, lastClick = 0;
+document.getElementById('monster-zone').addEventListener('click', (e) => {
+    Sound.init();
+    if (G.deathTimer > 0 || G.monsterHp <= 0) return;
+    G.totalClicks++;
+    
+    const baseDmg = getTapDamage(); const isCrit = Math.random() < 0.10;
+    const now = Date.now(); if(now-lastClick<400) comboCount=Math.min(comboCount+1, 40); else comboCount=1; lastClick=now;
+    if(comboCount>G.maxCombo) G.maxCombo=comboCount;
+    clearTimeout(comboTimer); comboTimer = setTimeout(()=>{comboCount=0; document.getElementById('combo-display').textContent='';}, 600);
+    if(comboCount>=2) document.getElementById('combo-display').textContent=`COMBO ×${(1+comboCount*0.1).toFixed(1)}`;
+    
+    let critMult = isCrit ? 3 : 1;
+    if (isCrit && G.leaderId === 'eze') critMult = 4.5;
+    
+    const dmg = Math.floor(baseDmg * (1+comboCount*0.1) * critMult);
+    G.monsterHp -= dmg;
+    
+    const spawnBC = Math.random() < 0.45;
+    const spawnHC = Math.random() < 0.25;
+    
+    const r=e.target.getBoundingClientRect();
+    const clickX = e.clientX-r.left;
+    const clickY = e.clientY-r.top;
+    
+    if (spawnBC) spawnCrystalParticle(clickX, clickY, 'BC');
+    if (spawnHC) spawnCrystalParticle(clickX, clickY, 'HC');
+    
+    spawnParticles(clickX, clickY, {count:isCrit?12:4, speed:isCrit?250:150, colors:isCrit?['#f1c40f','#fff']:['#ff8844','#fff']});
+    if(isCrit) Sound.playCrit(); else Sound.playHit();
+
+    // Chiffres de dégâts volants
+    const dmgEl = document.createElement('div');
+    dmgEl.className = 'dmg-text';
+    dmgEl.textContent = isCrit ? '⚡ ' + fmt(dmg) : fmt(dmg);
+    dmgEl.style.left   = Math.max(10, Math.min(clickX - 25, 480)) + 'px';
+    dmgEl.style.top    = Math.max(20, clickY - 10) + 'px';
+    dmgEl.style.fontSize   = isCrit ? '22px' : '15px';
+    dmgEl.style.color      = isCrit ? '#f1c40f' : '#fff';
+    dmgEl.style.textShadow = isCrit
+        ? '0 0 12px rgba(241,196,15,0.9), 0 2px 4px rgba(0,0,0,0.9)'
+        : '0 2px 4px rgba(0,0,0,0.8)';
+    document.getElementById('monster-zone').appendChild(dmgEl);
+    setTimeout(() => dmgEl.remove(), 920);
+
+    // Secousse visuelle du monstre
+    const mElem = document.getElementById('monster-emoji');
+    mElem.classList.remove('monster-shake');
+    void mElem.offsetWidth; // force reflow pour relancer l'animation
+    mElem.classList.add('monster-shake');
+    setTimeout(() => mElem.classList.remove('monster-shake'), 220);
+
+    if(G.monsterHp <= 0) killMonster(); else updateHpBar();
+});
+
+let lastMonsterAttack = 0;
+
+function triggerScreenShake() {
+    const gw = document.getElementById('game-window');
+    if (!gw) return;
+    gw.classList.remove('game-window-shake');
+    void gw.offsetWidth; // Force reflow
+    gw.classList.add('game-window-shake');
+    setTimeout(() => gw.classList.remove('game-window-shake'), 150);
+}
+
+function spawnBloodyDamageNumber(dmg, isUltimate = false) {
+    const footer = document.getElementById('footer');
+    if (!footer) return;
+    
+    const dmgEl = document.createElement('div');
+    dmgEl.className = 'bloody-dmg-text';
+    dmgEl.textContent = '-' + fmt(dmg);
+    
+    const rect = footer.getBoundingClientRect();
+    const container = document.getElementById('game-window') || document.body;
+    const containerRect = container.getBoundingClientRect();
+    
+    const x = (rect.left + rect.width / 2) - containerRect.left;
+    const y = (rect.top + 20) - containerRect.top;
+    
+    dmgEl.style.left = `${x + (Math.random() * 40 - 20)}px`;
+    dmgEl.style.top = `${y}px`;
+    if (isUltimate) {
+        dmgEl.style.fontSize = '32px';
+        dmgEl.style.color = '#9b59b6'; // Purple for Boss Ultimate
+        dmgEl.style.textShadow = '0 0 15px #9b59b6, 0 3px 6px #000';
+    } else {
+        dmgEl.style.fontSize = '24px';
+        dmgEl.style.color = '#ff3333'; // Bloody red
+        dmgEl.style.textShadow = '0 0 10px #ff3333, 0 2px 4px #000';
+    }
+    
+    container.appendChild(dmgEl);
+    setTimeout(() => dmgEl.remove(), 1200);
+}
+
+function handleSquadDeath() {
+    G.deathTimer = 3.0;
+    G.isBoss = false;
+    G.monsterIndex = 0;
+    if (G.zone > 1) G.zone--;
+    screenFlash('rgba(231,76,60,0.7)');
+    saveGame();
+}
+
+function triggerBossUltimate() {
+    let ultDmg = Math.floor(G.partyMaxHp * 0.90);
+    if (G.lanceShieldActive) {
+        ultDmg = Math.floor(ultDmg / 2);
+        showNotif("🛡️ Bouclier de Lance activé ! Dégâts de l'Ultime divisés par 2 !");
+    } else {
+        showNotif("🚨 ATTAQUE ULTIME ! Sans bouclier, vous subissez de lourds dégâts !");
+    }
+    
+    G.partyHp = Math.max(0, G.partyHp - ultDmg);
+    updatePartyHpBar();
+    
+    spawnBloodyDamageNumber(ultDmg, true);
+    triggerScreenShake();
+    screenFlash('rgba(255, 0, 0, 0.65)');
+    Sound.playHit();
+    
+    if (G.partyHp <= 0) {
+        handleSquadDeath();
+    }
+}
+
+setInterval(() => {
+    if (G.deathTimer > 0) {
+        G.deathTimer -= 0.1;
+        document.getElementById('monster-name').innerHTML = `<span style="color:#e74c3c">SQUAD K.O. - REPLI (${Math.ceil(G.deathTimer)}s)</span>`;
+        if (G.deathTimer <= 0) {
+            G.partyHp = G.partyMaxHp;
+            updatePartyHpBar();
+            spawnMonster();
+        }
+        updateDisplays();
+        return;
+    }
+
+    let dps = getTotalDPS();
+    if (G.playerSkillsActive.frenzy > 0) dps *= 3;
+    
+    if(dps>0 && G.monsterHp>0) {
+        G.monsterHp -= dps/10;
+        
+        if (Math.random() < 0.05) spawnCrystalParticle(150 + Math.random()*240, 100 + Math.random()*100, 'BC');
+        if (Math.random() < 0.02) spawnCrystalParticle(150 + Math.random()*240, 100 + Math.random()*100, 'HC');
+        
+        if(G.monsterHp<=0) killMonster(); else updateHpBar();
+    }
+    
+    if(G.isBoss) {
+        G.bossTimer -= 0.1; document.getElementById('boss-timer').textContent=`⏱ ${Math.max(0,G.bossTimer).toFixed(1)}s`;
+        if (30 - G.bossTimer >= 8 && !G.bossUltimateTriggered) {
+            G.bossUltimateTriggered = true;
+            triggerBossUltimate();
+        }
+        if(G.bossTimer<=0) { G.isBoss=false; G.monsterIndex=0; spawnMonster(); }
+    }
+    
+    const now = Date.now();
+    let shouldAttack = false;
+    const spawnElapsed = now - G.monsterSpawnTime;
+    
+    if (!G.monsterFirstAttackDone) {
+        if (spawnElapsed >= 1000) {
+            shouldAttack = true;
+            G.monsterFirstAttackDone = true;
+            lastMonsterAttack = now;
+        }
+    } else {
+        const attackInterval = G.isBoss ? 1500 : 2500;
+        if (now - lastMonsterAttack >= attackInterval) {
+            shouldAttack = true;
+            lastMonsterAttack = now;
+        }
+    }
+
+    if (shouldAttack && G.monsterHp > 0 && G.deathTimer <= 0) {
+        const baseAtk  = getMonsterAttack();
+        const atkMod   = G.monsterFrozen > 0 ? 0.5 : G.monsterDebuff > 0 ? 0.6 : 1.0;
+        const finalDmg = Math.max(1, Math.ceil(baseAtk * atkMod - G.partyDef * 0.08));
+        
+        G.partyHp = Math.max(0, G.partyHp - finalDmg);
+        updatePartyHpBar();
+        screenFlash('rgba(231,76,60,0.25)');
+        triggerScreenShake();
+        spawnBloodyDamageNumber(finalDmg, false);
+        Sound.playHit();
+        
+        if (G.partyHp <= 0) {
+            handleSquadDeath();
+        }
+    }
+    
+    Object.keys(G.bbCooldowns).forEach(k => { if(G.bbCooldowns[k]>0) G.bbCooldowns[k]-=0.1; });
+    Object.keys(G.playerSkillsCd).forEach(k => { if(G.playerSkillsCd[k]>0) G.playerSkillsCd[k]-=0.1; });
+    // Décompte des statuts de monstre
+    if(G.monsterFrozen > 0) { G.monsterFrozen = Math.max(0, G.monsterFrozen - 0.1); _applyMonsterFilter(document.getElementById('monster-emoji'), ZONE_THEMES[(G.zone-1)%ZONE_THEMES.length].bgHue); }
+    if(G.monsterDebuff > 0) { G.monsterDebuff = Math.max(0, G.monsterDebuff - 0.1); _applyMonsterFilter(document.getElementById('monster-emoji'), ZONE_THEMES[(G.zone-1)%ZONE_THEMES.length].bgHue); }
+    
+    let activeOverlay = false;
+    Object.keys(G.playerSkillsActive).forEach(k => { 
+        if(G.playerSkillsActive[k]>0) {
+            G.playerSkillsActive[k]-=0.1; 
+            if(k==='frenzy') activeOverlay = true;
+        } 
+    });
+    document.getElementById('skill-active-overlay').style.display = activeOverlay ? 'block' : 'none';
+
+    updateDisplays();
+}, 100);
+
+// =============================================================
+// UI DISPLAYS & GRIDS
+// =============================================================
+function updateHpBar() {
+    document.getElementById('hp-bar-fill').style.width = Math.max(0,G.monsterHp/G.monsterMaxHp*100)+'%';
+    document.getElementById('hp-text').textContent=`${fmt(Math.max(0,G.monsterHp))} / ${fmt(G.monsterMaxHp)}`;
+}
+
+function updateMonsterUI() {
+    const theme  = ZONE_THEMES[(G.zone-1) % ZONE_THEMES.length];
+    const tier   = Math.floor((G.zone-1) / ZONE_THEMES.length);
+    const prefix = TIER_PREFIXES[Math.min(tier, TIER_PREFIXES.length-1)];
+
+    document.getElementById('zone-name').textContent = `Zone ${G.zone} — ${theme.name}`;
+    document.getElementById('zone-progress').textContent = G.isBoss ? '👑 BOSS' : `Monstre ${G.monsterIndex+1} / 10`;
+
+    const badge = document.getElementById('zone-elem-badge');
+    badge.innerHTML = `${ELEM_ICONS[theme.elem] || ''} ${theme.elem}`;
+    badge.style.background = ELEM_COLORS[theme.elem];
+
+    const me = document.getElementById('monster-emoji');
+    const biomeIdx = (G.zone - 1) % ZONE_THEMES.length;
+    applyBiomeBg(biomeIdx); // fond de zone dynamique
+    const mType    = G.monsterIndex < 4 ? 0 : G.monsterIndex < 7 ? 1 : 2;
+    const imgIdx   = G.isBoss ? 3 : mType;
+
+    // Cherche l'image spécifique du biome, sinon fallback sur les sprites Feu
+    const biomeImgs = MONSTER_IMAGES[biomeIdx];
+    const imgPath   = biomeImgs ? biomeImgs[imgIdx] : MONSTER_IMAGES[0][imgIdx];
+    me.src = imgPath;
+
+    // Applique hue-rotate seulement pour les biomes sans sprites propres
+    _applyMonsterFilter(me, biomeImgs ? 0 : theme.bgHue);
+
+    if (G.isBoss) {
+        me.style.height = 'clamp(130px, 20svh, 200px)';
+        document.getElementById('monster-name').textContent = prefix + theme.bossName;
+    } else {
+        me.style.height = 'clamp(100px, 15svh, 160px)';
+        document.getElementById('monster-name').textContent = prefix + theme.monsters[mType];
+    }
+
+    document.getElementById('boss-label').style.display = G.isBoss ? 'inline-block' : 'none';
+    document.getElementById('boss-timer').style.display = G.isBoss ? 'block' : 'none';
+    updateHpBar();
+}
+
+function _applyMonsterFilter(el, hue) {
+    const freeze = G.monsterFrozen > 0;
+    const debuff = G.monsterDebuff > 0;
+    const h = hue > 0 ? `hue-rotate(${hue}deg) ` : ''; // pas de teinte si sprite propre
+    if (freeze) {
+        el.style.filter = `${h}brightness(1.4) saturate(0.4) drop-shadow(0 0 18px rgba(100,200,255,0.95))`;
+    } else if (debuff) {
+        el.style.filter = `${h}drop-shadow(0 0 14px rgba(160,0,255,0.85)) drop-shadow(0 8px 20px rgba(0,0,0,.6))`;
+    } else {
+        el.style.filter = `${h}drop-shadow(0 8px 20px rgba(0,0,0,0.6))`;
+    }
+}
+
+function screenFlash(col) { const f=document.getElementById('screen-flash'); f.style.background=col; f.style.opacity='1'; setTimeout(()=>f.style.opacity='0', 120); }
+
+function updateDisplays() {
+    document.getElementById('gold-display').innerHTML = `<i class="ra ra-gold-bar"></i> ${fmt(G.gold)}`;
+    document.getElementById('gems-display').innerHTML = `<i class="ra ra-gem"></i> ${G.gems}`;
+    document.getElementById('honor-display').innerHTML = `⚔️ ${fmt(G.honorPoints)} PH`;
+    
+    let dps = getTotalDPS();
+    let dpsStr = fmt(dps);
+    if(G.playerSkillsActive.frenzy > 0) dpsStr = `<span style="color:#f1c40f">${fmt(dps*3)} (Frénésie)</span>`;
+    document.getElementById('dps-display').innerHTML = `⚔ DPS : ${dpsStr}/s`;
+    document.getElementById('tap-dmg-val').textContent = fmt(getTapDamage());
+    
+    document.getElementById('tap-desc').textContent = `Niv. ${G.tapDamageLevel} — Dégâts : ${fmt(getTapDamage())}`;
+    const nextMs = MILESTONES.find(m => m > G.tapDamageLevel);
+    document.getElementById('tap-next-ms').textContent = nextMs ? `Prochain cap : ${MILESTONE_LABELS[nextMs]} (Niv.${nextMs})` : '';
+
+    const tapCost = Math.floor(10 * Math.pow(1.05, G.tapDamageLevel));
+    const btn = document.getElementById('tap-btn'); btn.textContent = `⬆ ${fmt(tapCost)}`;
+    btn.disabled = G.gold < tapCost;
+
+    renderFooterBB();
+    renderMaterialsPanel();
+    if(document.querySelector('.tab-btn[data-tab="skills"]').classList.contains('active')) renderSkills();
+}
+
+function renderSquadGrid() {
+    const container = document.getElementById('squad-grid');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < 4; i++) {
+        const id = G.squad[i];
+        const h = G.heroes[id];
+        const def = id ? HERO_DEFS.find(d => d.id === id) : null;
+        
+        const card = document.createElement('div');
+        const gauge = id ? (G.bbGauges[id] || 0) : 0;
+        card.className = `squad-slot-card ${id ? 'filled' : ''} ${i === 0 ? 'leader-slot' : ''} ${gauge >= 100 ? 'bb-ready' : ''}`;
+        
+        if (id && h && def) {
+            const gauge = G.bbGauges[id] || 0;
+            card.innerHTML = `
+                <img src="${getHeroImage(id, h.stars)}" alt="">
+                <div class="squad-stars">${'★'.repeat(h.stars)}</div>
+                <div class="bb-gauge-fill" style="width:${gauge}%"></div>
+                <div class="squad-badge" style="background:${i === 0 ? 'linear-gradient(90deg, #f1c40f, #e67e22)' : 'rgba(0,0,0,0.75)'}">
+                    ${i === 0 ? '👑 LEADER' : def.elem}
+                </div>
+            `;
+            card.onclick = () => openHeroModal(id);
+        } else {
+            card.innerHTML = `<div class="squad-slot-empty-icon">🛡️</div><div class="squad-slot-empty-lbl">LIBRE</div>`;
+            card.onclick = () => {
+                document.querySelectorAll('.tab-btn, .tab-panel').forEach(el => el.classList.remove('active'));
+                const listBtn = document.querySelector('.tab-btn[data-tab="heroes"]');
+                listBtn.classList.add('active');
+                document.getElementById('panel-heroes').classList.add('active');
+            };
+        }
+        
+        container.appendChild(card);
+    }
+    
+    const badge = document.getElementById('squad-ls-badge');
+    const leaderId = G.squad[0];
+    if (leaderId && G.heroes[leaderId]) {
+        const lDef = HERO_DEFS.find(d => d.id === leaderId);
+        badge.textContent = `LS Leader: ${getLeaderSkillName(lDef.id)}`;
+    } else {
+        badge.textContent = 'Leader Skill: Aucun';
+    }
+}
+
+function getLeaderSkillName(id) {
+    const ls = {
+        ignis:   "Colère d'Agni (+50% DPS Feu)",
+        vargas:  "Moral de Combat (+20% DPS team)",
+        selena:  "Prêtresse d'Eau (+30% HP, +25% Gold)",
+        elimo:   "Maîtrise du Givre (+35% DPS Eau)",
+        lance:   "Rempart de Gaïa (+40% DEF, +20% HP)",
+        zeln:    "Instinct du Chasseur (+30% DPS Terre)",
+        karl:    "Force Draconique (+40% DPS Foudre/Ténèbres)",
+        eze:     "Foudre Alpha (+50% Crit mult, +20% Clic)",
+        sera:    "Créateur Suprême (+30% DPS team)",
+        atro:    "Lumière Sacrée (+40% DPS Lumière, +15% all)",
+        magress: "Tyrannie des Ombres (+50% DPS Ténèbres)",
+        kikuri:  "Malédiction Éternelle (+10% DPS team)",
+    };
+    return ls[id] || 'Aucun';
+}
+
+function renderHeroesGrid() {
+    const grid = document.getElementById('heroes-grid');
+    grid.innerHTML = '';
+    const currentZoneElem = ZONE_THEMES[(G.zone-1)%ZONE_THEMES.length].elem;
+
+    HERO_DEFS.forEach(def => {
+        const h = G.heroes[def.id];
+        const locked = !h;
+        const hasAdvantage = !locked && ELEMENT_ADVANTAGE[def.elem] === currentZoneElem;
+        const inSquad = G.squad.includes(def.id);
+        const isLeader = G.squad[0] === def.id;
+
+        const div = document.createElement('div');
+        div.className = `hero-mini-card ${locked ? 'locked' : `evo-${h.stars}`}`;
+
+        if (!locked) {
+            const expPct = (h.level / EVO_LEVEL_CAPS[h.stars]) * 100;
+            div.innerHTML = `
+                <img src="${getHeroImage(def.id, h.stars)}" alt="">
+                <div class="hero-mini-elem">${def.icon}</div>
+                ${inSquad ? `<div class="hero-mini-squad-badge">${isLeader ? '👑' : '⚔'}</div>` : ''}
+                ${hasAdvantage ? `<div class="hero-mini-adv">🔺</div>` : ''}
+                <div class="hero-mini-info">
+                    <span class="hero-mini-stars">${'★'.repeat(h.stars)}</span>
+                    <span class="hero-mini-name">${def.titles[h.stars - 3]}</span>
+                    <span class="hero-mini-level">Lv.${h.level} / ${EVO_LEVEL_CAPS[h.stars]}</span>
+                </div>
+                <div class="hero-mini-exp-bar">
+                    <div class="hero-mini-exp-fill" style="width:${expPct}%"></div>
+                </div>
+            `;
+            div.onclick = () => openHeroModal(def.id);
+        } else {
+            div.innerHTML = `
+                <img src="${getHeroImage(def.id, 3)}" alt="">
+                <div class="hero-mini-info">
+                    <span class="hero-mini-name" style="color:#4a5a7a; font-family:'Montserrat',sans-serif;">???</span>
+                </div>
+            `;
+        }
+
+        grid.appendChild(div);
+    });
+
+    renderSquadGrid();
+    updatePartyStats();
+}
+
+function upgradeTap() {
+    const cost = Math.floor(10 * Math.pow(1.05, G.tapDamageLevel));
+    if(G.gold >= cost) { G.gold -= cost; G.tapDamageLevel++; Sound.playLevelUp(); updateDisplays(); }
+}
+
+let currentHeroModal = null;
+function openHeroModal(id) {
+    currentHeroModal = id;
+    const def = HERO_DEFS.find(d=>d.id===id);
+    const h = G.heroes[id];
+    const maxLvl = EVO_LEVEL_CAPS[h.stars];
+    // Axe 3 : zone gating — la zone nécessaire pour débloquer l'évolution vers (h.stars+1)★
+    const evoTargetStars = h.stars + 1;
+    const evoZoneGate = (evoTargetStars <= 6) ? EVO_ZONE_GATES[evoTargetStars] : 999;
+    const canEvolve = h.level >= maxLvl && h.stars < 6 && G.maxZone >= evoZoneGate;
+    
+    document.getElementById('hm-title').textContent = def.titles[h.stars - 3] + ` (${h.type})`;
+    const img = document.getElementById('hm-image'); img.src = getHeroImage(id, h.stars);
+    document.getElementById('hm-stars').textContent = '★'.repeat(h.stars);
+    document.getElementById('hm-elem').innerHTML = def.icon;
+    document.getElementById('hm-lore').textContent = `"${def.lore}"`;
+    
+    document.getElementById('hm-type').textContent = h.type || 'Lord';
+    document.getElementById('hm-lvl').textContent = `${h.level} / ${maxLvl}`;
+    document.getElementById('hm-dps').textContent = fmt(getHeroDPS(def, h));
+    
+    const tMod = TYPE_MODS[h.type || 'Lord'];
+    const hHp = def.baseDPS * 18 * h.level * h.stars * tMod.hp;
+    const hDef = def.baseDPS * 1.5 * h.level * h.stars * tMod.def;
+    document.getElementById('hm-hp-def').textContent = `${fmt(hHp)} HP / ${fmt(hDef)} DEF`;
+    
+    document.getElementById('hm-lb').textContent = `+${h.duplicates * 10}%`;
+    document.getElementById('hm-ls').textContent = getLeaderSkillName(def.id);
+    
+    const nextMs = MILESTONES.find(m => m > h.level);
+    document.getElementById('hm-next-cap').textContent = nextMs ? `Prochain cap : ${MILESTONE_LABELS[nextMs]} (Niv.${nextMs})` : 'Toutes compétences débloquées';
+
+    const lvlRow = document.getElementById('hm-levelup-row');
+    if (h.level < maxLvl) {
+        const remaining = maxLvl - h.level;
+        const cost1   = getHeroLevelCost(def, h);
+        const levels10 = Math.min(10, remaining);
+        const cost10  = calcBulkCost(def, h, levels10);
+        const costMax = calcBulkCost(def, h, remaining);
+        const canAny  = G.gold >= cost1;
+
+        // Bouton +1
+        const btn1 = document.getElementById('hm-btn-lvlup');
+        btn1.disabled = !canAny;
+        document.getElementById('hm-cost-1').textContent = fmt(cost1) + ' 🪙';
+
+        // Bouton ×10
+        const btn10 = document.getElementById('hm-btn-lvlup10');
+        btn10.disabled = !canAny;
+        document.getElementById('hm-cost-10').textContent =
+            levels10 < 10 ? `×${levels10} — ${fmt(cost10)} 💰` : `${fmt(cost10)} 💰`;
+
+        // Bouton MAX
+        const btnMax = document.getElementById('hm-btn-lvlupmax');
+        btnMax.disabled = !canAny;
+        document.getElementById('hm-cost-max').textContent =
+            remaining > 0 ? `×${remaining} — ${fmt(costMax)} 💰` : 'Cap atteint';
+
+        lvlRow.style.display = 'flex';
+    } else {
+        lvlRow.style.display = 'none';
+    }
+
+    const btnEvo = document.getElementById('hm-btn-evolve');
+    const evoRow = document.getElementById('hm-evo-mats-row');
+    
+    if (h.stars < 6 && h.level >= maxLvl) {
+        // Cas : cap de niveau atteint mais zone insuffisante → afficher le verrou
+        if (!canEvolve) {
+            btnEvo.textContent = `🔒 Zone ${evoZoneGate - 1} Boss requis pour ${evoTargetStars}★`;
+            btnEvo.disabled = true;
+            btnEvo.style.display = 'block';
+            evoRow.style.display = 'none';
+        } else {
+            const evoCost = EVO_COSTS[h.stars];
+            btnEvo.textContent = `Évoluer en ${h.stars+1}★ (${fmt(evoCost)} 🪙)`;
+            
+            evoRow.style.display = 'flex';
+            const reqs = getEvolutionRequirements(def.elem, h.stars);
+            let listStr = "";
+            let hasMats = true;
+            
+            reqs.forEach(req => {
+                if (req.item === 'duplicate') {
+                    const owned = h.duplicates || 0;
+                    const color = owned >= req.qty ? '#2ecc71' : '#e74c3c';
+                    listStr += `<span style="color:${color}">Doublons sacrifiés : ${owned} / ${req.qty}</span>`;
+                    if (owned < req.qty) hasMats = false;
+                } else {
+                    const owned = G.materials[req.item] || 0;
+                    const matName = MATERIAL_DEFS[req.item].name;
+                    const color = owned >= req.qty ? '#2ecc71' : '#e74c3c';
+                    listStr += `<span style="color:${color}">${matName} : ${owned} / ${req.qty}</span>`;
+                    if (owned < req.qty) hasMats = false;
+                }
+            });
+            
+            document.getElementById('hm-evo-mats-list').innerHTML = listStr;
+            btnEvo.disabled = G.gold < evoCost || !hasMats;
+            btnEvo.style.display = 'block';
+        }
+    } else if (!canEvolve && h.stars >= 6) {
+        btnEvo.style.display = 'none';
+        evoRow.style.display = 'none';
+    } else {
+        btnEvo.style.display = 'none';
+        evoRow.style.display = 'none';
+    }
+    
+    const squadBtn = document.getElementById('hm-btn-squad');
+    const inSquad = G.squad.includes(id);
+    if (inSquad) {
+        const isLeader = G.squad[0] === id;
+        squadBtn.textContent = isLeader ? "Retirer de la Squad (Déjà Leader)" : "Promouvoir Leader / Retirer";
+    } else {
+        squadBtn.textContent = "Ajouter à la Squad";
+    }
+
+    document.getElementById('hero-modal').classList.add('visible');
+    BGM.update();
+    
+    // Setup Parallax for image
+    const modal = document.getElementById('hero-modal');
+    const imgElement = document.getElementById('hm-image');
+    modal.onmousemove = (e) => {
+        if (!imgElement) return;
+        const rect = modal.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        const moveX = (x - 0.5) * 30; // Max 15px movement
+        const moveY = (y - 0.5) * 30;
+        imgElement.style.transform = `scale(1.08) translate(${-moveX}px, ${-moveY}px)`;
+    };
+    modal.onmouseleave = () => {
+        if(imgElement) imgElement.style.transform = `scale(1.08) translate(0px, 0px)`;
+    };
+}
+
+function getEvolutionRequirements(elem, stars) {
+    const elemLower = elem === 'Feu' ? 'fire' : elem === 'Eau' ? 'water' : elem === 'Terre' ? 'earth' : elem === 'Foudre' ? 'thunder' : elem === 'Lumière' ? 'light' : 'dark';
+    // 3★ → 4★ : matériaux standards
+    if (stars === 3) {
+        return [
+            { item: `${elemLower}_crystal`, qty: 1 },
+            { item: 'mimic', qty: 1 }
+        ];
+    }
+    // 4★ → 5★ : matériaux + 1 doublon sacrifié (Axe 4)
+    else if (stars === 4) {
+        return [
+            { item: `${elemLower}_crystal`, qty: 1 },
+            { item: `${elemLower}_idol`, qty: 1 },
+            { item: 'mimic', qty: 1 },
+            { item: 'duplicate', qty: 1 }   // Axe 4 : sacrifice 1 doublon
+        ];
+    }
+    // 5★ → 6★ : matériaux rares + 2 doublons sacrifiés (Axe 4)
+    else if (stars === 5) {
+        return [
+            { item: `${elemLower}_idol`, qty: 1 },
+            { item: `${elemLower}_totem`, qty: 1 },
+            { item: 'mimic', qty: 2 },
+            { item: 'duplicate', qty: 2 }   // Axe 4 : sacrifice 2 doublons
+        ];
+    }
+    return [];
+}
+
+function closeHeroModal() { document.getElementById('hero-modal').classList.remove('visible'); renderHeroesGrid(); BGM.update(); }
+
+function levelUpCurrentHero(times = 1) {
+    const h   = G.heroes[currentHeroModal];
+    const def = HERO_DEFS.find(d => d.id === currentHeroModal);
+    const cap = EVO_LEVEL_CAPS[h.stars];
+    if (h.level >= cap) return;
+
+    const maxLevels = times === 'max' ? cap - h.level : Math.min(times, cap - h.level);
+    const { count, cost } = calcAffordableLevels(def, h, maxLevels);
+
+    if (count > 0) {
+        G.gold  -= cost;
+        h.level += count;
+        Sound.playLevelUp();
+        openHeroModal(currentHeroModal);
+        saveGame();
+    }
+}
+
+function evolveCurrentHero() {
+    const h = G.heroes[currentHeroModal];
+    const def = HERO_DEFS.find(d => d.id === currentHeroModal);
+    const cost = EVO_COSTS[h.stars];
+    const reqs = getEvolutionRequirements(def.elem, h.stars);
+    
+    // Axe 3 : vérification de zone
+    const evoTargetStars = h.stars + 1;
+    const evoZoneGate = (evoTargetStars <= 6) ? EVO_ZONE_GATES[evoTargetStars] : 999;
+    if (G.maxZone < evoZoneGate) {
+        showNotif(`🔒 Zone ${evoZoneGate - 1} Boss requis pour évoluer en ${evoTargetStars}★ !`);
+        return;
+    }
+    
+    let hasMats = true;
+    reqs.forEach(req => {
+        if (req.item === 'duplicate') {
+            if ((h.duplicates || 0) < req.qty) hasMats = false;  // Axe 4 : doublons
+        } else {
+            const owned = G.materials[req.item] || 0;
+            if (owned < req.qty) hasMats = false;
+        }
+    });
+    
+    if(G.gold >= cost && h.level >= EVO_LEVEL_CAPS[h.stars] && h.stars < 6 && hasMats) {
+        G.gold -= cost;
+        reqs.forEach(req => {
+            if (req.item === 'duplicate') {
+                h.duplicates -= req.qty;    // Axe 4 : consomme les doublons
+            } else {
+                G.materials[req.item] -= req.qty;
+            }
+        });
+        h.stars++; h.level = 1; Sound.playLevelUp(); screenFlash('#fff'); openHeroModal(currentHeroModal);
+        saveGame();
+    }
+}
+
+function toggleSquadCurrentHero() {
+    const id = currentHeroModal;
+    const index = G.squad.indexOf(id);
+    
+    if (index >= 0) {
+        if (index === 0) {
+            const others = G.squad.slice(1).filter(s => s !== null);
+            if (others.length === 0) {
+                alert("Vous devez garder au moins 1 héros dans la Squad !");
+                return;
+            }
+            const nextIndex = G.squad.indexOf(others[0]);
+            G.squad[nextIndex] = null;
+            G.squad[0] = others[0];
+            G.leaderId = others[0];
+        } else {
+            G.squad[index] = G.squad[0];
+            G.squad[0] = id;
+            G.leaderId = id;
+        }
+    } else {
+        const emptyIndex = G.squad.indexOf(null);
+        if (emptyIndex >= 0) {
+            G.squad[emptyIndex] = id;
+        } else {
+            G.squad[3] = id;
+        }
+        if (!G.squad[0]) { G.squad[0] = id; G.leaderId = id; }
+    }
+    
+    openHeroModal(id);
+    renderHeroesGrid();
+}
+
+// =============================================================
+// SUMMON SYSTEM (RARE & HONOR)
+// =============================================================
+// Axe 5 : Tiers de rareté gacha
+// Tier S (5%) : Sera, Magress — héros 6★-ready ultra-puissants
+// Tier A (25%) : Elimo, Eze, Atro, Kikuri — héros 4★-ready d'utilité
+// Tier B (70%) : les 6 héros standards
+const SUMMON_POOLS = {
+    S: ['sera', 'magress'],
+    A: ['elimo', 'eze', 'atro', 'kikuri'],
+    B: ['ignis', 'vargas', 'selena', 'lance', 'zeln', 'karl']
+};
+
+function summonRare() {
+    if (G.gems < 5) { showNotif('❌ Pas assez de gemmes !'); return; }
+    G.gems -= 5;
+
+    // Tirage de rareté pondéré
+    const roll = Math.random();
+    let pool;
+    if (roll < 0.05)       pool = SUMMON_POOLS.S;  // S : 5%
+    else if (roll < 0.30)  pool = SUMMON_POOLS.A;  // A : 25%
+    else                   pool = SUMMON_POOLS.B;  // B : 70%
+
+    const pickedId = pool[Math.floor(Math.random() * pool.length)];
+    const def = HERO_DEFS.find(d => d.id === pickedId);
+    const summonedType = HERO_TYPES[Math.floor(Math.random() * HERO_TYPES.length)];
+    const isNew = !G.heroes[def.id];
+
+    if (G.heroes[def.id]) {
+        G.heroes[def.id].duplicates++;
+    } else {
+        G.heroes[def.id] = initHero(summonedType);
+        const emptyIdx = G.squad.indexOf(null);
+        if (emptyIdx >= 0) { G.squad[emptyIdx] = def.id; if (emptyIdx === 0) G.leaderId = def.id; }
+    }
+
+    const stars = G.heroes[def.id].stars;
+    triggerSummonAnimation(stars, () => showHeroReveal(def.id, G.heroes[def.id], isNew));
+    updateDisplays(); saveGame();
+}
+
+// Axe 1 : Honor Summon coûte 500 PH (Points d'Honneur) au lieu de 2 000 Or
+function summonHonor() {
+    const cost = 500;
+    if (G.honorPoints < cost) { showNotif(`❌ Pas assez de Points d'Honneur ! (${fmt(G.honorPoints)} / ${cost} PH)`); return; }
+    G.honorPoints -= cost;
+
+    // Tirage pondéré : matériaux bas tier plus fréquents
+    const allKeys = Object.keys(MATERIAL_DEFS);
+    // Cristaux (3★) : 50%, Idoles (4★) : 30%, Totems (5★) : 10%, Mimics : 10%
+    const weights = allKeys.map(k => {
+        if (k === 'mimic') return 10;
+        if (k.includes('_totem')) return 10;
+        if (k.includes('_idol')) return 30;
+        return 50; // crystal
+    });
+    const totalW = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * totalW;
+    let rolledKey = allKeys[0];
+    for (let i = 0; i < allKeys.length; i++) {
+        r -= weights[i];
+        if (r <= 0) { rolledKey = allKeys[i]; break; }
+    }
+    const mat = MATERIAL_DEFS[rolledKey];
+    if (!G.materials[rolledKey]) G.materials[rolledKey] = 0;
+    G.materials[rolledKey]++;
+
+    triggerSummonAnimation(3, () => showMaterialReveal(rolledKey, mat));
+    updateDisplays(); saveGame();
+}
+
+function triggerSummonAnimation(stars, onReveal) {
+    const btnRare  = document.getElementById('rare-summon-btn');
+    const btnHonor = document.getElementById('honor-summon-btn');
+    if (btnRare)  btnRare.disabled  = true;
+    if (btnHonor) btnHonor.disabled = true;
+
+    // Overlay portail avec couleur de rareté
+    const overlay = document.getElementById('summon-gate-overlay');
+    const glow    = document.getElementById('sg-glow');
+    glow.className = 'sg-glow rarity-' + Math.min(stars, 6);
+    overlay.classList.add('active');
+    Sound.init(); Sound.playHit();
+
+    setTimeout(() => {
+        Sound.playSummon();
+        overlay.classList.remove('active');
+
+        // Flash blanc rapide
+        const flash = document.getElementById('summon-overlay');
+        flash.style.cssText = 'display:block; opacity:1; background:#fff;';
+        setTimeout(() => {
+            flash.style.opacity = '0';
+            setTimeout(() => { flash.style.display = 'none'; }, 350);
+            if (btnRare)  btnRare.disabled  = false;
+            if (btnHonor) btnHonor.disabled = false;
+            onReveal();
+        }, 160);
+    }, 1600);
+}
+
+// ---- REVEAL HÉROS ----
+const REVEAL_COLORS = { 3:'#6a9fff', 4:'#e6bc00', 5:'#ff5588', 6:'#c084fc' };
+const REVEAL_BGS    = {
+    3:'linear-gradient(180deg,#040c1e,#0a1840 55%,#000)',
+    4:'linear-gradient(180deg,#0e0800,#281a00 55%,#000)',
+    5:'linear-gradient(180deg,#120008,#300015 55%,#000)',
+    6:'linear-gradient(180deg,#0e0025,#200050 55%,#000)'
+};
+
+function showHeroReveal(heroId, heroData, isNew) {
+    const def   = HERO_DEFS.find(d => d.id === heroId);
+    const stars = Math.min(heroData.stars, 6);
+    const glow  = REVEAL_COLORS[stars] || REVEAL_COLORS[3];
+    const bg    = REVEAL_BGS[stars]    || REVEAL_BGS[3];
+
+    document.getElementById('reveal-bg').style.background = bg;
+    const portrait = document.getElementById('reveal-portrait');
+    portrait.src = getHeroImage(heroId, heroData.stars);
+    portrait.style.display = 'block';
+    document.getElementById('reveal-material-emoji').style.display = 'none';
+
+    const nameEl = document.getElementById('reveal-hero-name');
+    nameEl.textContent = def.titles[heroData.stars - 3];
+    nameEl.style.color = glow;
+    nameEl.style.textShadow = `0 0 30px ${glow}88, 0 2px 20px rgba(0,0,0,.9)`;
+
+    document.getElementById('reveal-hero-info').innerHTML =
+        `${def.elem} ${def.icon} · ${heroData.type} · ` +
+        (isNew ? '<span style="color:#2ecc71">✨ NOUVEAU !</span>'
+               : '<span style="color:#f1c40f">🔄 Doublon +10% Stats</span>');
+
+    _openReveal(stars, glow);
+}
+
+function showMaterialReveal(matKey, mat) {
+    const matEmojis = { crystal:'💎', idol:'🏺', totem:'🗿', mimic:'📦' };
+    const emojiKey  = Object.keys(matEmojis).find(k => matKey.includes(k)) || 'crystal';
+
+    document.getElementById('reveal-bg').style.background = 'linear-gradient(180deg,#040818,#0a1530 55%,#000)';
+    document.getElementById('reveal-portrait').style.display = 'none';
+    const emojiEl = document.getElementById('reveal-material-emoji');
+    emojiEl.textContent = matEmojis[emojiKey]; emojiEl.style.display = 'block';
+
+    const nameEl = document.getElementById('reveal-hero-name');
+    nameEl.textContent = mat.name; nameEl.style.color = mat.color;
+    nameEl.style.textShadow = `0 0 20px ${mat.color}66, 0 2px 12px rgba(0,0,0,.9)`;
+    document.getElementById('reveal-hero-info').innerHTML = `<span style="color:${mat.color}">${mat.rarity}</span>`;
+
+    _openReveal(3, mat.color);
+}
+
+function _openReveal(stars, glow) {
+    const starsEl = document.getElementById('reveal-stars-container');
+    starsEl.innerHTML = '';
+    const reveal = document.getElementById('summon-reveal');
+    reveal.style.display = 'flex'; void reveal.offsetWidth; reveal.classList.add('visible');
+
+    for (let i = 0; i < Math.min(stars, 6); i++) {
+        setTimeout(() => {
+            const s = document.createElement('span');
+            s.className = 'reveal-star'; s.textContent = '★'; s.style.color = glow;
+            s.style.animationDelay = '0s'; starsEl.appendChild(s);
+            if (!Sound.sfxMuted) Sound.playClaim();
+        }, 450 + i * 180);
+    }
+}
+
+function closeReveal() {
+    const reveal = document.getElementById('summon-reveal');
+    reveal.classList.remove('visible');
+    setTimeout(() => { reveal.style.display = 'none'; }, 400);
+    renderHeroesGrid(); renderAchievements(); updateDisplays();
+    _updateSummonGlow();
+}
+
+function _updateSummonGlow() {
+    const rareBtn  = document.getElementById('rare-summon-btn');
+    const honorBtn = document.getElementById('honor-summon-btn');
+    if (rareBtn) {
+        rareBtn.disabled = G.gems < 5;
+        if (G.gems >= 5) rareBtn.classList.add('can-afford');
+        else rareBtn.classList.remove('can-afford');
+    }
+    if (honorBtn) {
+        honorBtn.disabled = G.gold < 2000;
+    }
+}
+
+function renderMaterialsPanel() {
+    const container = document.getElementById('materials-container');
+    const list = document.getElementById('materials-list');
+    
+    let html = "";
+    let hasMats = false;
+    
+    Object.keys(MATERIAL_DEFS).forEach(key => {
+        const owned = G.materials[key] || 0;
+        if (owned > 0) {
+            hasMats = true;
+            const def = MATERIAL_DEFS[key];
+            html += `<span class="material-badge" style="background:${def.color}">${def.name} x${owned}</span>`;
+        }
+    });
+    
+    container.style.display = hasMats ? 'block' : 'none';
+    list.innerHTML = hasMats ? html : "Aucun composant d'évolution possédé.";
+}
+
+// =============================================================
+// SKILLS & BRAVE BURST TRIGGERING
+// =============================================================
+function usePlayerSkill(id) {
+    if(G.playerSkillsCd[id] > 0) return;
+    Sound.init(); Sound.playBB();
+    if(id === 'strike') {
+        G.playerSkillsCd.strike = 30;
+        const dmg = getTapDamage() * 50;
+        G.monsterHp -= dmg; screenFlash('#f1c40f');
+        if(G.monsterHp<=0) killMonster(); else updateHpBar();
+    } else if (id === 'wealth') {
+        G.playerSkillsCd.wealth = 60;
+        G.playerSkillsActive.wealth = 15;
+        screenFlash('#f1c40f');
+    } else if (id === 'frenzy') {
+        G.playerSkillsCd.frenzy = 60;
+        G.playerSkillsActive.frenzy = 15;
+        screenFlash('#e74c3c');
+    }
+}
+
+function renderSkills() {
+    const pContainer = document.getElementById('player-skills-container');
+    let pHtml = '';
+    const pSkills = [
+        { id: 'strike', icon: '<i class="ra ra-crossed-swords" style="color:#e74c3c"></i>', name: 'Frappe Foudroyante', desc: 'Inflige 50x vos dégâts de Clic', cd: G.playerSkillsCd.strike, maxCd: 30 },
+        { id: 'wealth', icon: '<i class="ra ra-gold-bar" style="color:#f1c40f"></i>',       name: 'Aura de Richesse', desc: 'Double les gains d\'Or pendant 15s', cd: G.playerSkillsCd.wealth, maxCd: 60, active: G.playerSkillsActive.wealth>0 },
+        { id: 'frenzy', icon: '<i class="ra ra-lightning-bolt"></i>', name: 'Frénésie', desc: 'Multiplie le DPS par 3 pendant 15s', cd: G.playerSkillsCd.frenzy, maxCd: 60, active: G.playerSkillsActive.frenzy>0 },
+    ];
+    pSkills.forEach(s => {
+        const ready = s.cd <= 0;
+        pHtml += `<div class="skill-card">
+            <div class="skill-icon">${s.icon}</div>
+            <div class="skill-info">
+                <div class="skill-name player">${s.name} ${s.active?'(ACTIF)':''}</div>
+                <div class="skill-desc">${s.desc}</div>
+            </div>
+            <button class="skill-btn player-skill ${ready?'ready':''}" ${ready?'':'disabled'} onclick="usePlayerSkill('${s.id}')">
+                ${ready ? 'USE' : Math.ceil(s.cd)+'s'}
+            </button>
+        </div>`;
+    });
+    pContainer.innerHTML = pHtml;
+
+    const hContainer = document.getElementById('hero-skills-container');
+    let hHtml = '';
+    
+    G.squad.forEach(id => {
+        if (!id || !G.heroes[id]) return;
+        const h = G.heroes[id];
+        const def = HERO_DEFS.find(d => d.id === id);
+        
+        const ready = (G.bbGauges[id] || 0) >= 100;
+        const dpsDmg = getHeroDPS(def, h) * (id === 'eze' ? 120 : id === 'ignis' ? 100 : id === 'lance' ? 60 : id === 'selena' ? 50 : 40);
+        
+        let descStr = `Inflige ${fmt(dpsDmg)} dégâts élémentaires`;
+        if (id === 'selena')  descStr = `Soin 50% HP + ${fmt(dpsDmg)} dégâts d'eau`;
+        if (id === 'sera')    descStr = `Soin 100% HP + ${fmt(dpsDmg)} dégâts de lumière`;
+        if (id === 'atro')    descStr = `Soin 30% HP + Frappe Sacrée ${fmt(dpsDmg)}`;
+        if (id === 'lance')   descStr = `+50% DEF (10s) + ${fmt(dpsDmg)} dégâts de terre`;
+        if (id === 'vargas')  descStr = `+30 BC à toute la squad + ${fmt(dpsDmg)} dégâts de feu`;
+        if (id === 'elimo')   descStr = `Gèle le monstre 6s (−50% ATK) + ${fmt(dpsDmg)} dégâts de givre`;
+        if (id === 'zeln')    descStr = `Triple frappe rapide — ${fmt(dpsDmg)} dégâts de terre`;
+        if (id === 'kikuri')  descStr = `Malédiction 8s (−40% ATK monstre) + ${fmt(dpsDmg)} dégâts`;
+        if (id === 'magress') descStr = `Dévore l'âme — ${fmt(dpsDmg)} dégâts ténébreux (maximum)`;
+        if (id === 'eze')     descStr = `Frappe Berserk — ${fmt(dpsDmg)} dégâts foudre`;
+        if (id === 'karl')    descStr = `Souffle du Dragon — ${fmt(dpsDmg)} dégâts foudre`;
+        
+        hHtml += `<div class="skill-card">
+            <div class="skill-icon">${def.icon}</div>
+            <div class="skill-info">
+                <div class="skill-name">${def.titles[h.stars - 3]} — Brave Burst</div>
+                <div class="skill-desc">${descStr} · Charge: ${G.bbGauges[id] || 0}/100 BC</div>
+            </div>
+            <button class="skill-btn ${ready?'ready':''}" ${ready?'':'disabled'} onclick="useBB('${def.id}')">
+                ${ready ? 'BB !' : 'CHARGING'}
+            </button>
+        </div>`;
+    });
+    
+    hContainer.innerHTML = hHtml || '<div style="color:#6a7a9a; text-align:center; padding:10px; font-size:11px;">Ajoutez des héros à votre Squad active pour débloquer leurs Brave Bursts. Taper sur l\'écran génère des Battle Crystals (BC) pour les charger.</div>';
+}
+
+function useBB(id) {
+    const gauge = G.bbGauges[id] || 0;
+    if (gauge < 100) return;
+    
+    const h = G.heroes[id]; const def = HERO_DEFS.find(d=>d.id===id);
+    G.bbGauges[id] = 0;
+    
+    const dps = getHeroDPS(def, h);
+    const dmgFactors = { magress:150, eze:120, ignis:100, zeln:90, atro:80, karl:70,
+                         lance:60, sera:60, selena:50, elimo:45, kikuri:35, vargas:30 };
+    const dmgFactor = dmgFactors[id] || 40;
+    const dmg = dps * dmgFactor;
+    
+    const ov = document.getElementById('bb-overlay'); ov.classList.add('active');
+    ov.querySelector('.bb-portrait').src = getHeroImage(id, h.stars);
+    ov.querySelector('.bb-text').textContent = 'BRAVE BURST'; ov.querySelector('.bb-dmg-text').textContent = fmt(dmg);
+    ov.querySelector('.bb-bg').style.opacity = '0.85'; ov.querySelector('.bb-stripe').style.transform = 'scaleY(1)';
+    Sound.playBB();
+    
+    if (id === 'selena') {
+        healParty(Math.floor(G.partyMaxHp * 0.50));
+    } else if (id === 'sera') {
+        healParty(G.partyMaxHp);
+    } else if (id === 'atro') {
+        healParty(Math.floor(G.partyMaxHp * 0.30));
+    } else if (id === 'lance') {
+        G.partyDef = Math.floor(G.partyDef * 1.50);
+        G.lanceShieldActive = true;
+        updatePartyHpBar();
+        setTimeout(() => {
+            G.lanceShieldActive = false;
+            updatePartyStats();
+        }, 10000);
+    } else if (id === 'vargas') {
+        // Recharge +30 BC à toute la squad
+        G.squad.forEach(sid => {
+            if (sid && G.heroes[sid]) {
+                if (!G.bbGauges[sid]) G.bbGauges[sid] = 0;
+                G.bbGauges[sid] = Math.min(100, G.bbGauges[sid] + 30);
+            }
+        });
+        renderFooterBB();
+    } else if (id === 'elimo') {
+        G.monsterFrozen = 6; // 6 secondes -50% ATK
+        screenFlash('rgba(100,200,255,0.35)');
+    } else if (id === 'kikuri') {
+        G.monsterDebuff = 8; // 8 secondes -40% ATK
+        screenFlash('rgba(160,0,255,0.3)');
+    }
+    
+    setTimeout(() => {
+        ov.querySelector('.bb-portrait').style.transition = 'left 0.25s cubic-bezier(0.2,0.8,0.2,1)'; ov.querySelector('.bb-portrait').style.left = '60px';
+        ov.querySelector('.bb-text').style.transition = 'right 0.25s cubic-bezier(0.2,0.8,0.2,1)'; ov.querySelector('.bb-text').style.right = '30px';
+        G.monsterHp -= dmg; screenFlash((ELEM_COLORS[def.elem] || '#fff') + '88'); if(G.monsterHp<=0) killMonster(); else updateHpBar();
+    }, 200);
+    setTimeout(() => { ov.querySelector('.bb-dmg-text').style.opacity = '1'; ov.querySelector('.bb-dmg-text').style.transform = 'scale(1)'; }, 600);
+    setTimeout(() => {
+        ov.classList.remove('active');
+        ov.querySelector('.bb-portrait').style.transition = 'none'; ov.querySelector('.bb-portrait').style.left = '-200px';
+        ov.querySelector('.bb-text').style.transition = 'none'; ov.querySelector('.bb-text').style.right = '-300px';
+        ov.querySelector('.bb-dmg-text').style.transition = 'none'; ov.querySelector('.bb-dmg-text').style.opacity = '0'; ov.querySelector('.bb-dmg-text').style.transform = 'scale(0.3)';
+        ov.querySelector('.bb-bg').style.opacity = '0'; ov.querySelector('.bb-stripe').style.transform = 'scaleY(0)';
+    }, 1500);
+    
+    renderFooterBB();
+    updateDisplays();
+}
+
+function renderFooterBB() {
+    const c = document.getElementById('footer-bb-slots');
+    let html = '';
+    
+    G.squad.forEach(id => {
+        if (!id || !G.heroes[id]) return;
+        const def = HERO_DEFS.find(d => d.id === id);
+        const gauge = G.bbGauges[id] || 0;
+        const ready = gauge >= 100;
+        
+        html += `<div class="footer-bb ${ready?'ready':''}" onclick="useBB('${def.id}')">
+            <span>${def.icon}</span><span class="bb-label">${gauge}/100</span>
+            <div class="bb-gauge-fill-slot" style="width:${gauge}%"></div>
+        </div>`;
+    });
+    
+    c.innerHTML = html;
+}
+
+// =============================================================
+// ACHIEVEMENTS
+// =============================================================
+function renderAchievements() {
+    const isDesktop = window.innerWidth >= 1024;
+    if(!isDesktop && !document.querySelector('.tab-btn[data-tab="achievements"]').classList.contains('active')) return;
+    const container = document.getElementById('achievements-container');
+    let html = '';
+    ACHIEVEMENTS_DEFS.forEach(ach => {
+        const isClaimed = G.achievementsClaimed.includes(ach.id);
+        const isCompleted = ach.req(G);
+        html += `<div class="ach-card ${isClaimed?'claimed':''}">
+            <div class="ach-info">
+                <div class="ach-name">${ach.name}</div>
+                <div class="ach-desc">${ach.desc}</div>
+            </div>
+            ${isClaimed 
+                ? `<div style="color:#2ecc71; font-weight:700; font-size:12px;">✓ Obtenu</div>` 
+                : `<button class="ach-btn" ${!isCompleted?'disabled':''} onclick="claimAchievement('${ach.id}')">
+                    ${isCompleted ? `Récupérer ${ach.reward}💎` : `${ach.reward}💎`}
+                   </button>`
+            }
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+window.claimAchievement = function(id) {
+    if(G.achievementsClaimed.includes(id)) return;
+    const ach = ACHIEVEMENTS_DEFS.find(a=>a.id===id);
+    if(ach && ach.req(G)) {
+        G.gems += ach.reward; G.achievementsClaimed.push(id);
+        Sound.playClaim(); pulseCurrency('gems-display'); updateDisplays(); renderAchievements();
+    }
+}
+
+// =============================================================
+// PRESTIGE REBIRTH
+// =============================================================
+function renderPrestigePanel() {
+    document.getElementById('panel-prestige').innerHTML = `<div class="prestige-panel">
+        <div class="prestige-icon">♾️</div><div class="prestige-title">Prestige</div>
+        <div style="font-size:12px; color:#a0b0c0;">Recommencez (perdez Or, Zones et Niveaux des Héros, mais conservez les Héros, Gemmes, Doublons, Types et Matériaux) pour obtenir des Cristaux (+1% Stats globales).</div>
+        <div style="color:#00d2ff; font-weight:700; margin:10px 0;">Cristaux possédés : <span id="pres-crystals-val">0</span> (+<span id="pres-crystals-bonus">0</span>% Stats)</div>
+        <button class="prestige-btn" onclick="doPrestige()">REBIRTH (Req. Zone 50)</button>
+    </div>`;
+}
+
+function doPrestige() {
+    if(G.zone < 50) return alert('Zone 50 requise !');
+    if(!confirm('Êtes-vous sûr de vouloir faire un Rebirth ?')) return;
+    const gain = Math.floor(Math.sqrt(G.zone - 49) * 10);
+    G.prestigeCrystals += gain; G.totalPrestiges++; G.gold = 0; G.zone = 1; G.monsterIndex = 0; G.isBoss = false;
+    Object.keys(G.heroes).forEach(id => { G.heroes[id].level = 1; G.bbGauges[id] = 0; });
+    
+    G.partyHp = G.partyMaxHp;
+    Sound.playPrestige(); screenFlash('#c084fc'); spawnMonster(); saveGame(); updateDisplays();
+    document.getElementById('pres-crystals-val').textContent = G.prestigeCrystals;
+    document.getElementById('pres-crystals-bonus').textContent = G.prestigeCrystals;
+}
+
+// =============================================================
+// TABS & DRAWER LOGIC
+// =============================================================
+function openDrawer(tabName) {
+    const tabBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+    if (!tabBtn) return;
+    
+    document.querySelectorAll('.tab-btn, .tab-panel').forEach(el => el.classList.remove('active'));
+    
+    tabBtn.classList.add('active');
+    const panel = document.getElementById('panel-' + tabName);
+    if (panel) panel.classList.add('active');
+    
+    // Update drawer header label
+    const titleLbl = document.getElementById('drawer-title-lbl');
+    if (titleLbl) {
+        titleLbl.textContent = tabBtn.textContent.trim().replace('✕', '').trim();
+    }
+    
+    // Open drawer on mobile
+    const tabContent = document.getElementById('tab-content');
+    if (tabContent) tabContent.classList.remove('collapsed');
+    
+    // Render logic
+    if(tabName === 'heroes') renderHeroesGrid();
+    if(tabName === 'skills') renderSkills();
+    if(tabName === 'achievements') renderAchievements();
+    if(tabName === 'prestige') {
+        renderPrestigePanel();
+        const presValEl = document.getElementById('pres-crystals-val');
+        const presBonusEl = document.getElementById('pres-crystals-bonus');
+        if (presValEl) presValEl.textContent = G.prestigeCrystals;
+        if (presBonusEl) presBonusEl.textContent = G.prestigeCrystals;
+    }
+    if(tabName === 'settings') renderSettingsPanel();
+    
+    setTimeout(resizeP, 250);
+}
+
+function closeDrawer() {
+    const tabContent = document.getElementById('tab-content');
+    if (tabContent) tabContent.classList.add('collapsed');
+    
+    if (window.innerWidth < 1024) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    }
+    setTimeout(resizeP, 250);
+}
+
+// Responsive Layout DOM reorganization
+let _currentLayoutMode = '';
+function initResponsiveLayout() {
+    const isDesktop = window.innerWidth >= 1024;
+    const targetMode = isDesktop ? 'desktop' : 'mobile';
+    if (_currentLayoutMode === targetMode) return;
+    _currentLayoutMode = targetMode;
+
+    const leftWing = document.getElementById('left-wing');
+    const rightWingTabContent = document.getElementById('right-wing-tab-content');
+    const mobileTabContent = document.getElementById('tab-content');
+    const tabBar = document.getElementById('tab-bar');
+    const rightWingTabBar = document.getElementById('right-wing-tab-bar');
+    const gameWindow = document.getElementById('game-window');
+
+    const panelHeroes = document.getElementById('panel-heroes');
+    const panelGacha = document.getElementById('panel-gacha');
+    const panelSkills = document.getElementById('panel-skills');
+    const panelAchievements = document.getElementById('panel-achievements');
+    const panelPrestige = document.getElementById('panel-prestige');
+    const panelSettings = document.getElementById('panel-settings');
+
+    if (isDesktop) {
+        // Desktop Layout
+        // Move Achievements & Prestige to Left Wing
+        if (leftWing && panelAchievements && panelPrestige) {
+            leftWing.appendChild(panelAchievements);
+            leftWing.appendChild(panelPrestige);
+            panelAchievements.classList.add('active');
+            panelPrestige.classList.add('active');
+        }
+
+        // Move Heroes, Gacha, Skills, Settings to Right Wing
+        if (rightWingTabContent && panelHeroes && panelGacha && panelSkills && panelSettings) {
+            rightWingTabContent.appendChild(panelHeroes);
+            rightWingTabContent.appendChild(panelGacha);
+            rightWingTabContent.appendChild(panelSkills);
+            rightWingTabContent.appendChild(panelSettings);
+        }
+
+        // Move Tab Bar to Right Wing Header
+        if (rightWingTabBar && tabBar) {
+            rightWingTabBar.appendChild(tabBar);
+        }
+        
+        // On desktop, force the active tab-panel to align with the active tab button
+        let activeTab = 'heroes';
+        const activeBtn = tabBar.querySelector('.tab-btn.active');
+        if (activeBtn) {
+            activeTab = activeBtn.dataset.tab;
+        }
+        if (activeTab === 'achievements' || activeTab === 'prestige') {
+            // Revert to heroes since achievements & prestige are permanently shown on left
+            activeTab = 'heroes';
+            tabBar.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            const heroesBtn = tabBar.querySelector('.tab-btn[data-tab="heroes"]');
+            if (heroesBtn) heroesBtn.classList.add('active');
+        }
+        
+        document.querySelectorAll('#right-wing-tab-content .tab-panel').forEach(p => p.classList.remove('active'));
+        const activePanel = document.getElementById('panel-' + activeTab);
+        if (activePanel) activePanel.classList.add('active');
+        
+        renderPrestigePanel();
+        renderAchievements();
+        
+        // Force refresh layouts
+        setTimeout(resizeP, 100);
+    } else {
+        // Mobile Layout
+        // Move all panels to the mobile sliding drawer
+        if (mobileTabContent && panelHeroes && panelGacha && panelSkills && panelAchievements && panelPrestige && panelSettings) {
+            mobileTabContent.appendChild(panelHeroes);
+            mobileTabContent.appendChild(panelGacha);
+            mobileTabContent.appendChild(panelSkills);
+            mobileTabContent.appendChild(panelAchievements);
+            mobileTabContent.appendChild(panelPrestige);
+            mobileTabContent.appendChild(panelSettings);
+        }
+
+        // Move Tab Bar back to mobile container
+        const mobileTabBarContainer = document.getElementById('mobile-tab-bar-container');
+        if (mobileTabBarContainer && tabBar) {
+            mobileTabBarContainer.appendChild(tabBar);
+        }
+        
+        // Remove active class from panels unless they match active button
+        const activeBtn = tabBar.querySelector('.tab-btn.active');
+        const activeTab = activeBtn ? activeBtn.dataset.tab : 'heroes';
+        document.querySelectorAll('.tab-panel').forEach(p => {
+            if (p.id === 'panel-' + activeTab) {
+                p.classList.add('active');
+            } else {
+                p.classList.remove('active');
+            }
+        });
+        
+        closeDrawer();
+    }
+}
+
+// Set up listeners
+window.addEventListener('resize', initResponsiveLayout);
+window.addEventListener('DOMContentLoaded', initResponsiveLayout);
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        Sound.init();
+        const tabName = btn.dataset.tab;
+        
+        if (window.innerWidth < 1024) {
+            const isAlreadyActive = btn.classList.contains('active');
+            const isDrawerCollapsed = document.getElementById('tab-content').classList.contains('collapsed');
+            
+            if (isAlreadyActive && !isDrawerCollapsed) {
+                closeDrawer();
+            } else {
+                openDrawer(tabName);
+            }
+        } else {
+            openDrawer(tabName);
+        }
+        
+        BGM.update();
+    });
+});
+
+_updateSummonGlow();
+
+if(!loadGame()) { 
+    G.heroes['ignis'] = initHero('Lord'); 
+    G.materials = { fire_crystal: 2, mimic: 3 };
+} 
+
+spawnMonster();
+updateDisplays();
+
+// Handle responsive startup layout
+initResponsiveLayout();
+
+BGM.update();
+</script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+Placez votre fichier sprite de combat d'Ignis nommé 'ignis.png' dans ce dossier.
