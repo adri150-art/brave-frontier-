@@ -2891,7 +2891,7 @@ class SoundEngineClass {
 
     // Sharp sword strike — metallic "clang" with noise burst
     playHit() {
-        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        if (!this.enabled || this.sfxMuted) return; const t = this.ctx.currentTime;
         this._noise(t, 0.06, 0.5, 1800);
         this._osc(220, 'sawtooth', t, 0.07, 0.3, 80);
         this._osc(110, 'square', t, 0.05, 0.2);
@@ -2899,7 +2899,7 @@ class SoundEngineClass {
 
     // Critical hit — loud crack + high metallic ring
     playCrit() {
-        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        if (!this.enabled || this.sfxMuted) return; const t = this.ctx.currentTime;
         this._noise(t, 0.04, 0.8, 3500);
         this._osc(800, 'square', t, 0.03, 0.35, 200);
         this._osc(1600, 'sine', t + 0.02, 0.18, 0.25, 400);
@@ -2908,7 +2908,7 @@ class SoundEngineClass {
 
     // Monster kill — triumphant rising chime
     playKill() {
-        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        if (!this.enabled || this.sfxMuted) return; const t = this.ctx.currentTime;
         const notes = [523, 659, 784, 1047];
         notes.forEach((f, i) => this._osc(f, 'sine', t + i * 0.06, 0.25, 0.3));
         this._osc(523, 'triangle', t, 0.35, 0.15);
@@ -2917,7 +2917,7 @@ class SoundEngineClass {
 
     // Level up — classic RPG fanfare, bright and ascending
     playLevelUp() {
-        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        if (!this.enabled || this.sfxMuted) return; const t = this.ctx.currentTime;
         const melody = [523, 659, 784, 1047, 1319];
         melody.forEach((f, i) => {
             this._osc(f, 'triangle', t + i * 0.07, 0.22, 0.3);
@@ -2927,7 +2927,7 @@ class SoundEngineClass {
 
     // Brave Burst — massive explosion, deep bass + high shimmer
     playBB() {
-        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        if (!this.enabled || this.sfxMuted) return; const t = this.ctx.currentTime;
         // Deep bass hit
         this._osc(80, 'sine', t, 0.6, 0.5, 40);
         this._osc(60, 'square', t, 0.4, 0.4, 30);
@@ -2942,7 +2942,7 @@ class SoundEngineClass {
 
     // Summon — magical sparkle rising, mystical
     playSummon() {
-        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        if (!this.enabled || this.sfxMuted) return; const t = this.ctx.currentTime;
         const sparkle = [440, 554, 659, 880, 1108, 1318, 1760];
         sparkle.forEach((f, i) => {
             this._osc(f, 'sine', t + i * 0.08, 0.6, 0.25);
@@ -2953,7 +2953,7 @@ class SoundEngineClass {
 
     // Claim reward — coin jingle, bright and satisfying
     playClaim() {
-        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        if (!this.enabled || this.sfxMuted) return; const t = this.ctx.currentTime;
         [880, 1108, 1318].forEach((f, i) => this._osc(f, 'sine', t + i * 0.05, 0.18, 0.28));
         this._osc(1760, 'triangle', t + 0.15, 0.25, 0.2);
         this._noise(t, 0.04, 0.3, 4000);
@@ -2961,7 +2961,7 @@ class SoundEngineClass {
 
     // Prestige — dramatic orchestral swell + impact
     playPrestige() {
-        this.init(); if(this.sfxMuted) return; const t = this.ctx.currentTime;
+        if (!this.enabled || this.sfxMuted) return; const t = this.ctx.currentTime;
         // Low rumble
         this._osc(55, 'sine', t, 0.8, 0.4, 110);
         this._osc(110, 'square', t + 0.1, 0.6, 0.3);
@@ -3022,7 +3022,10 @@ function renderSettingsPanel() {
 
 function confirmReset() {
     if (confirm('⚠️ Supprimer définitivement toute ta progression ?\n\nCette action est irréversible.')) {
+        // Bloquer l'autosave avant la suppression
+        G._resetPending = true;
         localStorage.removeItem('bf_clicker_v4');
+        localStorage.removeItem('bf_clicker_backup');
         showNotif('🗑️ Sauvegarde supprimée…');
         setTimeout(() => location.reload(), 800);
     }
@@ -3384,6 +3387,7 @@ function loadGame() {
 }
 
 function saveGame() {
+    if (G._resetPending) return; // Suppression en cours — ne pas réécrire
     G.lastSave = Date.now();
     try {
         // Sauvegarde de secours avant écriture principale
@@ -4150,24 +4154,22 @@ function getLeaderSkillName(id) {
 }
 
 function getHeroPrice(def) {
-    // §2.2 — Grille recalibrée sur la nouvelle courbe d'or (×1.165/zone)
+    // §2.2 — Grille recalibrée + entrelacement multi-élément
     const priceMap = {
-        // Palier Initial (Zone 1-10)
-        ignis:   0,
-        vargas:  1200,
-        selena:  6500,
-        // Palier Intermédiaire (Zone 10-25)
-        margonia: 28000,
-        lance:   90000,
-        zeln:    280000,
-        // Palier Élite (Zone 25-45)
-        karl:    850000,
-        eze:     2200000,
-        kikuri:  6000000,
-        // Palier Divin (Post-Prestige)
-        sera:    14000000,
-        atro:    30000000,
-        magress: 70000000,
+        // VAGUE 1 — couverture multi-élément (1 attaquant par élément, prix doux)
+        ignis:   0,        // Feu
+        selena:  800,      // Eau
+        lance:   4000,     // Terre
+        karl:    18000,    // Foudre
+        kikuri:  70000,    // Ténèbres
+        atro:    200000,   // Lumière
+        // VAGUE 2 — le second héros (plus fort) de chaque élément (chasse long terme)
+        vargas:  600000,   // Feu
+        margonia:1500000,  // Eau
+        zeln:    4000000,  // Terre
+        eze:     10000000, // Foudre
+        magress: 30000000, // Ténèbres
+        sera:    70000000, // Lumière
     };
     return priceMap[def.id] !== undefined ? priceMap[def.id] : (def.baseDPS * 15000);
 }
@@ -4177,7 +4179,9 @@ function renderHeroesGrid() {
     grid.innerHTML = '';
     const currentZoneElem = ZONE_THEMES[(G.zone-1)%ZONE_THEMES.length].elem;
 
-    HERO_DEFS.forEach(def => {
+    // Tri par prix : la grille suit l'ordre réel de déblocage (éléments entrelacés)
+    const ordered = [...HERO_DEFS].sort((a, b) => getHeroPrice(a) - getHeroPrice(b));
+    ordered.forEach(def => {
         const h = G.heroes[def.id];
         const locked = !h;
         const hasAdvantage = !locked && ELEMENT_ADVANTAGE[def.elem] === currentZoneElem;
@@ -4388,27 +4392,22 @@ function openHeroModal(id) {
         const actionsBuy = document.getElementById('hm-actions-buy');
         actionsBuy.style.display = 'block';
 
+        const btnBuy = document.getElementById('hm-btn-buy');
         if (GOLD_BUYABLE_HEROES.includes(def.id)) {
             // ── Achat or classique ──
             const price = getHeroPrice(def);
-            document.getElementById('hm-cost-buy').textContent = price === 0 ? '🆓 Gratuit' : `${fmt(price)} 🪙`;
-            const btnBuy = document.getElementById('hm-btn-buy');
+            btnBuy.innerHTML = `<span style="font-size:14px">${price === 0 ? 'Débloquer gratuitement' : 'Acheter Héros'}</span><br><span id="hm-cost-buy" style="font-size:11px;opacity:0.8">${price === 0 ? '🆓 Gratuit' : fmt(price) + ' 🪙'}</span>`;
             btnBuy.disabled = price > 0 && G.gold < price;
-            btnBuy.textContent = price === 0 ? 'Débloquer gratuitement' : 'Acheter Héros';
             btnBuy.onclick = buyCurrentHero;
         } else if (GEMS_GACHA_HEROES.includes(def.id)) {
             // ── Héros Tier S/A → gacha gemmes ──
-            document.getElementById('hm-cost-buy').textContent = '🔮 Disponible via Rare Summon (5💎)';
-            const btnBuy = document.getElementById('hm-btn-buy');
+            btnBuy.innerHTML = `<span style="font-size:14px">🔮 Invoquer</span><br><span id="hm-cost-buy" style="font-size:11px;opacity:0.8">Rare Summon (5💎)</span>`;
             btnBuy.disabled = G.gems < 5;
-            btnBuy.textContent = `Invoquer (5💎)`;
             btnBuy.onclick = () => { closeHeroModal(); summonRare(); };
         } else {
             // ── Héros Tier B-mid → gacha PH ──
-            document.getElementById('hm-cost-buy').textContent = '🏆 Disponible via Honor Summon (500 PH)';
-            const btnBuy = document.getElementById('hm-btn-buy');
+            btnBuy.innerHTML = `<span style="font-size:14px">🏆 Invoquer</span><br><span id="hm-cost-buy" style="font-size:11px;opacity:0.8">Honor Summon (500 PH)</span>`;
             btnBuy.disabled = G.honorPoints < 500;
-            btnBuy.textContent = `Invoquer (500 PH)`;
             btnBuy.onclick = () => { closeHeroModal(); summonHonor(); };
         }
     } else {
@@ -4704,9 +4703,13 @@ const SUMMON_POOLS = {
 
 // Option A — Équilibrage : seuls les 4 premiers héros sont achetables avec l'or.
 // Les Tier S/A + zeln/karl s'obtiennent uniquement via gacha.
-const GOLD_BUYABLE_HEROES = ['ignis', 'vargas', 'selena', 'lance'];
-const GEMS_GACHA_HEROES   = [...SUMMON_POOLS.S, ...SUMMON_POOLS.A]; // sera, magress, margonia, eze, atro, kikuri
-const PH_GACHA_HEROES     = ['zeln', 'karl', ...SUMMON_POOLS.A];    // zeln, karl + Tier A
+// TOUS les héros sont achetables en or, en deux vagues (cf. getHeroPrice) :
+//   Vague 1 = 1 attaquant par élément (prix doux) → couverture multi-élément rapide
+//   Vague 2 = le second héros de chaque élément (plus cher et plus fort)
+// Le gacha (gemmes/PH) reste un raccourci/bonus qui peut aussi donner des doublons (+10%).
+const GOLD_BUYABLE_HEROES = HERO_DEFS.map(d => d.id);
+const GEMS_GACHA_HEROES   = [...SUMMON_POOLS.S, ...SUMMON_POOLS.A];
+const PH_GACHA_HEROES     = ['zeln', 'vargas', ...SUMMON_POOLS.A];
 
 function summonRare() {
     if (G.gems < 5) { showNotif('❌ Pas assez de gemmes !'); return; }
@@ -4757,8 +4760,8 @@ function summonHonor() {
         const heroId = SUMMON_POOLS.A[Math.floor(Math.random() * SUMMON_POOLS.A.length)];
         triggerSummonAnimation(4, () => _grantSummonedHero(heroId));
     } else if (phRoll < 0.30) {
-        // ── Héros Tier B-mid (zeln, karl) ──
-        const bMid = ['zeln', 'karl'];
+        // ── Héros Tier B-mid (zeln, vargas) ──
+        const bMid = ['zeln', 'vargas'];
         const heroId = bMid[Math.floor(Math.random() * bMid.length)];
         triggerSummonAnimation(3, () => _grantSummonedHero(heroId));
     } else {
