@@ -60,7 +60,7 @@ body {
         height: 98vh;
         max-height: 1020px;
         display: grid;
-        grid-template-columns: 1fr 550px 1fr;
+        grid-template-columns: 22% 1fr 22%;
         gap: 20px;
         background: transparent;
         border: none;
@@ -185,6 +185,15 @@ body {
     88%  { transform: translateY(-1px)  scaleX(1.003) scaleY(0.996); } /* compression légère */
     100% { transform: translateY(0px)   scaleX(1.000) scaleY(1.000); } /* repos */
 }
+
+/* ── §1.3 ANIMATION POP À LA MORT (prioritaire sur monsterIdle) ── */
+@keyframes monsterPop {
+    0%   { transform: scale(1);   opacity: 1; }
+    35%  { transform: scale(0);   opacity: 0; }
+    36%  { transform: scale(0.2); opacity: 0; }
+    100% { transform: scale(1);   opacity: 1; }
+}
+.monster-pop { animation: monsterPop 0.25s ease-out !important; }
 
 /* Ombre au sol qui pulse avec le monstre */
 #monster-emoji-container {
@@ -333,14 +342,60 @@ body {
     background: #ff5f49;
 }
 
+.desktop-spheres-inventory {
+    margin-top: 15px;
+    background: rgba(5, 7, 15, 0.6);
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.desktop-spheres-title {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    color: #00d2ff;
+    margin-bottom: 6px;
+}
+.desktop-spheres-grid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 /* ============================================= */
-/* RESPONSIVE LAYOUT DESKTOP (Triple-Panneau)   */
+/* RESPONSIVE LAYOUT DESKTOP CORRIGÉ & OPTIMISÉ */
 /* ============================================= */
 #left-wing, #right-wing {
     display: none;
 }
 
 @media (min-width: 1024px) {
+    body { 
+        align-items: center; 
+        justify-content: center;
+        background: #03050a;
+    }
+    /* CORRECTION : On impose une seule ligne à 100% de hauteur */
+    #game-window {
+        width: 99vw;
+        max-width: 1850px;
+        height: 98vh;
+        max-height: 1020px;
+        display: grid;
+        grid-template-columns: 22% 1fr 22%;
+        grid-template-rows: 100% !important; /* Force une rangée unique stricte */
+        gap: 20px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 4px 0;
+    }
+
+    /* CORRECTION CRITIQUE : Supprime le conteneur mobile du flux de la grille PC */
+    #mobile-tab-bar-container {
+        display: none !important;
+    }
+
     #left-wing, #right-wing {
         display: flex;
         flex-direction: column;
@@ -348,11 +403,11 @@ body {
         overflow: hidden;
     }
     
-    /* Force panels inside left-wing to display vertically */
+    /* Segmentations élégantes du panneau gauche (Objectifs) */
     #left-wing #panel-achievements,
     #left-wing #panel-prestige {
         display: flex !important;
-        background: rgba(10, 13, 24, 0.7);
+        background: rgba(10, 13, 24, 0.75);
         border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 8px;
         padding: 14px;
@@ -362,6 +417,7 @@ body {
     #left-wing #panel-achievements {
         flex: 2;
         overflow-y: auto;
+        margin-bottom: 10px;
     }
     
     #left-wing #panel-prestige {
@@ -373,19 +429,27 @@ body {
         width: 100%;
         height: 100%;
         padding-bottom: 0;
-        background: url('assets/ui/game_bg.png') center/cover;
+        background: transparent !important;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        
+        /* Force également le respect de l'arrondi du cadre d'or */
+        border-radius: 12px !important;
+        overflow: hidden !important;
     }
     
     #right-wing-tab-content {
         flex: 1;
         overflow-y: auto;
         padding: 14px;
-        background: rgba(10, 13, 24, 0.7);
+        background: rgba(10, 13, 24, 0.75);
         border-radius: 0 0 12px 12px;
         box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
         border-top: none;
         display: flex;
         flex-direction: column;
+        position: relative;
     }
 
     #right-wing-tab-content .tab-panel {
@@ -399,22 +463,345 @@ body {
     }
 
     #tab-content {
-        display: none !important; /* Hide mobile drawer container */
+        display: none !important;
     }
 
     .drawer-header {
         display: none !important;
     }
     
-    /* Redonner sa puissance au Monstre sur grand écran */
+    /* ZONE DE COMBAT — CARRÉ 1024×1024 CONTRAINT PAR LA HAUTEUR D'ÉCRAN */
+    /* 1. L'ARÈNE SOMBRE AVEC PROJECTEUR CENTRAL */
+    #monster-zone {
+        width: min(100%, calc(100vh - 190px)) !important;
+        aspect-ratio: 1 / 1 !important;
+        max-height: calc(100vh - 190px) !important;
+        margin: 0 auto;
+        flex: none !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+        box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.95), 0 4px 20px rgba(0,0,0,0.6);
+    }
+
+    #monster-bg {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background-size: 100% 100% !important;
+        background-position: center;
+        background-repeat: no-repeat;
+        mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 10%, rgba(0,0,0,0.15) 70%);
+        -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 10%, rgba(0,0,0,0.15) 70%);
+    }
+
+    .monster-container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+    }
+
+    /* CORRECTION SÉCURITÉ : On cible uniquement l'arène pour la jauge absolue du Boss */
+    #monster-zone .hp-bar-container {
+        position: absolute !important;
+        top: 15px !important;
+        width: 85% !important;
+        height: 8px !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 4px !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    
+    #monster-zone #hp-bar-fill {
+        border-radius: 4px !important;
+    }
+
+    #monster-zone #hp-text {
+        position: absolute !important;
+        top: 25px !important;
+        font-size: 10px !important;
+        color: #7a8ba8 !important;
+        text-shadow: 0 1px 2px #000;
+    }
+
+    #monster-name {
+        position: absolute;
+        top: 40px;
+        font-size: 16px !important;
+        letter-spacing: 1px;
+        color: #fff;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+    }
+
+    #boss-label { position: absolute; top: 65px; }
+    #boss-timer { position: absolute !important; top: 85px !important; font-size: 12px !important; }
+
+    /* Le conteneur prend 100% de la place pour laisser le sprite grandir librement */
+    #monster-emoji-container {
+        height: 100% !important;
+        width: 100% !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        box-sizing: border-box;
+        padding-top: 50px; /* Évite de chevaucher les textes du haut */
+    }
+
+    /* LIBÉRATION DES SIZES : Supprime les restrictions pour accepter le grand format */
+    #monster-emoji-container img,
     #monster-emoji {
-        height: clamp(200px, 42vh, 360px) !important;
+        width: auto !important;
+        max-width: 95% !important;
+        max-height: 95% !important;
+        object-fit: contain !important;
+        image-rendering: pixelated !important;
+        transition: height 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    .hp-bar-container {
-        width: 400px !important;
+
+    /* CORRECTION SQUAD HP BAR : Parfaitement isolée tout en bas sous les boutons */
+    #combat-arena #footer {
+        position: absolute !important;
+        bottom: 12px !important;
+        left: 12px !important;
+        right: 12px !important;
+        z-index: 10 !important;
+        background: transparent !important;
+        border-top: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        display: flex;
+        flex-direction: column-reverse !important;
+        gap: 8px !important;
     }
+
+    .footer-bb-slots {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        z-index: 2;
+    }
+
+    .squad-party-hp-wrap {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        z-index: 1;
+    }
+
     .squad-party-hp-bar {
-        width: 400px !important;
+        position: relative !important; /* REPLACÉ : 'relative' au lieu de 'static' pour emprisonner le texte */
+        width: 100% !important;
+        max-width: 420px !important;
+        height: 16px !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.7);
+        border-radius: 8px !important;
+    }
+
+    /* INTERFACE MODAL DU HÉROS SUBTILE ET COMPACTE (SANS VIDE NOIR NI VRES INVISIBLES) */
+    #hero-modal {
+        display: none !important;
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 130 !important;
+        border-radius: 8px;
+        flex-direction: column !important;
+        background: rgba(8, 10, 20, 0.98) !important;
+        /* Flou de fond pour masquer la grille d'unités en arrière-plan */
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 2px solid var(--hero-theme-color, #b4934c);
+        /* Lueur externe dynamique basée sur l'élément */
+        box-shadow: inset 0 0 25px rgba(0,0,0,0.95), 0 0 15px var(--hero-theme-color, rgba(0,0,0,0.5));
+        overflow-y: auto;
+    }
+
+    #hero-modal.visible {
+        display: flex !important;
+    }
+
+    .hm-left-panel {
+        width: 100% !important;
+        height: auto !important;
+        max-height: 260px !important;
+        padding: 12px 12px 0 12px !important;
+        background: transparent !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-bottom: none !important;
+    }
+
+    .hm-left-panel img {
+        width: 100% !important;
+        height: auto !important;
+        max-height: 240px !important;
+        object-fit: contain !important;
+        image-rendering: pixelated;
+    }
+
+    .hm-right-panel {
+        width: 100% !important;
+        height: auto !important;
+        background: transparent !important;
+        border-left: none !important;
+        padding: 0 14px 14px 14px !important;
+    }
+    
+    .hm-right-panel .hm-content {
+        overflow-y: visible !important;
+    }
+    
+    .hm-stats {
+        padding: 10px !important;
+        margin-bottom: 10px !important;
+        background: rgba(5, 7, 15, 0.85) !important;
+    }
+    
+    .hm-stat-row {
+        font-size: 12px !important;
+    }
+    
+    /* Zone d'affichage de l'inventaire global des sphères */
+    .desktop-spheres-inventory {
+        margin-top: 15px;
+        background: rgba(5, 7, 15, 0.6);
+        border-radius: 8px;
+        padding: 10px;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .desktop-spheres-title {
+        font-family: 'Cinzel', serif;
+        font-size: 11px;
+        color: #00d2ff;
+        margin-bottom: 6px;
+    }
+    .desktop-spheres-grid {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    /* En-têtes horizontaux élégants à gauche */
+    .left-wing-header {
+        font-family: 'Cinzel', serif;
+        font-size: 11px;
+        font-weight: 700;
+        color: #00d2ff;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 4px 8px;
+        background: linear-gradient(90deg, rgba(0, 210, 255, 0.15) 0%, rgba(0, 210, 255, 0) 100%);
+        border-left: 3px solid #00d2ff;
+        margin-bottom: 6px;
+        margin-top: 10px;
+    }
+    #left-wing-pres-header {
+        color: #c084fc;
+        background: linear-gradient(90deg, rgba(192, 132, 252, 0.15) 0%, rgba(192, 132, 252, 0) 100%);
+        border-left-color: #c084fc;
+    }
+
+    /* Ombre d'ancrage sous le sprite du monstre */
+    #monster-emoji-container::after {
+        content: '';
+        position: absolute;
+        bottom: -2px; /* Ajusté pile au niveau de la dalle de pierre du décor */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 180px; /* Plus large pour les gros monstres et dragons */
+        height: 18px;
+        background: radial-gradient(ellipse, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 75%) !important;
+        pointer-events: none;
+        z-index: 1;
+        animation: monsterShadow 3s ease-in-out infinite;
+    }
+
+    /* Secousse globale de l'arène au Tap */
+    .arena-click-shock {
+        animation: arenaShock 0.05s ease-in-out alternate 2;
+    }
+    @keyframes arenaShock {
+        0% { transform: scale(1); }
+        100% { transform: scale(1.02); filter: brightness(1.12); }
+    }
+
+    /* Jauge de Boss Épique en "Haut d'Écran" */
+    #boss-hp-container {
+        display: none;
+        position: absolute;
+        top: 15px;
+        left: 10%;
+        width: 80%;
+        z-index: 10;
+        flex-direction: column;
+        gap: 4px;
+    }
+    #boss-hp-container.visible {
+        display: flex;
+    }
+    .boss-hp-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: 'Cinzel', serif;
+        font-size: 11px;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0 2px 4px #000;
+        letter-spacing: 1px;
+    }
+    #boss-hp-name {
+        color: #e74c3c;
+        text-shadow: 0 0 10px rgba(231,76,60,0.6), 0 2px 4px #000;
+    }
+    #boss-hp-timer {
+        color: #f1c40f;
+    }
+    .boss-hp-bar-outer {
+        position: relative;
+        width: 100%;
+        height: 12px;
+        background: rgba(0,0,0,0.85);
+        border: 1.5px solid #b4934c;
+        border-radius: 6px;
+        box-shadow: inset 0 0 8px #000, 0 0 10px rgba(0,0,0,0.5);
+        overflow: hidden;
+    }
+    #boss-hp-bar-fill {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, #c0392b, #ff3333, #c0392b);
+        box-shadow: inset 0 1px 2px rgba(255,255,255,0.4), 0 0 8px #ff3333;
+        border-radius: 4px;
+        transition: width 0.15s ease-out;
+    }
+    #boss-hp-text {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0 1px 2px #000;
     }
 }
 
@@ -424,25 +811,37 @@ body {
 @media (min-width: 1024px) {
     .fantasy-panel {
         background: linear-gradient(135deg, rgba(16, 22, 42, 0.96) 0%, rgba(8, 10, 20, 0.99) 100%);
-        border: 3.5px solid #b4934c; /* Ligne d'or centrale */
         border-radius: 12px;
         position: relative;
-        box-shadow: 
-            0 12px 36px rgba(0, 0, 0, 0.85),
-            inset 0 0 25px rgba(0, 0, 0, 0.95),
-            0 0 0 2px #1f1826, /* Ligne sombre externe */
-            inset 0 0 0 2px #1f1826; /* Ligne sombre interne */
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
+        
+        /* CORRECTION CRITIQUE 1 : Empêche TOUT élément (décor, image, herbe) de déborder en bas */
+        overflow: hidden !important; 
     }
     
+    .fantasy-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border: 3.5px solid #b4934c;
+        border-radius: 12px;
+        pointer-events: none;
+        
+        /* CORRECTION CRITIQUE 2 : Force le cadre d'or à se dessiner au-dessus du overflow */
+        z-index: 125; 
+        box-sizing: border-box;
+        box-shadow: 
+            0 0 0 2px #1f1826, 
+            inset 0 0 0 2px #1f1826,
+            inset 0 0 25px rgba(0, 0, 0, 0.95);
+    }
+
     /* Separators for Header & Footer in Combat Arena */
     #combat-arena #header {
         border-bottom: 3.5px solid #b4934c;
         box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
-    #combat-arena #footer {
-        border-top: 3.5px solid #b4934c;
-        box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
-    }
+
 
     /* Gemmes d'angles lumineuses */
     .corner-gem {
@@ -509,9 +908,8 @@ body {
         border-bottom: none;
         border-right: 1.5px solid #1f1826;
         border-left: none;
-        border-radius: 8px 8px 0 0;
-        margin: 4px 2px 0;
-        height: calc(100% - 4px);
+        border-radius: 0;
+        margin: 0;
         background: linear-gradient(180deg, #2b355a 0%, #171d33 100%);
         border: 1px solid #3c497c;
         border-bottom: none;
@@ -681,21 +1079,110 @@ body {
 /* MODALS & OVERLAYS                             */
 /* ============================================= */
 #hero-modal {
-    position: absolute; inset: 0; z-index: 150; background: rgba(4,6,12,0.95);
+    position: absolute; inset: 0; z-index: 150; background: rgba(4,6,12,0.96);
     display: none; flex-direction: column; opacity: 0; transition: opacity 0.2s;
 }
 #hero-modal.visible { display: flex; opacity: 1; }
-.hm-header {
-    height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px;
-    border-bottom: 1px solid rgba(255,255,255,0.1); background: linear-gradient(180deg, #1a2035, #0f1221);
+
+
+
+@media (max-width: 1023px) {
+    #hero-modal {
+        flex-direction: column !important;
+    }
+    .hm-left-panel {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: #050811;
+        position: relative;
+        overflow: hidden;
+    }
+    .hm-left-panel img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .hm-right-panel {
+        width: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(180deg, #101424, #080a14);
+        overflow-y: auto;
+    }
 }
-.hm-title { font-family: 'Cinzel', serif; font-size: 16px; color: #fff; }
-.hm-close { background: none; border: none; color: #a0b0c0; font-size: 24px; cursor: pointer; }
-.hm-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-.hm-image-container { width: 100%; height: 400px; position: relative; overflow: hidden; border-bottom: 2px solid #2a3560; perspective: 1000px; }
-.hm-image { width: 100%; height: 100%; object-fit: cover; object-position: top; transform: scale(1.08); transition: transform 0.1s ease-out; will-change: transform; }
-.hm-stars { position: absolute; top: 15px; right: 15px; font-size: 18px; color: #f1c40f; text-shadow: 0 2px 4px #000; letter-spacing: 2px; }
-.hm-elem { position: absolute; top: 15px; left: 15px; font-size: 24px; filter: drop-shadow(0 2px 4px #000); }
+
+.hm-right-panel .hm-header {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: transparent;
+    gap: 8px;
+}
+.hm-header-badge-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.hm-stars-badge {
+    font-size: 11px;
+    color: #f1c40f;
+    letter-spacing: 1px;
+    background: rgba(241,196,15,0.12);
+    border: 1px solid rgba(241,196,15,0.3);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-weight: 700;
+}
+.hm-elem-badge {
+    font-size: 14px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.hm-lvl-badge {
+    font-size: 11px;
+    color: #00d2ff;
+    letter-spacing: 1px;
+    background: rgba(0,210,255,0.12);
+    border: 1px solid rgba(0,210,255,0.3);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-weight: 700;
+}
+.hm-title-row {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+}
+.hm-title { font-family: 'Cinzel', serif; font-size: 18px; color: #fff; font-weight: 700; }
+.hm-close {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.hm-close:hover {
+    background: rgba(231,76,60,0.8);
+    border-color: #e74c3c;
+}
+.hm-right-panel .hm-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.hm-image { width: 100%; height: 100%; object-fit: cover; object-position: top; }
 
 /* ── RPG Awesome — Couleurs élémentaires ── */
 .ra-fire        { color: #e74c3c; }
@@ -707,26 +1194,58 @@ body {
 /* Ressources */
 .ra-gem         { color: #00d2ff; text-shadow: 0 0 6px rgba(0,210,255,0.4); }
 .ra-gold-bar    { color: #f1c40f; }
-/* Onglets — taille adaptée */
+/* Onglets ── */
 .tab-icon .ra   { font-size: 17px; }
-/* Mini-cartes héros */
 .hero-mini-elem .ra { font-size: 15px; }
-/* Skill icon */
 .skill-icon .ra { font-size: 30px; }
-/* Footer BB */
 .footer-bb .ra  { font-size: 18px; }
-/* Tap */
 .tap-upgrade-icon .ra { font-size: 20px; }
+
 .hm-info { padding: 15px; }
 .hm-lore { font-size: 12px; color: #a0b0c0; font-style: italic; margin-bottom: 15px; line-height: 1.4; }
+
+/* Equipment & Skill circular slots */
+.hm-slots-container {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin: 10px 0 20px;
+}
+.hm-slot-circle {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: rgba(10,12,24,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    color: rgba(255,255,255,0.4);
+    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.hm-slot-circle:not(.locked):hover {
+    color: #fff;
+    border-color: var(--hero-theme-color, #00d2ff);
+    box-shadow: 0 0 10px var(--hero-theme-color, #00d2ff);
+    background: rgba(255, 255, 255, 0.03);
+}
+.hm-slot-circle.locked {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: rgba(0,0,0,0.4);
+    border-style: dashed;
+}
+
 .hm-stats {
     background: rgba(15,18,30,0.8); border-radius: 8px; padding: 12px; border: 1px solid #1e2a4a;
     display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px;
 }
-.hm-stat-row { display: flex; justify-content: space-between; font-size: 13px; color: #fff; }
+.hm-stat-row { display: flex; justify-content: space-between; font-size: 13px; color: #fff; align-items: center; }
 .hm-stat-row span:last-child { font-weight: 700; color: #2ecc71; }
-.hm-actions { display: flex; flex-direction: column; gap: 8px; padding: 0 15px 15px; }
-.hm-lvlup-row { display: flex; gap: 6px; width: 100%; }
+.hm-actions { display: flex; flex-direction: column; gap: 8px; padding: 0; }
+.hm-lvlup-row { display: flex; gap: 6px; width: 100%; margin-bottom: 8px; }
 .hm-lvlup-btn {
     flex: 1; display: flex; flex-direction: column; align-items: center;
     padding: 9px 4px; gap: 2px; border-radius: 8px; border: none; cursor: pointer;
@@ -764,9 +1283,41 @@ body {
 .hm-lvlup-btn:disabled { background: linear-gradient(180deg,#3a4255,#252d3d) !important;
     color: #5a6a8a !important; cursor: not-allowed; transform: none !important;
     box-shadow: none !important; animation: none !important; border-color: transparent !important; }
-.hm-actions-row2 { display: flex; gap: 8px; }
-.hm-btn.evolve { background: linear-gradient(135deg, #c084fc, #9b59b6); }
-.hm-btn.evolve:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 15px rgba(192,132,252,0.6); }
+
+.hm-actions-row2 { display: flex; gap: 8px; width: 100%; }
+
+/* Evolve & Squad Buttons ── Gaming Rectangular Style with hover elemental color border glow */
+.hm-actions-row2 .hm-btn, .hm-actions .hm-btn {
+    border-radius: 0 !important;
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.25s;
+    background: #0f1221;
+    border: 1.5px solid #2a3560;
+    color: #a0b0c0;
+    cursor: pointer;
+}
+.hm-actions-row2 .hm-btn:hover:not(:disabled), .hm-actions .hm-btn:hover:not(:disabled) {
+    background: rgba(15,18,30,0.9);
+    border-color: var(--hero-theme-color, #00d2ff);
+    color: #fff;
+    box-shadow: 0 0 15px var(--hero-theme-color, #00d2ff);
+    transform: none;
+}
+.hm-btn.evolve {
+    border-color: var(--hero-theme-color, #c084fc) !important;
+    color: var(--hero-theme-color, #c084fc) !important;
+}
+.hm-btn.evolve:hover:not(:disabled) {
+    background: rgba(15,18,30,0.9);
+    border-color: var(--hero-theme-color, #c084fc) !important;
+    color: #fff !important;
+    box-shadow: 0 0 20px var(--hero-theme-color, #c084fc) !important;
+}
 
 #footer {
     flex-shrink: 0;
@@ -791,7 +1342,8 @@ body {
 .footer-bb .bb-gauge-fill-slot { position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #00d2ff; box-shadow: 0 -1px 3px #00d2ff; }
 .settings-btn { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #2a3560; background: rgba(15,18,30,0.9); color: #6a7a9a; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-#bb-overlay { position: absolute; inset: 0; z-index: 100; display: none; pointer-events: none; }
+/* §1.5 — z-index corrigés : overlays cinématique au-dessus de toute l'UI (tab-bar = 110) */
+#bb-overlay { position: absolute; inset: 0; z-index: 250; display: none; pointer-events: none; }
 #bb-overlay.active { display: flex; align-items: center; justify-content: center; }
 .bb-bg { position: absolute; inset: 0; background: #000; opacity: 0; }
 .bb-stripe { position: absolute; width: 100%; height: 160px; background: linear-gradient(90deg, transparent, #c084fc33, transparent); transform: scaleY(0); }
@@ -799,9 +1351,20 @@ body {
 .bb-text { position: absolute; right: -300px; font-family: 'Cinzel', serif; font-size: 32px; color: #fff; text-shadow: 0 0 20px #c084fc, 0 4px 8px #000; }
 .bb-dmg-text { position: absolute; bottom: 30%; font-size: 48px; font-family: 'Cinzel', serif; color: #c084fc; font-weight: 700; text-shadow: 0 0 30px #c084fc, 0 4px 10px #000; opacity: 0; transform: scale(0.3); }
 
-#summon-overlay { position: absolute; inset: 0; z-index: 200; background: #fff; display: none; opacity: 0; transition: opacity 0.5s; }
+#summon-overlay { position: absolute; inset: 0; z-index: 260; background: #fff; display: none; opacity: 0; transition: opacity 0.5s; }
 #summon-overlay.active { display: block; opacity: 1; }
-#screen-flash { position: absolute; inset: 0; z-index: 90; pointer-events: none; opacity: 0; transition: opacity 0.1s; }
+#screen-flash { position: absolute; inset: 0; z-index: 240; pointer-events: none; opacity: 0; transition: opacity 0.1s; }
+
+/* §3.2 — GPU promotion pour éléments animés critiques */
+.summon-vortex, .sg-vortex, #monster-emoji, #hp-bar-fill, #party-hp-bar-fill {
+    will-change: transform;
+}
+
+/* §3.2 — Respect de la préférence système (accessibilité + perf mobile) */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    #dynamic-pc-bg { filter: brightness(0.4) !important; }
+}
 .skill-active-overlay { position: absolute; top:0; left:0; right:0; background: rgba(241,196,15,0.2); font-size: 11px; text-align: center; color: #f1c40f; padding: 2px; display: none; z-index: 10; font-weight: 700; }
 
 .material-badge {
@@ -811,7 +1374,7 @@ body {
 /* ============================================= */
 /* MINI HERO CARDS — Grille Compacte 3 colonnes  */
 /* ============================================= */
-.heroes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px 0; }
+.heroes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px 0; align-content: flex-start; }
 
 .hero-mini-card {
     border-radius: 10px; overflow: hidden; position: relative; cursor: pointer;
@@ -848,6 +1411,29 @@ body {
 /* Locked state */
 .hero-mini-card.locked { cursor: default; border: 2px dashed #2a3560 !important; box-shadow: none !important; }
 .hero-mini-card.locked > img { filter: brightness(0.12) grayscale(1); }
+
+/* Hover dynamique lié à la couleur du biome du héros */
+.hero-mini-card:not(.locked):hover {
+    transform: translateY(-5px) scale(1.03);
+    box-shadow: 0 8px 20px var(--hero-theme-color, rgba(0,210,255,0.3)) !important;
+    border-color: var(--hero-theme-color, #00d2ff) !important;
+    z-index: 5;
+}
+
+/* Lueur combo sur la zone de clic */
+#monster-zone { transition: box-shadow 0.2s ease; }
+#monster-zone.combo-glow { box-shadow: inset 0 0 40px rgba(241,196,15,0.25); }
+
+/* Indicateurs de touches clavier sur les boutons de compétences */
+.skill-card, .footer-bb { position: relative; }
+.keyboard-key-hint {
+    position: absolute; top: -4px; left: -4px;
+    background: #2a3560; border: 1px solid #b4934c;
+    color: #f1c40f; font-size: 8px; font-weight: 700;
+    padding: 1px 4px; border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    pointer-events: none;
+}
 
 /* ============================================= */
 /* CADRES DE RARETÉ SKEUOMORPHIQUES              */
@@ -1556,7 +2142,7 @@ body {
         <div id="header">
             <div class="header-top">
                 <div class="zone-info">
-                    <div class="zone-name" id="zone-name">Zone 1 — Plaines de Mistral</div>
+                    <div class="zone-name" id="zone-name">Chargement…</div>
                     <div class="zone-progress" id="zone-progress">Monstre 1 / 10</div>
                     <div class="zone-elem-badge" id="zone-elem-badge"></div>
                 </div>
@@ -1577,19 +2163,24 @@ body {
         <div id="monster-zone">
             <div id="monster-bg"></div>
             <canvas id="particle-canvas"></canvas>
+            <div id="skill-active-overlay" class="skill-active-overlay">⚡ FRENZY ACTIVE (x3 TAP & DPS) ⚡</div>
+            
+
+
             <div class="monster-container">
                 <span class="boss-label" id="boss-label">👑 BOSS</span>
-                <div id="monster-emoji-container">
-                    <img id="monster-emoji" src="assets/monster/biome 1/slime-de-lave-1.png" alt="Monster">
-                </div>
-                <div id="monster-name">Loup Gris</div>
+                <div id="boss-timer">⏱ 30s</div>
+                <div id="monster-name">…</div>
                 
                 <!-- Monster HP Bar -->
                 <div class="hp-bar-container">
                     <div id="hp-bar-fill" style="width:100%"></div>
                     <div id="hp-text">10 / 10</div>
                 </div>
-                <div id="boss-timer">⏱ 30s</div>
+                
+                <div id="monster-emoji-container">
+                    <img id="monster-emoji" src="assets/monster/biome 1/slime-de-lave-1.png" alt="Monster">
+                </div>
             </div>
         </div>
 
@@ -1628,14 +2219,21 @@ body {
                 </div>
 
                 <!-- Tap Upgrade -->
-                <div class="tap-upgrade-card">
-                    <div class="tap-upgrade-icon"><i class="ra ra-sword" style="color:#a0b0c0"></i></div>
-                    <div class="tap-upgrade-info">
-                        <div class="tap-upgrade-title">Puissance de Tap</div>
-                        <div id="tap-desc">Niv. 0 — Dégâts : 1</div>
-                        <div id="tap-next-ms">Prochain cap: x2 au Niv.10</div>
+                <div class="tap-upgrade-card" style="flex-direction: column; gap: 10px; align-items: stretch;">
+                    <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                        <div class="tap-upgrade-icon"><i class="ra ra-sword" style="color:#a0b0c0"></i></div>
+                        <div class="tap-upgrade-info">
+                            <div class="tap-upgrade-title">Puissance de Tap</div>
+                            <div id="tap-desc">Niv. 0 — Dégâts : 1</div>
+                            <div id="tap-next-ms">Prochain cap: x2 au Niv.10</div>
+                        </div>
                     </div>
-                    <button class="hm-btn levelup" id="tap-btn" style="flex:none; padding:8px 12px;" onclick="upgradeTap()">⬆ 10</button>
+                    
+                    <div class="hm-lvlup-row" style="margin-bottom: 0; width: 100%; display: flex; gap: 6px;">
+                        <button class="hm-lvlup-btn x1" id="tap-btn-1" style="flex: 1; padding: 10px 2px;" onclick="upgradeTap(1)">+1</button>
+                        <button class="hm-lvlup-btn x10" id="tap-btn-10" style="flex: 1; padding: 10px 2px;" onclick="upgradeTap(10)">×10</button>
+                        <button class="hm-lvlup-btn xmax" id="tap-btn-max" style="flex: 1; padding: 10px 2px;" onclick="upgradeTap('max')">MAX</button>
+                    </div>
                 </div>
 
                 <div class="heroes-grid" id="heroes-grid"></div>
@@ -1654,9 +2252,9 @@ body {
                 <div class="summon-vortex"></div>
                 <div class="summon-banner-content">
                     <div class="summon-banner-tag">✦ RARE SUMMON ✦</div>
-                    <div class="summon-banner-title">Héros Légendaires</div>
-                    <div class="summon-banner-stars">3★ ·· 4★ ·· 5★ ·· 6★</div>
-                    <div class="summon-banner-desc">S: 5% (Sera, Magress) · A: 25% · B: 70%</div>
+                    <div class="summon-banner-title">Sphères & Matériaux Divins</div>
+                    <div class="summon-banner-stars">Équipements Légendaires</div>
+                    <div class="summon-banner-desc">Sphères (70%) · Matériaux Haut-Tier (30%)</div>
                 </div>
                 <button class="summon-cost-btn gems" id="rare-summon-btn" onclick="summonRare()">
                     <i class="ra ra-gem"></i> 5
@@ -1677,7 +2275,13 @@ body {
                 </button>
             </div>
 
-            <div class="gacha-note">Doublez vos DPS avec des doublons · Évoluez jusqu'à 6★ pour débloquer les artworks !</div>
+            <div class="gacha-note">Équipez vos héros avec des Sphères pour démultiplier leur puissance !</div>
+            
+            <div class="desktop-spheres-inventory">
+                <div class="desktop-spheres-title">🎒 Vos Reliques et Sphères en Stock</div>
+                <div class="desktop-spheres-grid" id="global-spheres-stock">
+                </div>
+            </div>
         </div>
         
         <div class="tab-panel" id="panel-skills">
@@ -1727,6 +2331,24 @@ body {
                 </div>
             </div>
 
+            <!-- Export / Import -->
+            <div class="settings-section">
+                <div class="settings-section-title">📤 Export / Import</div>
+                <div class="settings-actions-row">
+                    <button class="settings-action-btn save" id="btn-export-save" onclick="exportSave()">📋 Exporter</button>
+                    <button class="settings-action-btn" id="btn-import-save" onclick="importSavePrompt()" style="background:linear-gradient(135deg,#1a6b4a,#0f4d35);border-color:#0d3d2a;">📥 Importer</button>
+                </div>
+                <div class="settings-row-sub" style="text-align:center; color:#4a5a6a;">
+                    Export copie dans le presse-papier. Import lit depuis le presse-papier.
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="settings-section" id="stats-section">
+                <div class="settings-section-title">📊 Statistiques</div>
+                <div id="stats-content"></div>
+            </div>
+
             <!-- Infos -->
             <div class="settings-credits">Brave Frontier Clicker · Sauvegarde locale (localStorage)</div>
         </div>
@@ -1740,6 +2362,102 @@ body {
         <div class="corner-gem gem-light bottom-right"></div>
         <div id="right-wing-tab-bar"></div>
         <div id="right-wing-tab-content"></div>
+
+        <!-- HERO FULL CARD MODAL -->
+        <div id="hero-modal">
+            <!-- Left panel (60% width on PC, containing only the hero illustration) -->
+            <div class="hm-left-panel" onclick="closeHeroModal()" title="Cliquer pour fermer" style="cursor: pointer;">
+                <img id="hm-image" class="hm-image" src="" alt="Hero">
+            </div>
+            
+            <!-- Right panel (40% width on PC, containing stats and actions) -->
+            <div class="hm-right-panel">
+                <div class="hm-header">
+                    <div class="hm-header-badge-row">
+                        <span class="hm-stars-badge" id="hm-stars">★★★</span>
+                        <span class="hm-elem-badge" id="hm-elem">🔥</span>
+                        <span class="hm-lvl-badge" id="hm-header-lvl">Lv.1</span>
+                    </div>
+                    <div class="hm-title-row">
+                        <div class="hm-title" id="hm-title">Ignis l'Épéiste</div>
+                        <button class="hm-close" onclick="closeHeroModal()">×</button>
+                    </div>
+                </div>
+                
+                <div class="hm-content">
+                    <div class="hm-info">
+                        <div class="hm-lore" id="hm-lore">"Une description épique..."</div>
+                        
+                        <!-- Circular slots for spheres/equipment/skills -->
+                        <div class="hm-slots-container">
+                            <div class="hm-slot-circle" id="hm-slot-sphere" onclick="toggleSphereSelect()">
+                                <span id="hm-slot-sphere-icon"><i class="ra ra-plus"></i></span>
+                            </div>
+                            <div class="hm-slot-circle locked" title="Emplacement verrouillé">
+                                <span><i class="ra ra-sword"></i></span>
+                            </div>
+                            <div class="hm-slot-circle locked" title="Emplacement verrouillé">
+                                <span><i class="ra ra-shield"></i></span>
+                            </div>
+                            <div class="hm-slot-circle locked" title="Emplacement verrouillé">
+                                <span><i class="ra ra-fairy-wand"></i></span>
+                            </div>
+                        </div>
+                        
+                        <div class="hm-stats">
+                            <div class="hm-stat-row"><span>Type (Nature)</span><span id="hm-type" style="color:#f1c40f">Lord</span></div>
+                            <div class="hm-stat-row"><span>Niveau</span><span id="hm-lvl">1 / 50</span></div>
+                            <div class="hm-stat-row"><span>DPS total</span><span id="hm-dps">10</span></div>
+                            <div class="hm-stat-row"><span>HP / DEF Héros</span><span id="hm-hp-def">10 / 5</span></div>
+                            <div class="hm-stat-row" style="color:#f1c40f"><span>Bonus Doublons (Limit Break)</span><span id="hm-lb">+0%</span></div>
+                            
+                            <!-- Sphere selection row -->
+                            <div class="hm-stat-row" id="hm-sphere-row" style="color:#00d2ff; font-size:11px; margin-top:2px; display:none; flex-direction:column; gap:4px; width:100%;">
+                                <span>Sélectionner une Sphère</span>
+                                <select id="hm-sphere-select" onchange="equipSphere(this.value)" style="background:#1a2035; color:#fff; border:1px solid #2a3560; border-radius:4px; padding:4px 6px; font-size:11px; width: 100%;">
+                                </select>
+                            </div>
+                            
+                            <div class="hm-stat-row" style="color:#00d2ff; font-size:10px; margin-top:2px;"><span>Leader Skill</span><span id="hm-ls" style="color:#e0e6f0">Aucun</span></div>
+                            <div class="hm-stat-row" style="color:#a0b0c0; font-size:10px; margin-top:2px;"><span>Prochain palier</span><span id="hm-next-cap" style="color:#00d2ff"></span></div>
+                            <div class="hm-stat-row" id="hm-evo-mats-row" style="color:#e74c3c; font-size:10px; display:none; flex-direction:column; gap:2px; margin-top:4px;">
+                                <span>Matériaux Requis pour Évoluer :</span>
+                                <span id="hm-evo-mats-list" style="color:#a0b0c0"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="hm-actions" id="hm-actions-owned">
+                            <!-- Rangée 1 : niveau ×1 / ×10 / MAX -->
+                            <div class="hm-lvlup-row" id="hm-levelup-row">
+                                <button class="hm-lvlup-btn x1"   id="hm-btn-lvlup"    onclick="levelUpCurrentHero(1)">
+                                    <span class="lvl-label">+1</span>
+                                    <span class="lvl-cost"  id="hm-cost-1"></span>
+                                </button>
+                                <button class="hm-lvlup-btn x10"  id="hm-btn-lvlup10"  onclick="levelUpCurrentHero(10)">
+                                    <span class="lvl-label">×10</span>
+                                    <span class="lvl-cost"  id="hm-cost-10"></span>
+                                </button>
+                                <button class="hm-lvlup-btn xmax" id="hm-btn-lvlupmax" onclick="levelUpCurrentHero('max')">
+                                    <span class="lvl-label">MAX</span>
+                                    <span class="lvl-cost"  id="hm-cost-max"></span>
+                                </button>
+                            </div>
+                            <!-- Rangée 2 : évoluer + squad -->
+                            <div class="hm-actions-row2">
+                                <button class="hm-btn evolve" id="hm-btn-evolve" onclick="evolveCurrentHero()" style="flex:1;">Évoluer</button>
+                                <button class="hm-btn" id="hm-btn-squad" onclick="toggleSquadCurrentHero()" style="flex:1;">Squad</button>
+                            </div>
+                        </div>
+                        <div class="hm-actions" id="hm-actions-buy" style="display:none; padding-top: 10px;">
+                            <button class="hm-btn xmax" id="hm-btn-buy" onclick="buyCurrentHero()" style="width:100%;">
+                                <span style="font-size: 14px;">Acheter Héros</span><br>
+                                <span id="hm-cost-buy" style="font-size: 11px; opacity: 0.8;"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- CONTENEUR DES ONGLETS MOBILES (Initialement hébergé ici) -->
@@ -1755,59 +2473,6 @@ body {
     </div>
 
 </div> <!-- Fin de #game-window -->
-
-<!-- HERO FULL CARD MODAL -->
-<div id="hero-modal">
-    <div class="hm-header">
-        <div class="hm-title" id="hm-title">Ignis l'Épéiste</div>
-        <button class="hm-close" onclick="closeHeroModal()">×</button>
-    </div>
-        <div class="hm-content">
-            <div class="hm-image-container">
-                <img id="hm-image" class="hm-image" src="" alt="Hero">
-                <div class="hm-elem" id="hm-elem">🔥</div>
-                <div class="hm-stars" id="hm-stars">★★★</div>
-            </div>
-            <div class="hm-info">
-                <div class="hm-lore" id="hm-lore">"Une description épique..."</div>
-                <div class="hm-stats">
-                    <div class="hm-stat-row"><span>Type (Nature)</span><span id="hm-type" style="color:#f1c40f">Lord</span></div>
-                    <div class="hm-stat-row"><span>Niveau</span><span id="hm-lvl">1 / 50</span></div>
-                    <div class="hm-stat-row"><span>DPS total</span><span id="hm-dps">10</span></div>
-                    <div class="hm-stat-row"><span>HP / DEF Héros</span><span id="hm-hp-def">10 / 5</span></div>
-                    <div class="hm-stat-row" style="color:#f1c40f"><span>Bonus Doublons (Limit Break)</span><span id="hm-lb">+0%</span></div>
-                    <div class="hm-stat-row" style="color:#00d2ff; font-size:10px; margin-top:2px;"><span>Leader Skill</span><span id="hm-ls" style="color:#e0e6f0">Aucun</span></div>
-                    <div class="hm-stat-row" style="color:#a0b0c0; font-size:10px; margin-top:2px;"><span>Prochain palier</span><span id="hm-next-cap" style="color:#00d2ff"></span></div>
-                    <div class="hm-stat-row" id="hm-evo-mats-row" style="color:#e74c3c; font-size:10px; display:none; flex-direction:column; gap:2px; margin-top:4px;">
-                        <span>Matériaux Requis pour Évoluer :</span>
-                        <span id="hm-evo-mats-list" style="color:#a0b0c0"></span>
-                    </div>
-                </div>
-                <div class="hm-actions">
-                    <!-- Rangée 1 : niveau ×1 / ×10 / MAX -->
-                    <div class="hm-lvlup-row" id="hm-levelup-row">
-                        <button class="hm-lvlup-btn x1"   id="hm-btn-lvlup"    onclick="levelUpCurrentHero(1)">
-                            <span class="lvl-label">+1</span>
-                            <span class="lvl-cost"  id="hm-cost-1"></span>
-                        </button>
-                        <button class="hm-lvlup-btn x10"  id="hm-btn-lvlup10"  onclick="levelUpCurrentHero(10)">
-                            <span class="lvl-label">×10</span>
-                            <span class="lvl-cost"  id="hm-cost-10"></span>
-                        </button>
-                        <button class="hm-lvlup-btn xmax" id="hm-btn-lvlupmax" onclick="levelUpCurrentHero('max')">
-                            <span class="lvl-label">MAX</span>
-                            <span class="lvl-cost"  id="hm-cost-max"></span>
-                        </button>
-                    </div>
-                    <!-- Rangée 2 : évoluer + squad -->
-                    <div class="hm-actions-row2">
-                        <button class="hm-btn evolve" id="hm-btn-evolve" onclick="evolveCurrentHero()" style="flex:1;">Évoluer</button>
-                        <button class="hm-btn" id="hm-btn-squad" onclick="toggleSquadCurrentHero()" style="flex:1;">Squad</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- OVERLAYS -->
     <div id="bb-overlay">
@@ -1868,63 +2533,57 @@ const ELEM_ICONS = {
 // 12 héros — 2 par élément (1 Attaquant + 1 Utilitaire), triés par coût croissant
 const HERO_DEFS = [
     // ── FEU ──
-    { id: 'ignis',   elem: 'Feu',      icon: '<i class="ra ra-fire"></i>',          baseDPS: 2,   baseCost: 50,
+    { id: 'ignis', elem: 'Feu', icon: '<i class="ra ra-fire"></i>', baseDPS: 2, baseCost: 50,
       titles: ['Épéiste Ignis','Chevalier Ignis','Général Ignis','Dieu du Feu Ignis'],
       lore: "Un guerrier impulsif maniant une épée enveloppée de flammes célestes." },
-    { id: 'vargas',  elem: 'Feu',      icon: '<i class="ra ra-fire"></i>',          baseDPS: 3,   baseCost: 80,
+    { id: 'vargas', elem: 'Feu', icon: '<i class="ra ra-fire"></i>', baseDPS: 3, baseCost: 80,
       titles: ['Soldat Vargas','Vétéran Vargas','Commandant Vargas','Légendaire Vargas'],
-      lore: "Un ancien commandant qui galvanise ses alliés grâce à une aura de feu intérieur." },
+      lore: "Un ancien commandant qui galvanise ses alliés en surchargeant leur jauge de BC." },
     // ── EAU ──
-    { id: 'selena',  elem: 'Eau',      icon: '<i class="ra ra-droplet"></i>', baseDPS: 5,   baseCost: 200,
+    { id: 'selena', elem: 'Eau', icon: '<i class="ra ra-droplet"></i>', baseDPS: 5, baseCost: 200,
       titles: ['Mage Selena','Sirène Selena','Reine Selena','Déesse de Glace Selena'],
-      lore: "Héritière légendaire d'une ancienne lignée de prêtresses de l'eau." },
-    { id: 'elimo',   elem: 'Eau',      icon: '<i class="ra ra-droplet"></i>', baseDPS: 9,   baseCost: 380,
-      titles: ['Mage Elimo','Cryomage Elimo','Archimage Elimo','Maîtresse du Givre Elimo'],
-      lore: "Une enchanteresse qui transforme l'eau en lances de givre pour figer ses ennemis." },
+      lore: "Héritière légendaire d'une ancienne lignée capable de soigner et de doubler la fortune." },
+    { id: 'margonia', elem: 'Eau', icon: '<i class="ra ra-droplet"></i>', baseDPS: 9, baseCost: 380,
+      titles: ['Mage Margonia','Cryomage Margonia','Archimage Margonia','Maîtresse du Givre Margonia'],
+      lore: "Une enchanteresse qui lance des pics de givre pour figer et geler complètement les cibles." },
     // ── TERRE ──
-    { id: 'lance',   elem: 'Terre',    icon: '<i class="ra ra-leaf"></i>', baseDPS: 15,  baseCost: 800,
+    { id: 'lance', elem: 'Terre', icon: '<i class="ra ra-leaf"></i>', baseDPS: 15, baseCost: 800,
       titles: ['Garde Lance','Lancier Lance','Protecteur Lance','Gaïa Lance'],
-      lore: "Un guerrier lié à l'Arbre Monde, armé d'une lance vivante." },
-    { id: 'zeln',    elem: 'Terre',    icon: '<i class="ra ra-leaf"></i>', baseDPS: 22,  baseCost: 1400,
+      lore: "Un guerrier lié à l'Arbre Monde protégeant l'équipe derrière un rempart végétal." },
+    { id: 'zeln', elem: 'Terre', icon: '<i class="ra ra-leaf"></i>', baseDPS: 22, baseCost: 1400,
       titles: ['Chasseur Zeln','Traqueur Zeln','Maître des Bois Zeln','Esprit de la Forêt Zeln'],
-      lore: "Un chasseur furtif qui frappe à la vitesse d'une vigne-éclair dans la jungle de Gaïa." },
+      lore: "Un chasseur furtif exécutant de triples frappes rapides d'une violence inouïe." },
     // ── FOUDRE ──
-    { id: 'karl',    elem: 'Foudre',   icon: '<i class="ra ra-lightning-bolt"></i>', baseDPS: 50,  baseCost: 3000,
+    { id: 'karl', elem: 'Foudre', icon: '<i class="ra ra-lightning-bolt"></i>', baseDPS: 50, baseCost: 3000,
       titles: ['Dragon Karl','Cavalier Karl','Dragon Foudroyant Karl','Démon Karl'],
-      lore: "Mi-humain, mi-dragon, maîtrisant le souffle électrique tempétueux." },
-    { id: 'eze',     elem: 'Foudre',   icon: '<i class="ra ra-lightning-bolt"></i>', baseDPS: 85,  baseCost: 6000,
+      lore: "Mi-humain, mi-dragon, déclenchant des souffles électriques foudroyants." },
+    { id: 'eze', elem: 'Foudre', icon: '<i class="ra ra-lightning-bolt"></i>', baseDPS: 85, baseCost: 6000,
       titles: ['Sauvage Eze','Guerrier Eze','Berserker Eze','Dieu Foudre Eze'],
-      lore: "Un gladiateur redoutable qui tire sa force brute de la foudre." },
+      lore: "Un gladiateur redoutable qui tire sa force brute de la foudre pour des coups critiques massifs." },
     // ── LUMIÈRE ──
-    { id: 'sera',    elem: 'Lumière',  icon: '<i class="ra ra-sun"></i>', baseDPS: 250, baseCost: 35000,
+    { id: 'sera', elem: 'Lumière', icon: '<i class="ra ra-sun"></i>', baseDPS: 250, baseCost: 35000,
       titles: ['Sainte Sera','Valkyrie Sera','Archange Sera','Déesse Créatrice Sera'],
-      lore: "La paladine sacrée descendue des cieux avec ses ailes de lumière." },
-    { id: 'atro',    elem: 'Lumière',  icon: '<i class="ra ra-sun"></i>', baseDPS: 400, baseCost: 55000,
+      lore: "La paladine sacrée descendue des cieux pour restaurer intégralement la vie de la squad." },
+    { id: 'atro', elem: 'Lumière', icon: '<i class="ra ra-sun"></i>', baseDPS: 400, baseCost: 55000,
       titles: ['Paladin Atro','Seigneur Atro','Champion Céleste Atro','Dieu Solaire Atro'],
-      lore: "Un paladin d'élite dont l'épée sacrée dissout les ténèbres à chaque frappe." },
+      lore: "Un paladin d'élite alliant frappe sacrée offensive et soins légers de soutien." },
     // ── TÉNÈBRES ──
-    { id: 'kikuri',  elem: 'Ténèbres', icon: '<i class="ra ra-skull"></i>', baseDPS: 500, baseCost: 72000,
-      titles: ['Apprentie Kikuri','Prêtresse Kikuri','Grande Prêtresse Kikuri','Déesse des Malédictions Kikuri'],
-      lore: "Une prêtresse liée aux forces spectrales, capable de maudire les ennemis et de drainer leur énergie vitale." },
     { id: 'magress', elem: 'Ténèbres', icon: '<i class="ra ra-skull"></i>', baseDPS: 700, baseCost: 95000,
       titles: ['Guerrier Magress','Chevalier Noir Magress','Seigneur des Ombres Magress','Démon Absolu Magress'],
-      lore: "Un ancien général de lumière corrompu par le Néant, dont l'épée dévore les âmes." },
+      lore: "Un ancien général corrompu dont l'épée dévore les âmes pour infliger le plus haut multiplicateur." },
+    { id: 'kikuri', elem: 'Ténèbres', icon: '<i class="ra ra-skull"></i>', baseDPS: 500, baseCost: 72000,
+      titles: ['Apprentie Kikuri','Prêtresse Kikuri','Grande Prêtresse Kikuri','Déesse des Malédictions Kikuri'],
+      lore: "Une prêtresse spectrale qui maudit les ennemis pour affaiblir définitivement leur puissance." }
 ];
 
-// 6 Biomes — 1 par élément, 3 monstres communs + 1 boss
+// Configuration des 6 Biomes officiels (3 Monstres communs + 1 Boss par région)
 const ZONE_THEMES = [
-    { name: "Cavernes d'Agni",    elem: 'Feu',      bossName: "Dragon d'Agni",
-      monsters: ["Slime de Lave","Chien d'Enfer","Élémentaire de Feu"],      bgHue: 0   },
-    { name: "Océan Éternel",      elem: 'Eau',      bossName: "Léviathan",
-      monsters: ["Méduse de Cristal","Éclaireur Squalide","Tortue de Récif"], bgHue: 185 },
-    { name: "Forêt de Gaïa",      elem: 'Terre',    bossName: "Colosse de Gaïa",
-      monsters: ["Loup de Gaïa","Plante Carnivore","Golem de Pierre"],        bgHue: 95  },
-    { name: "Pic Foudroyé",       elem: 'Foudre',   bossName: "Titan des Tempêtes",
-      monsters: ["Faucon Électrique","Scorpion Fulgurant","Cristal Vivant"],  bgHue: 50  },
-    { name: "Sanctuaire Céleste", elem: 'Lumière',  bossName: "Archange Corrompu",
-      monsters: ["Gardien de Marbre","Cherub Déchu","Oracle Aveugle"],        bgHue: 40  },
-    { name: "Néant des Ombres",   elem: 'Ténèbres', bossName: "Faucheur d'Âmes",
-      monsters: ["Squelette Maudit","Vampire Seigneur","Esprit Vengeur"],     bgHue: 270 },
+    { name: "Cavernes d'Agni", elem: 'Feu', bossName: "Dragon d'Agni", monsters: ["Slime de Lave", "Canidé d'Enfer", "Élémentaire de Scorie"], bgHue: 0 },
+    { name: "Océan Éternel", elem: 'Eau', bossName: "Léviathan", monsters: ["Méduse de Cristal", "Éclaireur Squalide", "Tortue de Récif"], bgHue: 185 },
+    { name: "Forêt de Gaïa", elem: 'Terre', bossName: "Ancien Gardien", monsters: ["Mandragore Bourgeonnante", "Esprit Sylvestre", "Arachnide des Bois"], bgHue: 95 },
+    { name: "Pic Foudroyé", elem: 'Foudre', bossName: "Titan Foudre", monsters: ["Scarabée Volte", "Rapace des Nuées", "Renard de Foudre"], bgHue: 50 },
+    { name: "Sanctuaire Céleste", elem: 'Lumière', bossName: "Archange Déchu", monsters: ["Éclat Flottant", "Pégase de Marbre", "Sentinelle Sacrée"], bgHue: 40 },
+    { name: "Néant des Ombres", elem: 'Ténèbres', bossName: "Faucheur d'Âmes", monsters: ["Ombre Errante", "Gargouille de Crypte", "Spectre Maudit"], bgHue: 270 }
 ];
 
 // Prefixes de cycle (zone 7+ = même biomes mais plus durs)
@@ -1933,15 +2592,25 @@ const TIER_PREFIXES = ['', 'Alfa ', 'Légendaire ', 'Mythique ', 'Divin '];
 // Fonds de biome — index correspond à ZONE_THEMES
 // null = utilise le biome 1 (Feu) comme fallback jusqu'à ce qu'un fond propre existe
 const BIOME_BGS = [
-    "assets/Biome/Biome 1 — Les Cavernes d'Agni (Feu).png",  // 0 — Feu      ✓
-    "assets/Biome/Biome 2 — L'Océan Éternel (Eau).png",      // 1 — Eau      ✓
-    null,  // 2 — Terre      (à ajouter)
-    null,  // 3 — Foudre     (à ajouter)
-    null,  // 4 — Lumière    (à ajouter)
-    null,  // 5 — Ténèbres   (à ajouter)
+    "assets/Biome/Biome FEU _ Les Cavernes d'Agni.png",          // 0 — Feu      ✓
+    "assets/Biome/Biome EAU _ L'Océan Éternel.png",              // 1 — Eau      ✓
+    "assets/Biome/Biome TERRE _ La Forêt de Gaïa.png",           // 2 — Terre    ✓
+    "assets/Biome/Biome FOUDRE _ Le Pic Foudroyé.png",           // 3 — Foudre   ✓
+    "assets/Biome/Biome LUMIÈRE _ Le Sanctuaire Céleste.png",    // 4 — Lumière  ✓
+    "assets/Biome/Biome TÉNÈBRES _ Le Néant des Ombres.png",     // 5 — Ténèbres ✓
 ];
 
 let _lastBiomeIdx = -1; // évite les rechargements inutiles
+// Lueur colorée du monstre selon l'élément du biome actif
+let _biomeGlowColor = 'rgba(255,255,255,0.3)';
+const BIOME_GLOW_COLORS = [
+    'rgba(231, 76,  60,  0.75)', // Feu
+    'rgba(52,  152, 219, 0.75)', // Eau
+    'rgba(39,  174, 96,  0.75)', // Terre
+    'rgba(241, 196, 15,  0.75)', // Foudre
+    'rgba(253, 243, 150, 0.75)', // Lumière
+    'rgba(155, 89,  182, 0.75)', // Ténèbres
+];
 
 function applyBiomeBg(biomeIdx) {
     if (biomeIdx === _lastBiomeIdx) return;
@@ -1966,6 +2635,11 @@ function applyBiomeBg(biomeIdx) {
         }
     }
 
+    // Lueur du monstre : couleur élémentaire du biome
+    _biomeGlowColor = BIOME_GLOW_COLORS[biomeIdx] || 'rgba(255,255,255,0.3)';
+    const monsterImg = document.getElementById('monster-emoji');
+    if (monsterImg) _applyMonsterFilter(monsterImg, hasOwnImg ? 0 : theme.bgHue);
+
     // Fond d'écran dynamique global PC
     const dynamicBg = document.getElementById('dynamic-pc-bg');
     if (dynamicBg) {
@@ -1978,22 +2652,14 @@ function applyBiomeBg(biomeIdx) {
     }
 }
 
-// Images des monstres par biome : [commun1, commun2, commun3, boss]
-// Les numéros dans les noms de fichiers = ordre d'apparition
-// null = fallback vers les sprites du Biome 1 avec hue-rotate élémentaire
+// Cartographie des chemins d'assets (avec fallbacks d'altération de couleur CSS pour les biomes 3 à 6)
 const MONSTER_IMAGES = [
-    // 0 — Feu (Cavernes d'Agni) ✓
-    ["assets/monster/biome 1/slime-de-lave-1.png",
-     "assets/monster/biome 1/Canidé-d'enfer-2.png",
-     "assets/monster/biome 1/Élémentaire-de-Scorie.png",
-     "assets/monster/biome 1/BOSS _ Dragon d'Agni.png"],
-    // 1 — Eau (Océan Éternel) ✓
-    ["assets/monster/biome 2/Méduse de Cristal (Commun 1).png",
-     "assets/monster/biome 2/Éclaireur Squalide (Commun 2).png",
-     "assets/monster/biome 2/Tortue de Récif (Commun 3).png",
-     "assets/monster/biome 2/👑 BOSS _ Léviathan.png"],
-    // 2-5 — Terre, Foudre, Lumière, Ténèbres (à ajouter)
-    null, null, null, null,
+    // Biome 1 — Feu (Assets existants)
+    ["assets/monster/biome 1/slime-de-lave-1.png", "assets/monster/biome 1/Canidé-d'enfer-2.png", "assets/monster/biome 1/Élémentaire-de-Scorie.png", "assets/monster/biome 1/BOSS _ Dragon d'Agni.png"],
+    // Biome 2 — Eau (Assets existants)
+    ["assets/monster/biome 2/Méduse de Cristal (Commun 1).png", "assets/monster/biome 2/Éclaireur Squalide (Commun 2).png", "assets/monster/biome 2/Tortue de Récif (Commun 3).png", "assets/monster/biome 2/👑 BOSS _ Léviathan.png"],
+    // Biomes 3 à 6 (Utilisent la structure de fallback CSS hue-rotate basée sur le Biome 1)
+    null, null, null, null
 ];
 
 const MILESTONES = [10, 25, 50, 100];
@@ -2039,6 +2705,12 @@ const MATERIAL_DEFS = {
     mimic: { name: 'Mimic', color: '#a0b0c0', rarity: 'Universal Component' }
 };
 
+const SPHERE_DEFS = {
+    bijou_sacre: { name: 'Bijou Sacré', desc: '+20% Stats', multiplier: 1.2 },
+    barre_legwand: { name: 'Barre Legwand', desc: '+30% Stats', multiplier: 1.3 },
+    pierre_choc: { name: 'Pierre de Choc', desc: '+25% Dégâts', multiplier: 1.25 }
+};
+
 let G = {
     gold: 0, gems: 15, honorPoints: 0, prestigeCrystals: 0, tapDamageLevel: 0, zone: 1, monsterIndex: 0, isBoss: false,
     monsterHp: 10, monsterMaxHp: 10, bossTimer: 30, heroes: {}, bbCooldowns: {},
@@ -2046,6 +2718,7 @@ let G = {
     playerSkillsActive: { wealth: 0, frenzy: 0 },
     totalClicks: 0, totalKills: 0, bossKills: 0, totalGold: 0, totalPrestiges: 0, maxZone: 1, maxCombo: 0, 
     achievementsClaimed: [], lastSave: Date.now(),
+    spheres: {},
     
     // Squad System
     squad: ['ignis', null, null, null],
@@ -2056,7 +2729,7 @@ let G = {
     partyMaxHp: 100,
     partyDef: 10,
     deathTimer: 0,
-    monsterFrozen: 0,   // secondes de gel (Elimo BB)
+    monsterFrozen: 0,   // secondes de gel (Margonia BB)
     monsterDebuff: 0    // secondes de malédiction (Kikuri BB)
 };
 
@@ -2159,7 +2832,11 @@ class SoundEngineClass {
     constructor() { this.ctx = null; this.enabled = false; this.sfxMuted = false; }
 
     _boot() {
-        if (this.ctx) return;
+        if (this.ctx) {
+            // Résoudre si suspendu (politique autoplay)
+            if (this.ctx.state === 'suspended') this.ctx.resume();
+            return;
+        }
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             this.master = this.ctx.createGain();
@@ -2177,10 +2854,13 @@ class SoundEngineClass {
             this.reverb.connect(reverbGain); reverbGain.connect(this.master);
             this.master.connect(this.ctx.destination);
             this.enabled = true;
+            // Résoudre immédiatement si le contexte démarre suspendu
+            if (this.ctx.state === 'suspended') this.ctx.resume();
         } catch(e) {}
     }
 
-    init() { this._boot(); if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); BGM.update(); }
+    // Appelé uniquement depuis un geste utilisateur
+    init() { this._boot(); BGM.update(); }
 
     _osc(f, type, t, dur, vol, freqEnd) {
         if (!this.enabled) return;
@@ -2336,6 +3016,8 @@ function renderSettingsPanel() {
         sfxBtn.textContent = Sound.sfxMuted ? 'OFF' : 'ON';
         sfxBtn.className = 'toggle-btn ' + (Sound.sfxMuted ? 'off' : 'on');
     }
+    // §5.1 — Mettre à jour les statistiques à chaque ouverture
+    renderStats();
 }
 
 function confirmReset() {
@@ -2369,33 +3051,34 @@ function spawnParticles(x,y,opts={}) { const c=opts.count||10, s=opts.speed||250
 
 function spawnCrystalParticle(x, y, type) {
     const color = type === 'BC' ? '#00d2ff' : '#2ecc71';
-    let targetX = 270;
-    let targetY = 930;
+    const canvasRect = pCanvas.getBoundingClientRect();
+    let targetX = pCanvas.width / 2;
+    let targetY = pCanvas.height + 150;
     
     if (type === 'HC') {
         const hpBar = document.getElementById('party-hp-bar-fill');
         if (hpBar) {
             const rect = hpBar.getBoundingClientRect();
-            targetX = rect.left + rect.width / 2;
-            targetY = rect.top - 10;
+            targetX = rect.left + rect.width / 2 - canvasRect.left;
+            targetY = rect.top - 10 - canvasRect.top;
         }
     } else {
         const squadBar = document.getElementById('footer-bb-slots');
         if (squadBar && squadBar.children.length > 0) {
             const index = Math.floor(Math.random() * squadBar.children.length);
             const rect = squadBar.children[index].getBoundingClientRect();
-            targetX = rect.left + rect.width / 2;
-            targetY = rect.top + rect.height / 2;
+            targetX = rect.left + rect.width / 2 - canvasRect.left;
+            targetY = rect.top + rect.height / 2 - canvasRect.top;
         }
     }
     
     particles.push({
         x: x,
         y: y,
-        vx: (Math.random() - 0.5) * 200,
-        vy: -150 - Math.random() * 100,
-        life: 1.5,
-        maxLife: 1.5,
+        vx: (Math.random() - 0.5) * 280, // Enhanced horizontal fan-out spread
+        vy: -180 - Math.random() * 120, // Dynamic vertical pop
+        life: 1.8,
+        maxLife: 1.8,
         size: 5,
         color: color,
         isCrystal: true,
@@ -2410,6 +3093,74 @@ function updateP(now) {
     const dt = Math.min(0.05, (now - lpt) / 1000);
     lpt = now;
     pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+
+    // 4. AMBIANCE MÉTÉO POUR CHAQUE BIOME
+    if (G.zone) {
+        const theme = ZONE_THEMES[(G.zone - 1) % ZONE_THEMES.length];
+        const elem = theme ? theme.elem : 'Feu';
+        if (elem === 'Feu' && Math.random() < 0.08) {
+            // Fines cendres orange qui montent
+            particles.push({
+                x: Math.random() * pCanvas.width,
+                y: pCanvas.height + 10,
+                vx: (Math.random() - 0.5) * 40,
+                vy: -40 - Math.random() * 50,
+                life: 3, maxLife: 3,
+                size: 2 + Math.random() * 3,
+                color: `hsl(${15 + Math.random() * 20}, 100%, ${50 + Math.random() * 20}%)`,
+                gravity: 0, isWeather: true
+            });
+        } else if ((elem === 'Foudre' || elem === 'Eau') && Math.random() < 0.15) {
+            // Gouttes de pluie diagonales rapides
+            particles.push({
+                x: Math.random() * pCanvas.width,
+                y: -10,
+                vx: 80 + Math.random() * 40,
+                vy: 300 + Math.random() * 150,
+                life: 2, maxLife: 2,
+                size: 1 + Math.random() * 1.5,
+                color: 'rgba(174, 219, 255, 0.4)',
+                gravity: 0, isWeather: true, isRain: true
+            });
+        } else if (elem === 'Ténèbres' && Math.random() < 0.05) {
+            // Volutes de brume violette
+            particles.push({
+                x: Math.random() * pCanvas.width,
+                y: pCanvas.height - 30 - Math.random() * 60,
+                vx: (Math.random() - 0.5) * 20,
+                vy: -10 - Math.random() * 15,
+                life: 4, maxLife: 4,
+                size: 6 + Math.random() * 8,
+                color: `rgba(${130 + Math.random() * 40}, 50, ${200 + Math.random() * 50}, 0.15)`,
+                gravity: 0, isWeather: true, isMist: true
+            });
+        } else if (elem === 'Lumière' && Math.random() < 0.06) {
+            // Étincelles dorées douces qui descendent
+            particles.push({
+                x: Math.random() * pCanvas.width,
+                y: -10,
+                vx: (Math.random() - 0.5) * 30,
+                vy: 20 + Math.random() * 30,
+                life: 5, maxLife: 5,
+                size: 2.5 + Math.random() * 2.5,
+                color: `rgba(255, 235, 150, ${0.3 + Math.random() * 0.4})`,
+                gravity: 0, isWeather: true, isSparkle: true
+            });
+        } else if (elem === 'Terre' && Math.random() < 0.05) {
+            // Spores vertes flottantes
+            particles.push({
+                x: Math.random() * pCanvas.width,
+                y: pCanvas.height + 10,
+                vx: (Math.random() - 0.5) * 50,
+                vy: -30 - Math.random() * 40,
+                life: 4, maxLife: 4,
+                size: 2.5 + Math.random() * 2.5,
+                color: `hsl(${90 + Math.random() * 30}, 75%, ${50 + Math.random() * 15}%)`,
+                gravity: 0, isWeather: true
+            });
+        }
+    }
+
     particles = particles.filter(p => {
         p.life -= dt;
         if (p.life <= 0) return false;
@@ -2422,6 +3173,23 @@ function updateP(now) {
             if (dist < 20 || p.life < 0.1) {
                 if (p.crystalType === 'BC') addBC(1);
                 else healParty(Math.ceil(G.partyMaxHp * 0.02));
+                
+                // 5. ANIMATION D'IMPACT RÉACTIVE (BC/HC EXPLOSION DE PIXELS)
+                const blastColors = p.crystalType === 'BC' ? ['#00d2ff', '#ffffff'] : ['#2ecc71', '#ffffff'];
+                for (let i = 0; i < 8; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const sp = 60 + Math.random() * 80;
+                    particles.push({
+                        x: p.x,
+                        y: p.y,
+                        vx: Math.cos(angle) * sp,
+                        vy: Math.sin(angle) * sp,
+                        life: 0.3, maxLife: 0.3,
+                        size: 2 + Math.random() * 2,
+                        color: blastColors[Math.floor(Math.random() * blastColors.length)],
+                        gravity: 100
+                    });
+                }
                 return false;
             }
             
@@ -2442,16 +3210,30 @@ function updateP(now) {
         const a = p.life / p.maxLife;
         pCtx.globalAlpha = a;
         pCtx.fillStyle = p.color;
-        pCtx.beginPath();
-        if (p.isCrystal) {
-            pCtx.moveTo(p.x, p.y - p.size);
-            pCtx.lineTo(p.x + p.size, p.y);
-            pCtx.lineTo(p.x, p.y + p.size);
-            pCtx.lineTo(p.x - p.size, p.y);
+        
+        if (p.isRain) {
+            // Dessin sous forme de fil de pluie oblique
+            pCtx.strokeStyle = p.color;
+            pCtx.lineWidth = p.size;
+            pCtx.beginPath();
+            pCtx.moveTo(p.x, p.y);
+            pCtx.lineTo(p.x - p.vx * 0.04, p.y - p.vy * 0.04);
+            pCtx.stroke();
         } else {
-            pCtx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2);
+            pCtx.beginPath();
+            if (p.isCrystal) {
+                pCtx.moveTo(p.x, p.y - p.size);
+                pCtx.lineTo(p.x + p.size, p.y);
+                pCtx.lineTo(p.x, p.y + p.size);
+                pCtx.lineTo(p.x - p.size, p.y);
+            } else if (p.isMist) {
+                // Brume avec un peu plus de volume
+                pCtx.arc(p.x, p.y, p.size * (1 + (1 - a) * 0.5), 0, Math.PI * 2);
+            } else {
+                pCtx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2);
+            }
+            pCtx.fill();
         }
-        pCtx.fill();
         return true;
     });
     pCtx.globalAlpha = 1;
@@ -2462,50 +3244,167 @@ requestAnimationFrame(updateP);
 // =============================================================
 // INITIALIZATIONS, SAVING & UTILITIES
 // =============================================================
-function getHeroImage(id, stars) {
-    if (id === 'ignis') {
-        return `assets/heroes/ignis_${stars}.png`;
-    }
-    if (stars === 6) {
-        return `assets/heroes/${id}_6.png`;
+function getHeroImage(id, stars, context = 'full') {
+    const mapping = {
+        ignis: {
+            unit: 'Unité/Ignis-trois-etoile (1).png',
+            squad: 'Squad img/Ignis-trois-etoile.png',
+            full: 'full img/Ignis-trois-etoile.png'
+        },
+        vargas: {
+            unit: 'Unité/vargas-trois-etoile (1).png',
+            squad: 'Squad img/vargas-trois-etoile (1).png',
+            full: 'full img/Vargas-trois-etoile.png'
+        },
+        selena: {
+            unit: 'Unité/Selena-trois-etoile (1).png',
+            squad: 'Squad img/Selena-trois-etoile.png',
+            full: 'full img/Selena-trois-etoile.png'
+        },
+        margonia: {
+            unit: 'Unité/Margonia-trois-etoile (1).png',
+            squad: 'Squad img/margonia-trois-etoile.png',
+            full: 'full img/Margonia-trois-etoile.png'
+        },
+        elimo: {
+            unit: 'Unité/Margonia-trois-etoile (1).png',
+            squad: 'Squad img/margonia-trois-etoile.png',
+            full: 'full img/Margonia-trois-etoile.png'
+        },
+        lance: {
+            unit: 'Unité/Lance-trois-etoile (1).png',
+            squad: 'Squad img/Lance-trois-etoile.png',
+            full: 'full img/Lance_trois_etoile.png'
+        },
+        zeln: {
+            unit: 'Unité/Zeln_trois_etoile (1).png',
+            squad: 'Squad img/Zeln_trois_etoile.png',
+            full: 'full img/Zeln_trois_etoile.png'
+        },
+        karl: {
+            unit: 'Unité/Karl-trois-etoile (1).png',
+            squad: 'Squad img/Karl-trois-etoile.png',
+            full: 'full img/Karl-trois-etoile.png'
+        },
+        eze: {
+            unit: 'Unité/Eze-trois-etoile.png',
+            squad: 'Squad img/Eza-trois-etoile.png',
+            full: 'full img/Eza_trois_etoile.png'
+        },
+        sera: {
+            unit: 'Unité/Sera-trois-etoile (1).png',
+            squad: 'Squad img/Sera-trois-etoile.png',
+            full: 'full img/Sera-trois-etoile.png'
+        },
+        atro: {
+            unit: 'Unité/Atro-trois-etoile (1).png',
+            squad: 'Squad img/Atro-trois-etoile.png',
+            full: 'full img/Atro-trois-etoile.png'
+        },
+        magress: {
+            unit: 'Unité/Magress-trois-etoile (1).png',
+            squad: 'Squad img/Magress-trois-etoile.png',
+            full: 'full img/Magress-trois-etoile.png'
+        },
+        kikuri: {
+            unit: 'Unité/Kikuri-trois-etoile (1).png',
+            squad: 'Squad img/Kikuri-trois-etoile.png',
+            full: 'full img/Kikuri-trois-etoile.png'
+        }
+    };
+    
+    const hero = mapping[id];
+    if (hero && hero[context]) {
+        return `assets/heroes/${hero[context]}`;
     }
     return `assets/heroes/${id}.png`;
 }
 
 function initHero(forcedType = null) {
     const t = forcedType || HERO_TYPES[Math.floor(Math.random() * HERO_TYPES.length)];
-    return { level: 1, stars: 3, duplicates: 0, type: t };
+    return { level: 1, stars: 3, duplicates: 0, type: t, equippedSphere: null };
+}
+
+// =============================================================
+// SAVE / LOAD — VERSIONÉ (§3.3)
+// =============================================================
+const SAVE_VERSION = 5;
+
+function migrateSave(s) {
+    s._v = s._v || 1;
+    if (s._v < 2) {
+        // Migration elimo -> margonia (déplacée ici pour être versionnée)
+        if (s.heroes && s.heroes.elimo) {
+            s.heroes.margonia = s.heroes.elimo;
+            delete s.heroes.elimo;
+        }
+        if (s.squad) s.squad = s.squad.map(id => id === 'elimo' ? 'margonia' : id);
+        if (s.bbGauges && s.bbGauges.elimo !== undefined) {
+            s.bbGauges.margonia = s.bbGauges.elimo;
+            delete s.bbGauges.elimo;
+        }
+        if (s.leaderId === 'elimo') s.leaderId = 'margonia';
+        s._v = 2;
+    }
+    if (s._v < 5) {
+        // Normaliser chaque héros avec les champs par défaut
+        Object.values(s.heroes || {}).forEach(h => {
+            if (h.duplicates === undefined) h.duplicates = 0;
+            if (h.type === undefined) h.type = 'Lord';
+            if (h.equippedSphere === undefined) h.equippedSphere = null;
+        });
+        s._v = SAVE_VERSION;
+    }
+    return s;
 }
 
 function loadGame() {
-    try { const d = localStorage.getItem('bf_clicker_v4'); if (d) { 
-        const parsed = JSON.parse(d);
-        G = { ...G, ...parsed }; 
-        if(!G.playerSkillsCd) G.playerSkillsCd = { strike: 0, wealth: 0, frenzy: 0 };
-        if(!G.playerSkillsActive) G.playerSkillsActive = { wealth: 0, frenzy: 0 };
-        if(!G.achievementsClaimed) G.achievementsClaimed = [];
-        if(!G.squad) G.squad = ['ignis', null, null, null];
-        if(!G.materials) G.materials = {};
-        if(!G.bbGauges) G.bbGauges = {};
-        if(!G.monsterFrozen) G.monsterFrozen = 0;
-        if(!G.monsterDebuff) G.monsterDebuff = 0;
-        if(G.honorPoints === undefined) G.honorPoints = 0;
-        return true; 
-    } } catch(e){}
-    return false;
+    try {
+        const d = localStorage.getItem('bf_clicker_v4');
+        if (!d) return false;
+        const parsed = migrateSave(JSON.parse(d));
+        G = { ...G, ...parsed };
+        if (!G.playerSkillsCd)    G.playerSkillsCd    = { strike: 0, wealth: 0, frenzy: 0 };
+        if (!G.playerSkillsActive) G.playerSkillsActive = { wealth: 0, frenzy: 0 };
+        if (!G.achievementsClaimed) G.achievementsClaimed = [];
+        if (!G.squad)             G.squad             = ['ignis', null, null, null];
+        if (!G.materials)         G.materials         = {};
+        if (!G.spheres)           G.spheres           = {};
+        if (!G.bbGauges)          G.bbGauges          = {};
+        if (!G.monsterFrozen)     G.monsterFrozen     = 0;
+        if (!G.monsterDebuff)     G.monsterDebuff     = 0;
+        if (G.honorPoints === undefined) G.honorPoints = 0;
+        // §1.2 — Sécuriser les vieilles sauvegardes avec partyHp nul ou absent
+        if (!G.partyHp || G.partyHp <= 0) G.partyHp = G.partyMaxHp || 100;
+        return true;
+    } catch (e) {
+        console.warn('Sauvegarde corrompue, démarrage neuf', e);
+        return false;
+    }
 }
+
 function saveGame() {
     G.lastSave = Date.now();
-    try { localStorage.setItem('bf_clicker_v4', JSON.stringify(G)); } catch(e){}
+    try {
+        // Sauvegarde de secours avant écriture principale
+        const existing = localStorage.getItem('bf_clicker_v4');
+        if (existing) localStorage.setItem('bf_clicker_backup', existing);
+        localStorage.setItem('bf_clicker_v4', JSON.stringify(G));
+    } catch (e) { console.warn('Erreur de sauvegarde', e); }
 }
+
+// §3.4 — Autosave périodique + sauvegarde à la fermeture de l'onglet
+setInterval(saveGame, 15000);
+window.addEventListener('beforeunload', saveGame);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
 
 // =============================================================
 // STATS & ECONOMY BALANCING
 // =============================================================
 // Axe 2 : courbe XP plus raide selon le palier d'étoiles
 function getHeroLevelCost(def, hData) {
-    const rates = [0, 0, 0, 1.06, 1.09, 1.13, 1.18];
-    const rate = rates[hData.stars] || 1.06;
+    const rates = [0, 0, 0, 1.15, 1.19, 1.24, 1.30];
+    const rate = rates[hData.stars] || 1.15;
     return Math.floor(def.baseCost * Math.pow(rate, hData.level));
 }
 
@@ -2546,6 +3445,10 @@ function getHeroDPS(def, hData) {
     const currentZoneElem = ZONE_THEMES[(G.zone-1)%ZONE_THEMES.length].elem;
     if (ELEMENT_ADVANTAGE[def.elem] === currentZoneElem) dps *= 1.5;
     
+    if (hData.equippedSphere && SPHERE_DEFS[hData.equippedSphere]) {
+        dps *= SPHERE_DEFS[hData.equippedSphere].multiplier;
+    }
+    
     if (G.leaderId && G.heroes[G.leaderId]) {
         const lDef = HERO_DEFS.find(d => d.id === G.leaderId);
         if (!lDef) return Math.floor(dps);
@@ -2554,7 +3457,7 @@ function getHeroDPS(def, hData) {
         if (lDef.id === 'vargas')                            dps *= 1.20;
         // ── EAU ──
         if (lDef.id === 'selena')                            dps *= 1.10; // + gold bonus géré ailleurs
-        if (lDef.id === 'elimo'  && def.elem === 'Eau')      dps *= 1.35;
+        if (lDef.id === 'margonia' && def.elem === 'Eau')    dps *= 1.35;
         // ── TERRE ──
         if (lDef.id === 'lance') { /* bonus DEF, léger DPS */ dps *= 1.05; }
         if (lDef.id === 'zeln'   && def.elem === 'Terre')    dps *= 1.30;
@@ -2581,7 +3484,7 @@ function getTotalDPS() {
             total += getHeroDPS(def, h);
         }
     });
-    return Math.floor(total * (1 + G.prestigeCrystals * 0.01));
+    return Math.floor(total * (1 + G.prestigeCrystals * 0.10));
 }
 
 function getTapDamage() {
@@ -2595,25 +3498,20 @@ function getTapDamage() {
         }
     });
     if (G.leaderId === 'eze') tap = Math.floor(tap * 1.20);
-    return Math.floor(tap * (1 + G.prestigeCrystals * 0.01));
+    return Math.floor(tap * (1 + G.prestigeCrystals * 0.10));
 }
 
 function getMonsterMaxHp() {
-    const base = 10 * Math.pow(1.14, G.zone - 1);
-    return Math.ceil(G.isBoss ? base * 8 : base);
+    const base = 10 * Math.pow(1.20, G.zone - 1);   // §2.1 : 1.28 → 1.20
+    return Math.ceil(G.isBoss ? base * 12 : base);   // boss mult 15 → 12
 }
 
 function getMonsterAttack() {
-    if (G.isBoss && G.zone >= 10) {
-        // Target exactly 35% net damage after flat DEF mitigation
-        // With zone scaling of 18% per zone starting from zone 10
-        const targetDmg = (G.partyMaxHp * 0.35) * Math.pow(1.18, G.zone - 10);
-        const baseAtk = targetDmg + (G.partyDef * 0.08);
-        return Math.ceil(baseAtk);
-    } else {
-        const base = 1.5 * Math.pow(1.10, G.zone - 1);
-        return Math.ceil(G.isBoss ? base * 4.5 : base);
+    let base = 2.5 * Math.pow(1.16, G.zone - 1);    // §2.4 : 1.21 → 1.16
+    if (G.isBoss) {
+        base *= 4.5;
     }
+    return Math.ceil(base);
 }
 
 function updatePartyStats() {
@@ -2628,6 +3526,13 @@ function updatePartyStats() {
             
             let hHp = def.baseDPS * 18 * h.level * h.stars * tMod.hp;
             let hDef = def.baseDPS * 1.5 * h.level * h.stars * tMod.def;
+            
+            if (h.equippedSphere && SPHERE_DEFS[h.equippedSphere]) {
+                if (h.equippedSphere === 'bijou_sacre' || h.equippedSphere === 'barre_legwand') {
+                    hHp *= SPHERE_DEFS[h.equippedSphere].multiplier;
+                    hDef *= SPHERE_DEFS[h.equippedSphere].multiplier;
+                }
+            }
             
             maxHp += Math.floor(hHp);
             totalDef += Math.floor(hDef);
@@ -2671,41 +3576,88 @@ function updatePartyHpBar() {
 function spawnMonster() {
     if (G.monsterIndex >= 10) { G.isBoss = true; G.monsterIndex = 10; G.bossTimer = 30; }
     G.monsterMaxHp = getMonsterMaxHp(); G.monsterHp = G.monsterMaxHp;
-    G.monsterFrozen = 0; G.monsterDebuff = 0; // réinitialise les statuts
-    
+    G.monsterFrozen = 0; G.monsterDebuff = 0;
+
     G.monsterSpawnTime = Date.now();
     G.monsterFirstAttackDone = false;
     G.bossUltimateTriggered = false;
-    
+
     updateMonsterUI();
+
+    // CORRECTION CRITIQUE : Séparation des règles d'échelle PC et Mobile
+    const monsterImg = document.getElementById('monster-emoji');
+    if (monsterImg) {
+        if (window.innerWidth >= 1024) {
+            // 🖥️ MODE ORDINATEUR : Proportions en % idéales pour le cadre carré
+            if (G.isBoss) {
+                if (G.zone % 10 === 0) {
+                    monsterImg.style.setProperty('height', '80%', 'important');
+                } else {
+                    monsterImg.style.setProperty('height', '68%', 'important');
+                }
+            } else {
+                monsterImg.style.setProperty('height', '46%', 'important');
+            }
+        } else {
+            // 📱 MODE MOBILE / ANDROID : Utilisation du "vh" (Viewport Height) pour ne jamais déborder
+            if (G.isBoss) {
+                if (G.zone % 10 === 0) {
+                    // Le gros Boss de fin d'acte reste imposant mais sous le texte
+                    monsterImg.style.setProperty('height', '32vh', 'important');
+                } else {
+                    // Boss classique de zone
+                    monsterImg.style.setProperty('height', '26vh', 'important');
+                }
+            } else {
+                // Les monstres de base restent bien proportionnés au centre
+                monsterImg.style.setProperty('height', '19vh', 'important');
+            }
+        }
+    }
+
     BGM.update();
 }
 
 function killMonster() {
-    let gold = Math.ceil(5 * Math.pow(1.11, G.zone - 1) * (G.isBoss ? 8 : 1));
+    let gold = Math.ceil(10 * Math.pow(1.165, G.zone - 1) * (G.isBoss ? 5 : 1)); // §2.1 : 1.12 → 1.165
     if (G.playerSkillsActive.wealth > 0) gold *= 2;
     if (G.leaderId === 'selena') gold = Math.floor(gold * 1.25);
     
+    // 1. AJOUT DES RESSOURCES
     G.gold += gold; G.totalGold += gold; G.totalKills++; Sound.playKill();
-    pulseCurrency('gold-display');
     
-    // Axe 1 : Points d'Honneur — déterministes (no RNG)
     if (G.isBoss) {
-        G.honorPoints += 10;  // +10 PH par boss
+        G.honorPoints += 10;
         G.bossKills++; G.gems += 1; screenFlash('#f1c40f');
-        pulseCurrency('gems-display'); pulseCurrency('honor-display');
         G.isBoss = false; G.monsterIndex = 0; G.zone++; 
-        if(G.zone>G.maxZone) G.maxZone=G.zone; 
+        if(G.zone > G.maxZone) G.maxZone = G.zone; 
     } else {
-        G.honorPoints += 1;   // +1 PH par monstre commun
-        pulseCurrency('honor-display');
+        G.honorPoints += 1;
         G.monsterIndex++;
     }
+
+    // 2. CORRECTION CRITIQUE : On met à jour l'affichage TEXTUEL immédiatement ici
+    // pour que l'or apparaisse à l'écran sans attendre les calculs de décors
+    updateDisplays();
+    pulseCurrency('gold-display');
+    if (G.isBoss) {
+        pulseCurrency('gems-display');
+        pulseCurrency('honor-display');
+    }
     
+    // 3. ENGENDRER LE PROCHAIN MONSTRE (Contient les calculs graphiques lourds)
     spawnMonster();
     renderAchievements();
-    const me = document.getElementById('monster-emoji'); me.style.transform = 'scale(0)';
-    setTimeout(()=>me.style.transform = 'scale(1)', 50);
+    // §3.1 — mise à jour événementielle des panneaux lourds (hors tick 100ms)
+    renderFooterBB();
+    if (G.isBoss) renderMaterialsPanel(); // les matériaux changent surtout sur boss drop
+    
+    // §1.3 — Pop via classe CSS (prioritaire sur monsterIdle grâce à !important)
+    const me = document.getElementById('monster-emoji');
+    me.classList.remove('monster-pop');
+    void me.offsetWidth;          // reflow pour redéclencher l'animation
+    me.classList.add('monster-pop');
+    setTimeout(() => me.classList.remove('monster-pop'), 260);
 }
 
 function healParty(amount) {
@@ -2726,59 +3678,144 @@ function addBC(count) {
     if(document.querySelector('.tab-btn[data-tab="skills"]').classList.contains('active')) renderSkills();
 }
 
+// =============================================================
+// LIVE DPS TRACKER
+// =============================================================
+let totalDamageDealtInLastSecond = 0;
+let liveDpsValue = 0;
+
+function trackRealDamage(amount) {
+    totalDamageDealtInLastSecond += amount;
+}
+
+setInterval(() => {
+    liveDpsValue = totalDamageDealtInLastSecond;
+    totalDamageDealtInLastSecond = 0;
+}, 1000);
+
+// Enregistrement du DPS passif dans la boucle existante (10 fois/s)
+setInterval(() => {
+    if (G.deathTimer > 0 || G.monsterHp <= 0) return;
+    let dps = getTotalDPS();
+    if (G.playerSkillsActive.frenzy > 0) dps *= 3;
+    if (dps > 0) trackRealDamage(dps / 10);
+}, 100);
+
+// =============================================================
+// GESTIONNAIRE DE CLIC : CRIT SCALING + COMBO GLOW
+// =============================================================
 let comboCount = 0, comboTimer = null, lastClick = 0;
 document.getElementById('monster-zone').addEventListener('click', (e) => {
     Sound.init();
     if (G.deathTimer > 0 || G.monsterHp <= 0) return;
     G.totalClicks++;
-    
-    const baseDmg = getTapDamage(); const isCrit = Math.random() < 0.10;
-    const now = Date.now(); if(now-lastClick<400) comboCount=Math.min(comboCount+1, 40); else comboCount=1; lastClick=now;
-    if(comboCount>G.maxCombo) G.maxCombo=comboCount;
-    clearTimeout(comboTimer); comboTimer = setTimeout(()=>{comboCount=0; document.getElementById('combo-display').textContent='';}, 600);
-    if(comboCount>=2) document.getElementById('combo-display').textContent=`COMBO ×${(1+comboCount*0.1).toFixed(1)}`;
-    
+
+    // Crit scaling : +0.5% de chance de crit par combo (max +20% au combo 40)
+    const bonusCritChance = Math.min(0.20, comboCount * 0.005);
+    const isCrit = Math.random() < (0.10 + bonusCritChance);
+
+    const now = Date.now();
+    if (now - lastClick < 400) {
+        comboCount = Math.min(comboCount + 1, 40);
+        if (comboCount >= 15) document.getElementById('monster-zone').classList.add('combo-glow');
+    } else {
+        comboCount = 1;
+        document.getElementById('monster-zone').classList.remove('combo-glow');
+    }
+    lastClick = now;
+
+    if (comboCount > G.maxCombo) G.maxCombo = comboCount;
+    clearTimeout(comboTimer);
+    comboTimer = setTimeout(() => {
+        comboCount = 0;
+        document.getElementById('combo-display').textContent = '';
+        document.getElementById('monster-zone').classList.remove('combo-glow');
+    }, 600);
+
+    if (comboCount >= 2) {
+        const critIndicator = bonusCritChance > 0
+            ? ` <small style="color:#f1c40f">(+${Math.floor(bonusCritChance * 100)}% Crit)</small>`
+            : '';
+        document.getElementById('combo-display').innerHTML =
+            `COMBO ×${(1 + comboCount * 0.1).toFixed(1)}${critIndicator}`;
+    }
+
     let critMult = isCrit ? 3 : 1;
     if (isCrit && G.leaderId === 'eze') critMult = 4.5;
-    
-    const dmg = Math.floor(baseDmg * (1+comboCount*0.1) * critMult);
+
+    const baseDmg = getTapDamage();
+    const dmg = Math.floor(baseDmg * (1 + comboCount * 0.1) * critMult);
     G.monsterHp -= dmg;
-    
+    trackRealDamage(dmg);
+
     const spawnBC = Math.random() < 0.45;
     const spawnHC = Math.random() < 0.25;
-    
-    const r=e.target.getBoundingClientRect();
-    const clickX = e.clientX-r.left;
-    const clickY = e.clientY-r.top;
-    
+
+    const r = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - r.left;
+    const clickY = e.clientY - r.top;
+
     if (spawnBC) spawnCrystalParticle(clickX, clickY, 'BC');
     if (spawnHC) spawnCrystalParticle(clickX, clickY, 'HC');
-    
-    spawnParticles(clickX, clickY, {count:isCrit?12:4, speed:isCrit?250:150, colors:isCrit?['#f1c40f','#fff']:['#ff8844','#fff']});
-    if(isCrit) Sound.playCrit(); else Sound.playHit();
 
-    // Chiffres de dégâts volants
+    spawnParticles(clickX, clickY, {count: isCrit ? 12 : 4, speed: isCrit ? 250 : 150, colors: isCrit ? ['#f1c40f', '#fff'] : ['#ff8844', '#fff']});
+    if (isCrit) Sound.playCrit(); else Sound.playHit();
+
+    // 1. DES DÉGATS DE CLIC ÉLÉMENTAIRES
+    const theme = ZONE_THEMES[(G.zone - 1) % ZONE_THEMES.length];
+    const elemColors = {
+        'Feu': '#ff4c30',
+        'Eau': '#00d2ff',
+        'Terre': '#2ecc71',
+        'Foudre': '#f1c40f',
+        'Lumière': '#ffffff',
+        'Ténèbres': '#c084fc'
+    };
+    const elemGlows = {
+        'Feu': '0 0 10px rgba(255,76,48,0.8)',
+        'Eau': '0 0 10px rgba(0,210,255,0.8)',
+        'Terre': '0 0 10px rgba(46,204,113,0.8)',
+        'Foudre': '0 0 10px rgba(241,196,15,0.8)',
+        'Lumière': '0 0 10px rgba(255,255,255,0.8)',
+        'Ténèbres': '0 0 10px rgba(192,132,252,0.8)'
+    };
+    const currentElemColor = elemColors[theme.elem] || '#fff';
+    const currentElemGlow = elemGlows[theme.elem] || '0 0 8px rgba(255,255,255,0.5)';
+
     const dmgEl = document.createElement('div');
     dmgEl.className = 'dmg-text';
     dmgEl.textContent = isCrit ? '⚡ ' + fmt(dmg) : fmt(dmg);
-    dmgEl.style.left   = Math.max(10, Math.min(clickX - 25, 480)) + 'px';
-    dmgEl.style.top    = Math.max(20, clickY - 10) + 'px';
-    dmgEl.style.fontSize   = isCrit ? '22px' : '15px';
-    dmgEl.style.color      = isCrit ? '#f1c40f' : '#fff';
+    // §1.4 — clamp dynamique sur la largeur réelle de la zone (au lieu du 480px mobile-only)
+    const zoneW = e.currentTarget.clientWidth;
+    dmgEl.style.left = Math.max(10, Math.min(clickX - 25, zoneW - 60)) + 'px';
+    dmgEl.style.top = Math.max(20, clickY - 10) + 'px';
+    dmgEl.style.fontSize = isCrit ? '22px' : '15px';
+    dmgEl.style.color = isCrit ? '#f1c40f' : currentElemColor;
     dmgEl.style.textShadow = isCrit
         ? '0 0 12px rgba(241,196,15,0.9), 0 2px 4px rgba(0,0,0,0.9)'
-        : '0 2px 4px rgba(0,0,0,0.8)';
+        : `${currentElemGlow}, 0 2px 4px rgba(0,0,0,0.8)`;
     document.getElementById('monster-zone').appendChild(dmgEl);
     setTimeout(() => dmgEl.remove(), 920);
 
-    // Secousse visuelle du monstre
+    // SECRAMENT DE L'IMPACT : SHOCK SUR L'ARÈNE ET LE MONSTRE
+    const mbg = document.getElementById('monster-bg');
+    const memoji = document.getElementById('monster-emoji-container');
+    [mbg, memoji].forEach(el => {
+        if (el) {
+            el.classList.remove('arena-click-shock');
+            void el.offsetWidth;
+            el.classList.add('arena-click-shock');
+            setTimeout(() => el.classList.remove('arena-click-shock'), 50);
+        }
+    });
+
     const mElem = document.getElementById('monster-emoji');
     mElem.classList.remove('monster-shake');
-    void mElem.offsetWidth; // force reflow pour relancer l'animation
+    void mElem.offsetWidth;
     mElem.classList.add('monster-shake');
     setTimeout(() => mElem.classList.remove('monster-shake'), 220);
 
-    if(G.monsterHp <= 0) killMonster(); else updateHpBar();
+    if (G.monsterHp <= 0) killMonster(); else updateHpBar();
 });
 
 let lastMonsterAttack = 0;
@@ -2833,7 +3870,9 @@ function handleSquadDeath() {
 }
 
 function triggerBossUltimate() {
-    let ultDmg = Math.floor(G.partyMaxHp * 0.90);
+    const baseAtk = getMonsterAttack();
+    const atkMod = G.monsterFrozen > 0 ? 0.5 : G.monsterDebuff > 0 ? 0.6 : 1.0;
+    let ultDmg = Math.ceil((baseAtk * atkMod) * 2.8);
     if (G.lanceShieldActive) {
         ultDmg = Math.floor(ultDmg / 2);
         showNotif("🛡️ Bouclier de Lance activé ! Dégâts de l'Ultime divisés par 2 !");
@@ -2880,12 +3919,19 @@ setInterval(() => {
     }
     
     if(G.isBoss) {
-        G.bossTimer -= 0.1; document.getElementById('boss-timer').textContent=`⏱ ${Math.max(0,G.bossTimer).toFixed(1)}s`;
+        G.bossTimer -= 0.1;
+        document.getElementById('boss-timer').textContent = `⏱ ${Math.max(0,G.bossTimer).toFixed(1)}s`;
         if (30 - G.bossTimer >= 8 && !G.bossUltimateTriggered) {
             G.bossUltimateTriggered = true;
             triggerBossUltimate();
         }
-        if(G.bossTimer<=0) { G.isBoss=false; G.monsterIndex=0; spawnMonster(); }
+        if(G.bossTimer<=0) {
+            // §2.5 — Pénalité boss : perte d'une zone (symétrique à la mort de squad)
+            showNotif("⏱️ Temps écoulé ! Le Boss vous repousse d'une zone.");
+            G.isBoss = false; G.monsterIndex = 0;
+            if (G.zone > 1) G.zone--;
+            spawnMonster(); saveGame();
+        }
     }
     
     const now = Date.now();
@@ -2909,7 +3955,9 @@ setInterval(() => {
     if (shouldAttack && G.monsterHp > 0 && G.deathTimer <= 0) {
         const baseAtk  = getMonsterAttack();
         const atkMod   = G.monsterFrozen > 0 ? 0.5 : G.monsterDebuff > 0 ? 0.6 : 1.0;
-        const finalDmg = Math.max(1, Math.ceil(baseAtk * atkMod - G.partyDef * 0.08));
+        // §2.4 — Réduction de dégâts proportionnelle (la DEF compte toujours, jamais cosmestique)
+        const reduction = G.partyDef / (G.partyDef + baseAtk * atkMod);
+        const finalDmg  = Math.max(1, Math.ceil(baseAtk * atkMod * (1 - reduction * 0.75)));
         
         G.partyHp = Math.max(0, G.partyHp - finalDmg);
         updatePartyHpBar();
@@ -2938,15 +3986,20 @@ setInterval(() => {
     });
     document.getElementById('skill-active-overlay').style.display = activeOverlay ? 'block' : 'none';
 
-    updateDisplays();
+    if (G.monsterHp > 0) {
+        updateDisplays();
+    }
 }, 100);
 
 // =============================================================
 // UI DISPLAYS & GRIDS
 // =============================================================
 function updateHpBar() {
-    document.getElementById('hp-bar-fill').style.width = Math.max(0,G.monsterHp/G.monsterMaxHp*100)+'%';
-    document.getElementById('hp-text').textContent=`${fmt(Math.max(0,G.monsterHp))} / ${fmt(G.monsterMaxHp)}`;
+    const pct = Math.max(0, G.monsterHp / G.monsterMaxHp * 100);
+    const txt = `${fmt(Math.max(0, G.monsterHp))} / ${fmt(G.monsterMaxHp)}`;
+    
+    document.getElementById('hp-bar-fill').style.width = pct + '%';
+    document.getElementById('hp-text').textContent = txt;
 }
 
 function updateMonsterUI() {
@@ -2975,11 +4028,10 @@ function updateMonsterUI() {
     // Applique hue-rotate seulement pour les biomes sans sprites propres
     _applyMonsterFilter(me, biomeImgs ? 0 : theme.bgHue);
 
+    // CORRECTION : On ne touche plus à la hauteur ici pour éviter les conflits de taille
     if (G.isBoss) {
-        me.style.height = 'clamp(130px, 20svh, 200px)';
         document.getElementById('monster-name').textContent = prefix + theme.bossName;
     } else {
-        me.style.height = 'clamp(100px, 15svh, 160px)';
         document.getElementById('monster-name').textContent = prefix + theme.monsters[mType];
     }
 
@@ -2992,12 +4044,16 @@ function _applyMonsterFilter(el, hue) {
     const freeze = G.monsterFrozen > 0;
     const debuff = G.monsterDebuff > 0;
     const h = hue > 0 ? `hue-rotate(${hue}deg) ` : ''; // pas de teinte si sprite propre
+    
+    const isBossZone10 = (G.zone % 10 === 0 && G.isBoss);
+    const bossShadow = isBossZone10 ? ' drop-shadow(0 10px 20px rgba(255, 0, 0, 0.3))' : '';
+
     if (freeze) {
-        el.style.filter = `${h}brightness(1.4) saturate(0.4) drop-shadow(0 0 18px rgba(100,200,255,0.95))`;
+        el.style.filter = `${h}brightness(1.4) saturate(0.4) drop-shadow(0 0 18px rgba(100,200,255,0.95))` + bossShadow;
     } else if (debuff) {
-        el.style.filter = `${h}drop-shadow(0 0 14px rgba(160,0,255,0.85)) drop-shadow(0 8px 20px rgba(0,0,0,.6))`;
+        el.style.filter = `${h}drop-shadow(0 0 14px rgba(160,0,255,0.85)) drop-shadow(0 8px 20px rgba(0,0,0,.6))` + bossShadow;
     } else {
-        el.style.filter = `${h}drop-shadow(0 8px 20px rgba(0,0,0,0.6))`;
+        el.style.filter = `${h}drop-shadow(0 8px 20px rgba(0,0,0,0.6)) drop-shadow(0 0 14px ${_biomeGlowColor})` + bossShadow;
     }
 }
 
@@ -3014,16 +4070,17 @@ function updateDisplays() {
     document.getElementById('dps-display').innerHTML = `⚔ DPS : ${dpsStr}/s`;
     document.getElementById('tap-dmg-val').textContent = fmt(getTapDamage());
     
-    document.getElementById('tap-desc').textContent = `Niv. ${G.tapDamageLevel} — Dégâts : ${fmt(getTapDamage())}`;
+    document.getElementById('tap-desc').textContent = `Niv. ${G.tapDamageLevel} — Dégâts : ${fmt(getTapDamage())}`;
     const nextMs = MILESTONES.find(m => m > G.tapDamageLevel);
-    document.getElementById('tap-next-ms').textContent = nextMs ? `Prochain cap : ${MILESTONE_LABELS[nextMs]} (Niv.${nextMs})` : '';
+    document.getElementById('tap-next-ms').textContent = nextMs ? `Prochain cap : ${MILESTONE_LABELS[nextMs]} (Niv.${nextMs})` : '';
 
-    const tapCost = Math.floor(10 * Math.pow(1.05, G.tapDamageLevel));
-    const btn = document.getElementById('tap-btn'); btn.textContent = `⬆ ${fmt(tapCost)}`;
-    btn.disabled = G.gold < tapCost;
+    // §2.3 — coût tap unifié sur 1.14 (idem upgradeTap)
+    const tapCost = Math.floor(10 * Math.pow(1.14, G.tapDamageLevel));
+    const btn = document.getElementById('tap-btn');
+    if (btn) { btn.textContent = `⬆ ${fmt(tapCost)}`; btn.disabled = G.gold < tapCost; }
 
-    renderFooterBB();
-    renderMaterialsPanel();
+    // §3.1 — renderFooterBB et renderMaterialsPanel retirés du tick 100ms :
+    // ils sont appelés à la demand sur événement (achat, kill, ouverture d'onglet)
     if(document.querySelector('.tab-btn[data-tab="skills"]').classList.contains('active')) renderSkills();
 }
 
@@ -3043,7 +4100,7 @@ function renderSquadGrid() {
         if (id && h && def) {
             const gauge = G.bbGauges[id] || 0;
             card.innerHTML = `
-                <img src="${getHeroImage(id, h.stars)}" alt="">
+                <img src="${getHeroImage(id, h.stars, 'squad')}" alt="">
                 <div class="squad-stars">${'★'.repeat(h.stars)}</div>
                 <div class="bb-gauge-fill" style="width:${gauge}%"></div>
                 <div class="squad-badge" style="background:${i === 0 ? 'linear-gradient(90deg, #f1c40f, #e67e22)' : 'rgba(0,0,0,0.75)'}">
@@ -3079,7 +4136,7 @@ function getLeaderSkillName(id) {
         ignis:   "Colère d'Agni (+50% DPS Feu)",
         vargas:  "Moral de Combat (+20% DPS team)",
         selena:  "Prêtresse d'Eau (+30% HP, +25% Gold)",
-        elimo:   "Maîtrise du Givre (+35% DPS Eau)",
+        margonia: "Maîtrise du Givre (+35% DPS Eau)",
         lance:   "Rempart de Gaïa (+40% DEF, +20% HP)",
         zeln:    "Instinct du Chasseur (+30% DPS Terre)",
         karl:    "Force Draconique (+40% DPS Foudre/Ténèbres)",
@@ -3090,6 +4147,29 @@ function getLeaderSkillName(id) {
         kikuri:  "Malédiction Éternelle (+10% DPS team)",
     };
     return ls[id] || 'Aucun';
+}
+
+function getHeroPrice(def) {
+    // §2.2 — Grille recalibrée sur la nouvelle courbe d'or (×1.165/zone)
+    const priceMap = {
+        // Palier Initial (Zone 1-10)
+        ignis:   0,
+        vargas:  1200,
+        selena:  6500,
+        // Palier Intermédiaire (Zone 10-25)
+        margonia: 28000,
+        lance:   90000,
+        zeln:    280000,
+        // Palier Élite (Zone 25-45)
+        karl:    850000,
+        eze:     2200000,
+        kikuri:  6000000,
+        // Palier Divin (Post-Prestige)
+        sera:    14000000,
+        atro:    30000000,
+        magress: 70000000,
+    };
+    return priceMap[def.id] !== undefined ? priceMap[def.id] : (def.baseDPS * 15000);
 }
 
 function renderHeroesGrid() {
@@ -3110,7 +4190,7 @@ function renderHeroesGrid() {
         if (!locked) {
             const expPct = (h.level / EVO_LEVEL_CAPS[h.stars]) * 100;
             div.innerHTML = `
-                <img src="${getHeroImage(def.id, h.stars)}" alt="">
+                <img src="${getHeroImage(def.id, h.stars, 'unit')}" alt="">
                 <div class="hero-mini-elem">${def.icon}</div>
                 ${inSquad ? `<div class="hero-mini-squad-badge">${isLeader ? '👑' : '⚔'}</div>` : ''}
                 ${hasAdvantage ? `<div class="hero-mini-adv">🔺</div>` : ''}
@@ -3125,12 +4205,29 @@ function renderHeroesGrid() {
             `;
             div.onclick = () => openHeroModal(def.id);
         } else {
+            // Héros non possédé — affichage selon mode d'obtention
+            let acquireLabel, acquireColor;
+            if (GOLD_BUYABLE_HEROES.includes(def.id)) {
+                const price = getHeroPrice(def);
+                acquireLabel = price === 0 ? '🆓 Gratuit' : `${fmt(price)} 🪙`;
+                acquireColor = '#f1c40f';
+            } else if (GEMS_GACHA_HEROES.includes(def.id)) {
+                acquireLabel = '🔮 Gacha 5💎';
+                acquireColor = '#00d2ff';
+            } else {
+                acquireLabel = '🏆 Gacha 500PH';
+                acquireColor = '#c084fc';
+            }
             div.innerHTML = `
-                <img src="${getHeroImage(def.id, 3)}" alt="">
+                <img src="${getHeroImage(def.id, 3, 'unit')}" alt="">
+                <div class="hero-mini-elem">${def.icon}</div>
                 <div class="hero-mini-info">
-                    <span class="hero-mini-name" style="color:#4a5a7a; font-family:'Montserrat',sans-serif;">???</span>
+                    <span class="hero-mini-stars">${'★'.repeat(3)}</span>
+                    <span class="hero-mini-name" style="color:#a0b0c0">${def.titles[0]}</span>
+                    <span class="hero-mini-level" style="color:${acquireColor}">${acquireLabel}</span>
                 </div>
             `;
+            div.onclick = () => openHeroModal(def.id);
         }
 
         grid.appendChild(div);
@@ -3140,9 +4237,107 @@ function renderHeroesGrid() {
     updatePartyStats();
 }
 
-function upgradeTap() {
-    const cost = Math.floor(10 * Math.pow(1.05, G.tapDamageLevel));
-    if(G.gold >= cost) { G.gold -= cost; G.tapDamageLevel++; Sound.playLevelUp(); updateDisplays(); }
+function upgradeTap(times = 1) {
+    Sound.init();
+    // CORRECTION : Passage de 1.05 à 1.14 pour indexer le coût sur l'économie réelle
+    let currentCost = Math.floor(10 * Math.pow(1.14, G.tapDamageLevel));
+    
+    if (times === 1) {
+        if (G.gold >= currentCost) {
+            G.gold -= currentCost;
+            G.tapDamageLevel++;
+            Sound.playLevelUp();
+        }
+    } else if (times === 10) {
+        let totalCost = 0;
+        for (let i = 0; i < 10; i++) {
+            totalCost += Math.floor(10 * Math.pow(1.14, G.tapDamageLevel + i));
+        }
+        if (G.gold >= totalCost) {
+            G.gold -= totalCost;
+            G.tapDamageLevel += 10;
+            Sound.playLevelUp();
+        } else {
+            showNotif("❌ Pas assez d'Or pour l'amélioration ×10 !");
+        }
+    } else if (times === 'max') {
+        let count = 0;
+        let totalCost = 0;
+        while (true) {
+            let nextCost = Math.floor(10 * Math.pow(1.14, G.tapDamageLevel + count));
+            if (G.gold >= totalCost + nextCost) {
+                totalCost += nextCost;
+                count++;
+            } else {
+                break;
+            }
+        }
+        if (count > 0) {
+            G.gold -= totalCost;
+            G.tapDamageLevel += count;
+            Sound.playLevelUp();
+            showNotif(`⬆ Puissance de Tap améliorée de +${count} niveaux !`);
+        } else {
+            showNotif("❌ Pas assez d'Or pour améliorer le Tap !");
+        }
+    }
+    updateDisplays();
+    saveGame();
+}
+
+function buyCurrentHero() {
+    if (!currentHeroModal) return;
+    const def = HERO_DEFS.find(d => d.id === currentHeroModal);
+    if (!def || G.heroes[def.id]) return;
+
+    // Option A — bloquer l'achat or pour les héros gacha
+    if (!GOLD_BUYABLE_HEROES.includes(def.id)) {
+        showNotif('❌ Ce héros s\'obtient uniquement via Gacha !');
+        return;
+    }
+
+    const price = getHeroPrice(def);
+    if (price > 0 && G.gold < price) {
+        showNotif(`❌ Pas assez d'Or ! (${fmt(G.gold)} / ${fmt(price)} 🪙)`);
+        return;
+    }
+
+    G.gold -= price;
+    const summonedType = HERO_TYPES[Math.floor(Math.random() * HERO_TYPES.length)];
+    G.heroes[def.id] = initHero(summonedType);
+    
+    // Auto add to squad if space
+    const emptyIdx = G.squad.indexOf(null);
+    if (emptyIdx >= 0) { G.squad[emptyIdx] = def.id; if (emptyIdx === 0) G.leaderId = def.id; }
+    
+    Sound.init(); Sound.playLevelUp();
+    showNotif(`✨ ${def.titles[0]} rejoint l'équipe !`);
+    saveGame();
+    updateDisplays();
+    openHeroModal(def.id);
+    renderHeroesGrid();
+}
+
+function equipSphere(sphereId) {
+    if (!currentHeroModal || !G.heroes[currentHeroModal]) return;
+    const h = G.heroes[currentHeroModal];
+    
+    // Unequip current sphere
+    if (h.equippedSphere) {
+        if (!G.spheres[h.equippedSphere]) G.spheres[h.equippedSphere] = 0;
+        G.spheres[h.equippedSphere]++;
+        h.equippedSphere = null;
+    }
+    
+    // Equip new sphere
+    if (sphereId !== 'none' && SPHERE_DEFS[sphereId] && G.spheres[sphereId] > 0) {
+        G.spheres[sphereId]--;
+        h.equippedSphere = sphereId;
+    }
+    
+    saveGame();
+    updateDisplays();
+    openHeroModal(currentHeroModal);
 }
 
 let currentHeroModal = null;
@@ -3150,137 +4345,209 @@ function openHeroModal(id) {
     currentHeroModal = id;
     const def = HERO_DEFS.find(d=>d.id===id);
     const h = G.heroes[id];
-    const maxLvl = EVO_LEVEL_CAPS[h.stars];
-    // Axe 3 : zone gating — la zone nécessaire pour débloquer l'évolution vers (h.stars+1)★
-    const evoTargetStars = h.stars + 1;
-    const evoZoneGate = (evoTargetStars <= 6) ? EVO_ZONE_GATES[evoTargetStars] : 999;
-    const canEvolve = h.level >= maxLvl && h.stars < 6 && G.maxZone >= evoZoneGate;
     
-    document.getElementById('hm-title').textContent = def.titles[h.stars - 3] + ` (${h.type})`;
-    const img = document.getElementById('hm-image'); img.src = getHeroImage(id, h.stars);
-    document.getElementById('hm-stars').textContent = '★'.repeat(h.stars);
-    document.getElementById('hm-elem').innerHTML = def.icon;
-    document.getElementById('hm-lore').textContent = `"${def.lore}"`;
+    const modal = document.getElementById('hero-modal');
+    modal.style.setProperty('--hero-theme-color', ELEM_COLORS[def.elem] || '#fff');
     
-    document.getElementById('hm-type').textContent = h.type || 'Lord';
-    document.getElementById('hm-lvl').textContent = `${h.level} / ${maxLvl}`;
-    document.getElementById('hm-dps').textContent = fmt(getHeroDPS(def, h));
+    const lvlBadge = document.getElementById('hm-header-lvl');
+    if (lvlBadge) lvlBadge.textContent = 'Lv.' + (h ? h.level : '1');
     
-    const tMod = TYPE_MODS[h.type || 'Lord'];
-    const hHp = def.baseDPS * 18 * h.level * h.stars * tMod.hp;
-    const hDef = def.baseDPS * 1.5 * h.level * h.stars * tMod.def;
-    document.getElementById('hm-hp-def').textContent = `${fmt(hHp)} HP / ${fmt(hDef)} DEF`;
-    
-    document.getElementById('hm-lb').textContent = `+${h.duplicates * 10}%`;
-    document.getElementById('hm-ls').textContent = getLeaderSkillName(def.id);
-    
-    const nextMs = MILESTONES.find(m => m > h.level);
-    document.getElementById('hm-next-cap').textContent = nextMs ? `Prochain cap : ${MILESTONE_LABELS[nextMs]} (Niv.${nextMs})` : 'Toutes compétences débloquées';
-
-    const lvlRow = document.getElementById('hm-levelup-row');
-    if (h.level < maxLvl) {
-        const remaining = maxLvl - h.level;
-        const cost1   = getHeroLevelCost(def, h);
-        const levels10 = Math.min(10, remaining);
-        const cost10  = calcBulkCost(def, h, levels10);
-        const costMax = calcBulkCost(def, h, remaining);
-        const canAny  = G.gold >= cost1;
-
-        // Bouton +1
-        const btn1 = document.getElementById('hm-btn-lvlup');
-        btn1.disabled = !canAny;
-        document.getElementById('hm-cost-1').textContent = fmt(cost1) + ' 🪙';
-
-        // Bouton ×10
-        const btn10 = document.getElementById('hm-btn-lvlup10');
-        btn10.disabled = !canAny;
-        document.getElementById('hm-cost-10').textContent =
-            levels10 < 10 ? `×${levels10} — ${fmt(cost10)} 💰` : `${fmt(cost10)} 💰`;
-
-        // Bouton MAX
-        const btnMax = document.getElementById('hm-btn-lvlupmax');
-        btnMax.disabled = !canAny;
-        document.getElementById('hm-cost-max').textContent =
-            remaining > 0 ? `×${remaining} — ${fmt(costMax)} 💰` : 'Cap atteint';
-
-        lvlRow.style.display = 'flex';
-    } else {
-        lvlRow.style.display = 'none';
-    }
-
-    const btnEvo = document.getElementById('hm-btn-evolve');
-    const evoRow = document.getElementById('hm-evo-mats-row');
-    
-    if (h.stars < 6 && h.level >= maxLvl) {
-        // Cas : cap de niveau atteint mais zone insuffisante → afficher le verrou
-        if (!canEvolve) {
-            btnEvo.textContent = `🔒 Zone ${evoZoneGate - 1} Boss requis pour ${evoTargetStars}★`;
-            btnEvo.disabled = true;
-            btnEvo.style.display = 'block';
-            evoRow.style.display = 'none';
+    const sphereIconEl = document.getElementById('hm-slot-sphere-icon');
+    if (sphereIconEl) {
+        if (h && h.equippedSphere && SPHERE_DEFS[h.equippedSphere]) {
+            const icons = {
+                bijou_sacre: '<i class="ra ra-gem" style="color:#00d2ff"></i>',
+                barre_legwand: '<i class="ra ra-gold-bar" style="color:#f1c40f"></i>',
+                pierre_choc: '<i class="ra ra-crossed-swords" style="color:#e74c3c"></i>'
+            };
+            sphereIconEl.innerHTML = icons[h.equippedSphere] || '💎';
         } else {
-            const evoCost = EVO_COSTS[h.stars];
-            btnEvo.textContent = `Évoluer en ${h.stars+1}★ (${fmt(evoCost)} 🪙)`;
-            
-            evoRow.style.display = 'flex';
-            const reqs = getEvolutionRequirements(def.elem, h.stars);
-            let listStr = "";
-            let hasMats = true;
-            
-            reqs.forEach(req => {
-                if (req.item === 'duplicate') {
-                    const owned = h.duplicates || 0;
-                    const color = owned >= req.qty ? '#2ecc71' : '#e74c3c';
-                    listStr += `<span style="color:${color}">Doublons sacrifiés : ${owned} / ${req.qty}</span>`;
-                    if (owned < req.qty) hasMats = false;
-                } else {
-                    const owned = G.materials[req.item] || 0;
-                    const matName = MATERIAL_DEFS[req.item].name;
-                    const color = owned >= req.qty ? '#2ecc71' : '#e74c3c';
-                    listStr += `<span style="color:${color}">${matName} : ${owned} / ${req.qty}</span>`;
-                    if (owned < req.qty) hasMats = false;
-                }
-            });
-            
-            document.getElementById('hm-evo-mats-list').innerHTML = listStr;
-            btnEvo.disabled = G.gold < evoCost || !hasMats;
-            btnEvo.style.display = 'block';
+            sphereIconEl.innerHTML = '<i class="ra ra-plus"></i>';
         }
-    } else if (!canEvolve && h.stars >= 6) {
-        btnEvo.style.display = 'none';
-        evoRow.style.display = 'none';
-    } else {
-        btnEvo.style.display = 'none';
-        evoRow.style.display = 'none';
     }
     
-    const squadBtn = document.getElementById('hm-btn-squad');
-    const inSquad = G.squad.includes(id);
-    if (inSquad) {
-        const isLeader = G.squad[0] === id;
-        squadBtn.textContent = isLeader ? "Retirer de la Squad (Déjà Leader)" : "Promouvoir Leader / Retirer";
+    if (!h) {
+        // --- PURCHASE MODE ---
+        document.getElementById('hm-title').textContent = def.titles[0] + ' (Contrat)';
+        const img = document.getElementById('hm-image'); img.src = getHeroImage(id, 3, 'full');
+        document.getElementById('hm-stars').textContent = '★★★';
+        document.getElementById('hm-elem').innerHTML = def.icon;
+        document.getElementById('hm-lore').textContent = `"${def.lore}"`;
+        
+        document.getElementById('hm-type').textContent = 'Inconnu';
+        document.getElementById('hm-lvl').textContent = '1 / 50';
+        document.getElementById('hm-dps').textContent = fmt(def.baseDPS);
+        document.getElementById('hm-hp-def').textContent = '??? HP / ??? DEF';
+        document.getElementById('hm-lb').textContent = '+0%';
+        document.getElementById('hm-ls').textContent = getLeaderSkillName(def.id);
+        document.getElementById('hm-next-cap').textContent = 'Rejoignez l\'équipe pour dévoiler son potentiel.';
+        document.getElementById('hm-evo-mats-row').style.display = 'none';
+        document.getElementById('hm-sphere-row').style.display = 'none';
+
+        document.getElementById('hm-actions-owned').style.display = 'none';
+        const actionsBuy = document.getElementById('hm-actions-buy');
+        actionsBuy.style.display = 'block';
+
+        if (GOLD_BUYABLE_HEROES.includes(def.id)) {
+            // ── Achat or classique ──
+            const price = getHeroPrice(def);
+            document.getElementById('hm-cost-buy').textContent = price === 0 ? '🆓 Gratuit' : `${fmt(price)} 🪙`;
+            const btnBuy = document.getElementById('hm-btn-buy');
+            btnBuy.disabled = price > 0 && G.gold < price;
+            btnBuy.textContent = price === 0 ? 'Débloquer gratuitement' : 'Acheter Héros';
+            btnBuy.onclick = buyCurrentHero;
+        } else if (GEMS_GACHA_HEROES.includes(def.id)) {
+            // ── Héros Tier S/A → gacha gemmes ──
+            document.getElementById('hm-cost-buy').textContent = '🔮 Disponible via Rare Summon (5💎)';
+            const btnBuy = document.getElementById('hm-btn-buy');
+            btnBuy.disabled = G.gems < 5;
+            btnBuy.textContent = `Invoquer (5💎)`;
+            btnBuy.onclick = () => { closeHeroModal(); summonRare(); };
+        } else {
+            // ── Héros Tier B-mid → gacha PH ──
+            document.getElementById('hm-cost-buy').textContent = '🏆 Disponible via Honor Summon (500 PH)';
+            const btnBuy = document.getElementById('hm-btn-buy');
+            btnBuy.disabled = G.honorPoints < 500;
+            btnBuy.textContent = `Invoquer (500 PH)`;
+            btnBuy.onclick = () => { closeHeroModal(); summonHonor(); };
+        }
     } else {
-        squadBtn.textContent = "Ajouter à la Squad";
+        // --- OWNED MODE ---
+        document.getElementById('hm-actions-buy').style.display = 'none';
+        document.getElementById('hm-actions-owned').style.display = 'flex';
+        
+        const maxLvl = EVO_LEVEL_CAPS[h.stars];
+        const evoTargetStars = h.stars + 1;
+        const evoZoneGate = (evoTargetStars <= 6) ? EVO_ZONE_GATES[evoTargetStars] : 999;
+        const canEvolve = h.level >= maxLvl && h.stars < 6 && G.maxZone >= evoZoneGate;
+        
+        document.getElementById('hm-title').textContent = def.titles[h.stars - 3] + ` (${h.type})`;
+        const img = document.getElementById('hm-image'); img.src = getHeroImage(id, h.stars, 'full');
+        document.getElementById('hm-stars').textContent = '★'.repeat(h.stars);
+        document.getElementById('hm-elem').innerHTML = def.icon;
+        document.getElementById('hm-lore').textContent = `"${def.lore}"`;
+        
+        document.getElementById('hm-type').textContent = h.type || 'Lord';
+        document.getElementById('hm-lvl').textContent = `${h.level} / ${maxLvl}`;
+        document.getElementById('hm-dps').textContent = fmt(getHeroDPS(def, h));
+        
+        const tMod = TYPE_MODS[h.type || 'Lord'];
+        const hHp = def.baseDPS * 18 * h.level * h.stars * tMod.hp;
+        const hDef = def.baseDPS * 1.5 * h.level * h.stars * tMod.def;
+        document.getElementById('hm-hp-def').textContent = `${fmt(hHp)} HP / ${fmt(hDef)} DEF`;
+        
+        document.getElementById('hm-lb').textContent = `+${h.duplicates * 10}%`;
+        document.getElementById('hm-ls').textContent = getLeaderSkillName(def.id);
+        
+        const nextMs = MILESTONES.find(m => m > h.level);
+        document.getElementById('hm-next-cap').textContent = nextMs ? `Prochain cap : ${MILESTONE_LABELS[nextMs]} (Niv.${nextMs})` : 'Toutes compétences débloquées';
+
+        // SPHERES
+        document.getElementById('hm-sphere-row').style.display = 'flex';
+        const sphereSelect = document.getElementById('hm-sphere-select');
+        let optionsHtml = `<option value="none">-- Aucune --</option>`;
+        if (h.equippedSphere && SPHERE_DEFS[h.equippedSphere]) {
+            optionsHtml += `<option value="${h.equippedSphere}" selected>${SPHERE_DEFS[h.equippedSphere].name} (Équipée)</option>`;
+        }
+        Object.keys(G.spheres).forEach(sId => {
+            if (G.spheres[sId] > 0 && SPHERE_DEFS[sId]) {
+                optionsHtml += `<option value="${sId}">${SPHERE_DEFS[sId].name} (${G.spheres[sId]})</option>`;
+            }
+        });
+        sphereSelect.innerHTML = optionsHtml;
+
+        const lvlRow = document.getElementById('hm-levelup-row');
+        if (h.level < maxLvl) {
+            const remaining = maxLvl - h.level;
+            const cost1   = getHeroLevelCost(def, h);
+            const levels10 = Math.min(10, remaining);
+            const cost10  = calcBulkCost(def, h, levels10);
+            const costMax = calcBulkCost(def, h, remaining);
+            const canAny  = G.gold >= cost1;
+
+            const btn1 = document.getElementById('hm-btn-lvlup');
+            btn1.disabled = !canAny;
+            document.getElementById('hm-cost-1').textContent = fmt(cost1) + ' 🪙';
+
+            const btn10 = document.getElementById('hm-btn-lvlup10');
+            btn10.disabled = !canAny;
+            document.getElementById('hm-cost-10').textContent =
+                levels10 < 10 ? `×${levels10} — ${fmt(cost10)} 💰` : `${fmt(cost10)} 💰`;
+
+            const { count: affordCount, cost: affordCost } = calcAffordableLevels(def, h, remaining);
+            const btnMax = document.getElementById('hm-btn-lvlupmax');
+            btnMax.disabled = affordCount === 0;
+            document.getElementById('hm-cost-max').textContent =
+                affordCount > 0 ? `×${affordCount} — ${fmt(affordCost)} 💰` : 'Or insuffisant';
+
+            lvlRow.style.display = 'flex';
+        } else {
+            lvlRow.style.display = 'none';
+        }
+
+        const btnEvo = document.getElementById('hm-btn-evolve');
+        const evoRow = document.getElementById('hm-evo-mats-row');
+        
+        if (h.stars < 6 && h.level >= maxLvl) {
+            if (!canEvolve) {
+                btnEvo.textContent = `🔒 Zone ${evoZoneGate - 1} Boss requis pour ${evoTargetStars}★`;
+                btnEvo.disabled = true;
+                btnEvo.style.display = 'block';
+                evoRow.style.display = 'none';
+            } else {
+                const evoCost = EVO_COSTS[h.stars];
+                btnEvo.textContent = `Évoluer en ${h.stars+1}★ (${fmt(evoCost)} 🪙)`;
+                
+                evoRow.style.display = 'flex';
+                const reqs = getEvolutionRequirements(def.elem, h.stars);
+                let listStr = "";
+                let hasMats = true;
+                
+                reqs.forEach(req => {
+                    if (req.item === 'duplicate') {
+                        const owned = h.duplicates || 0;
+                        const color = owned >= req.qty ? '#2ecc71' : '#e74c3c';
+                        listStr += `<span style="color:${color}">Doublons sacrifiés : ${owned} / ${req.qty}</span>`;
+                        if (owned < req.qty) hasMats = false;
+                    } else {
+                        const owned = G.materials[req.item] || 0;
+                        const matName = MATERIAL_DEFS[req.item].name;
+                        const color = owned >= req.qty ? '#2ecc71' : '#e74c3c';
+                        listStr += `<span style="color:${color}">${matName} : ${owned} / ${req.qty}</span>`;
+                        if (owned < req.qty) hasMats = false;
+                    }
+                });
+                
+                document.getElementById('hm-evo-mats-list').innerHTML = listStr;
+                btnEvo.disabled = G.gold < evoCost || !hasMats;
+                btnEvo.style.display = 'block';
+            }
+        } else {
+            btnEvo.style.display = 'none';
+            evoRow.style.display = 'none';
+        }
+        
+        const squadBtn = document.getElementById('hm-btn-squad');
+        const inSquad = G.squad.includes(id);
+        if (inSquad) {
+            const isLeader = G.squad[0] === id;
+            squadBtn.textContent = isLeader ? "Retirer de la Squad (Déjà Leader)" : "Promouvoir Leader / Retirer";
+        } else {
+            squadBtn.textContent = "Ajouter à la Squad";
+        }
     }
 
     document.getElementById('hero-modal').classList.add('visible');
     BGM.update();
-    
-    // Setup Parallax for image
-    const modal = document.getElementById('hero-modal');
-    const imgElement = document.getElementById('hm-image');
-    modal.onmousemove = (e) => {
-        if (!imgElement) return;
-        const rect = modal.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
-        const moveX = (x - 0.5) * 30; // Max 15px movement
-        const moveY = (y - 0.5) * 30;
-        imgElement.style.transform = `scale(1.08) translate(${-moveX}px, ${-moveY}px)`;
-    };
-    modal.onmouseleave = () => {
-        if(imgElement) imgElement.style.transform = `scale(1.08) translate(0px, 0px)`;
-    };
+}
+
+function toggleSphereSelect() {
+    const row = document.getElementById('hm-sphere-row');
+    if (row.style.display === 'none' || row.style.display === '') {
+        row.style.display = 'flex';
+    } else {
+        row.style.display = 'none';
+    }
 }
 
 function getEvolutionRequirements(elem, stars) {
@@ -3316,21 +4583,38 @@ function getEvolutionRequirements(elem, stars) {
 function closeHeroModal() { document.getElementById('hero-modal').classList.remove('visible'); renderHeroesGrid(); BGM.update(); }
 
 function levelUpCurrentHero(times = 1) {
-    const h   = G.heroes[currentHeroModal];
+    const h = G.heroes[currentHeroModal];
     const def = HERO_DEFS.find(d => d.id === currentHeroModal);
     const cap = EVO_LEVEL_CAPS[h.stars];
     if (h.level >= cap) return;
 
-    const maxLevels = times === 'max' ? cap - h.level : Math.min(times, cap - h.level);
-    const { count, cost } = calcAffordableLevels(def, h, maxLevels);
-
-    if (count > 0) {
-        G.gold  -= cost;
-        h.level += count;
-        Sound.playLevelUp();
-        openHeroModal(currentHeroModal);
-        saveGame();
+    if (times === 'max') {
+        // CORRECTION MAJEURE : On calcule le maximum de niveaux achetables avec l'Or ACTUEL du joueur
+        const remainingToCap = cap - h.level;
+        const { count, cost } = calcAffordableLevels(def, h, remainingToCap);
+        
+        if (count > 0) {
+            G.gold -= cost;
+            h.level += count;
+            Sound.playLevelUp();
+            showNotif(`⬆ ${def.titles[h.stars - 3]} a gagné +${count} niveaux !`);
+        } else {
+            showNotif("❌ Pas assez d'Or pour acheter un niveau !");
+        }
+    } else {
+        // Mode classique +1 ou +10
+        const maxLevels = Math.min(times, cap - h.level);
+        const { count, cost } = calcAffordableLevels(def, h, maxLevels);
+        if (count > 0) {
+            G.gold -= cost;
+            h.level += count;
+            Sound.playLevelUp();
+        }
     }
+    
+    openHeroModal(currentHeroModal);
+    saveGame();
+    updateDisplays();
 }
 
 function evolveCurrentHero() {
@@ -3410,40 +4694,52 @@ function toggleSquadCurrentHero() {
 // =============================================================
 // Axe 5 : Tiers de rareté gacha
 // Tier S (5%) : Sera, Magress — héros 6★-ready ultra-puissants
-// Tier A (25%) : Elimo, Eze, Atro, Kikuri — héros 4★-ready d'utilité
+// Tier A (25%) : Margonia, Eze, Atro, Kikuri — héros 4★-ready d'utilité
 // Tier B (70%) : les 6 héros standards
 const SUMMON_POOLS = {
     S: ['sera', 'magress'],
-    A: ['elimo', 'eze', 'atro', 'kikuri'],
+    A: ['margonia', 'eze', 'atro', 'kikuri'],
     B: ['ignis', 'vargas', 'selena', 'lance', 'zeln', 'karl']
 };
+
+// Option A — Équilibrage : seuls les 4 premiers héros sont achetables avec l'or.
+// Les Tier S/A + zeln/karl s'obtiennent uniquement via gacha.
+const GOLD_BUYABLE_HEROES = ['ignis', 'vargas', 'selena', 'lance'];
+const GEMS_GACHA_HEROES   = [...SUMMON_POOLS.S, ...SUMMON_POOLS.A]; // sera, magress, margonia, eze, atro, kikuri
+const PH_GACHA_HEROES     = ['zeln', 'karl', ...SUMMON_POOLS.A];    // zeln, karl + Tier A
 
 function summonRare() {
     if (G.gems < 5) { showNotif('❌ Pas assez de gemmes !'); return; }
     G.gems -= 5;
 
-    // Tirage de rareté pondéré
+    // Option A — Probabilités Rare Summon (5 gemmes)
+    // 10% Héros Tier S | 25% Héros Tier A | 30% Sphère | 35% Matériau haut-tier
     const roll = Math.random();
-    let pool;
-    if (roll < 0.05)       pool = SUMMON_POOLS.S;  // S : 5%
-    else if (roll < 0.30)  pool = SUMMON_POOLS.A;  // A : 25%
-    else                   pool = SUMMON_POOLS.B;  // B : 70%
-
-    const pickedId = pool[Math.floor(Math.random() * pool.length)];
-    const def = HERO_DEFS.find(d => d.id === pickedId);
-    const summonedType = HERO_TYPES[Math.floor(Math.random() * HERO_TYPES.length)];
-    const isNew = !G.heroes[def.id];
-
-    if (G.heroes[def.id]) {
-        G.heroes[def.id].duplicates++;
+    if (roll < 0.10) {
+        // ── Héros Tier S (sera, magress) ──
+        const heroId = SUMMON_POOLS.S[Math.floor(Math.random() * SUMMON_POOLS.S.length)];
+        triggerSummonAnimation(6, () => _grantSummonedHero(heroId));
+    } else if (roll < 0.35) {
+        // ── Héros Tier A (margonia, eze, atro, kikuri) ──
+        const heroId = SUMMON_POOLS.A[Math.floor(Math.random() * SUMMON_POOLS.A.length)];
+        triggerSummonAnimation(5, () => _grantSummonedHero(heroId));
+    } else if (roll < 0.65) {
+        // ── Sphère Légendaire ──
+        const spheresKeys = Object.keys(SPHERE_DEFS);
+        const sId = spheresKeys[Math.floor(Math.random() * spheresKeys.length)];
+        if (!G.spheres[sId]) G.spheres[sId] = 0;
+        G.spheres[sId]++;
+        triggerSummonAnimation(5, () => showSphereReveal(sId, SPHERE_DEFS[sId]));
     } else {
-        G.heroes[def.id] = initHero(summonedType);
-        const emptyIdx = G.squad.indexOf(null);
-        if (emptyIdx >= 0) { G.squad[emptyIdx] = def.id; if (emptyIdx === 0) G.leaderId = def.id; }
+        // ── Matériel Haut-Tier ──
+        const allKeys = Object.keys(MATERIAL_DEFS);
+        const highTierMats = allKeys.filter(k => k.includes('_totem') || k === 'mimic');
+        const mId = highTierMats.length ? highTierMats[Math.floor(Math.random() * highTierMats.length)] : allKeys[0];
+        if (!G.materials[mId]) G.materials[mId] = 0;
+        G.materials[mId]++;
+        triggerSummonAnimation(5, () => showMaterialReveal(mId, MATERIAL_DEFS[mId]));
     }
 
-    const stars = G.heroes[def.id].stars;
-    triggerSummonAnimation(stars, () => showHeroReveal(def.id, G.heroes[def.id], isNew));
     updateDisplays(); saveGame();
 }
 
@@ -3453,28 +4749,62 @@ function summonHonor() {
     if (G.honorPoints < cost) { showNotif(`❌ Pas assez de Points d'Honneur ! (${fmt(G.honorPoints)} / ${cost} PH)`); return; }
     G.honorPoints -= cost;
 
-    // Tirage pondéré : matériaux bas tier plus fréquents
-    const allKeys = Object.keys(MATERIAL_DEFS);
-    // Cristaux (3★) : 50%, Idoles (4★) : 30%, Totems (5★) : 10%, Mimics : 10%
-    const weights = allKeys.map(k => {
-        if (k === 'mimic') return 10;
-        if (k.includes('_totem')) return 10;
-        if (k.includes('_idol')) return 30;
-        return 50; // crystal
-    });
-    const totalW = weights.reduce((a, b) => a + b, 0);
-    let r = Math.random() * totalW;
-    let rolledKey = allKeys[0];
-    for (let i = 0; i < allKeys.length; i++) {
-        r -= weights[i];
-        if (r <= 0) { rolledKey = allKeys[i]; break; }
+    // Option A — Probabilités Honor Summon (500 PH)
+    // 15% Héros Tier A | 15% Héros Tier B-mid (zeln, karl) | 70% Matériaux pondérés
+    const phRoll = Math.random();
+    if (phRoll < 0.15) {
+        // ── Héros Tier A ──
+        const heroId = SUMMON_POOLS.A[Math.floor(Math.random() * SUMMON_POOLS.A.length)];
+        triggerSummonAnimation(4, () => _grantSummonedHero(heroId));
+    } else if (phRoll < 0.30) {
+        // ── Héros Tier B-mid (zeln, karl) ──
+        const bMid = ['zeln', 'karl'];
+        const heroId = bMid[Math.floor(Math.random() * bMid.length)];
+        triggerSummonAnimation(3, () => _grantSummonedHero(heroId));
+    } else {
+        // ── Matériaux pondérés ──
+        const allKeys = Object.keys(MATERIAL_DEFS);
+        // Cristaux (3★) : 50%, Idoles (4★) : 30%, Totems (5★) : 10%, Mimics : 10%
+        const weights = allKeys.map(k => {
+            if (k === 'mimic') return 10;
+            if (k.includes('_totem')) return 10;
+            if (k.includes('_idol')) return 30;
+            return 50; // crystal
+        });
+        const totalW = weights.reduce((a, b) => a + b, 0);
+        let r = Math.random() * totalW;
+        let rolledKey = allKeys[0];
+        for (let i = 0; i < allKeys.length; i++) {
+            r -= weights[i];
+            if (r <= 0) { rolledKey = allKeys[i]; break; }
+        }
+        const mat = MATERIAL_DEFS[rolledKey];
+        if (!G.materials[rolledKey]) G.materials[rolledKey] = 0;
+        G.materials[rolledKey]++;
+        triggerSummonAnimation(3, () => showMaterialReveal(rolledKey, mat));
     }
-    const mat = MATERIAL_DEFS[rolledKey];
-    if (!G.materials[rolledKey]) G.materials[rolledKey] = 0;
-    G.materials[rolledKey]++;
 
-    triggerSummonAnimation(3, () => showMaterialReveal(rolledKey, mat));
     updateDisplays(); saveGame();
+}
+
+// Accorde un héros invoqué : si déjà possédé → +1 duplicate (Limit Break), sinon unlock
+function _grantSummonedHero(heroId) {
+    const def = HERO_DEFS.find(d => d.id === heroId);
+    if (!def) return;
+    if (G.heroes[heroId]) {
+        // Déjà possédé → Limit Break
+        G.heroes[heroId].duplicates = (G.heroes[heroId].duplicates || 0) + 1;
+        showNotif(`✨ ${def.titles[0]} déjà obtenu ! Limit Break +1 (LB: ${G.heroes[heroId].duplicates * 10}%)`);
+    } else {
+        const summonedType = HERO_TYPES[Math.floor(Math.random() * HERO_TYPES.length)];
+        G.heroes[heroId] = initHero(summonedType);
+        const emptyIdx = G.squad.indexOf(null);
+        if (emptyIdx >= 0) { G.squad[emptyIdx] = heroId; if (emptyIdx === 0) G.leaderId = heroId; }
+        showNotif(`🌟 ${def.titles[0]} rejoint l'équipe !`);
+    }
+    renderHeroesGrid();
+    updateDisplays();
+    saveGame();
 }
 
 function triggerSummonAnimation(stars, onReveal) {
@@ -3524,7 +4854,7 @@ function showHeroReveal(heroId, heroData, isNew) {
 
     document.getElementById('reveal-bg').style.background = bg;
     const portrait = document.getElementById('reveal-portrait');
-    portrait.src = getHeroImage(heroId, heroData.stars);
+    portrait.src = getHeroImage(heroId, heroData.stars, 'full');
     portrait.style.display = 'block';
     document.getElementById('reveal-material-emoji').style.display = 'none';
 
@@ -3540,6 +4870,21 @@ function showHeroReveal(heroId, heroData, isNew) {
 
     _openReveal(stars, glow);
 }
+
+function showSphereReveal(sphereId, sphereDef) {
+    document.getElementById('reveal-bg').style.background = 'linear-gradient(180deg,#120008,#300015 55%,#000)';
+    document.getElementById('reveal-portrait').style.display = 'none';
+    const emojiEl = document.getElementById('reveal-material-emoji');
+    emojiEl.textContent = '🔮'; emojiEl.style.display = 'block';
+
+    const nameEl = document.getElementById('reveal-hero-name');
+    nameEl.textContent = sphereDef.name; nameEl.style.color = '#ff5588';
+    nameEl.style.textShadow = `0 0 20px #ff558866, 0 2px 12px rgba(0,0,0,.9)`;
+    document.getElementById('reveal-hero-info').innerHTML = `<span style="color:#ff5588">Sphère Légendaire</span>`;
+
+    _openReveal(5, '#ff5588');
+}
+
 
 function showMaterialReveal(matKey, mat) {
     const matEmojis = { crystal:'💎', idol:'🏺', totem:'🗿', mimic:'📦' };
@@ -3590,8 +4935,10 @@ function _updateSummonGlow() {
         if (G.gems >= 5) rareBtn.classList.add('can-afford');
         else rareBtn.classList.remove('can-afford');
     }
+    // §1.1 — tester les Points d'Honneur, pas l'or
     if (honorBtn) {
-        honorBtn.disabled = G.gold < 2000;
+        honorBtn.disabled = G.honorPoints < 500;
+        honorBtn.classList.toggle('can-afford', G.honorPoints >= 500);
     }
 }
 
@@ -3677,7 +5024,7 @@ function renderSkills() {
         if (id === 'atro')    descStr = `Soin 30% HP + Frappe Sacrée ${fmt(dpsDmg)}`;
         if (id === 'lance')   descStr = `+50% DEF (10s) + ${fmt(dpsDmg)} dégâts de terre`;
         if (id === 'vargas')  descStr = `+30 BC à toute la squad + ${fmt(dpsDmg)} dégâts de feu`;
-        if (id === 'elimo')   descStr = `Gèle le monstre 6s (−50% ATK) + ${fmt(dpsDmg)} dégâts de givre`;
+        if (id === 'margonia') descStr = `Gèle le monstre 6s (−50% ATK) + ${fmt(dpsDmg)} dégâts de givre`;
         if (id === 'zeln')    descStr = `Triple frappe rapide — ${fmt(dpsDmg)} dégâts de terre`;
         if (id === 'kikuri')  descStr = `Malédiction 8s (−40% ATK monstre) + ${fmt(dpsDmg)} dégâts`;
         if (id === 'magress') descStr = `Dévore l'âme — ${fmt(dpsDmg)} dégâts ténébreux (maximum)`;
@@ -3708,12 +5055,12 @@ function useBB(id) {
     
     const dps = getHeroDPS(def, h);
     const dmgFactors = { magress:150, eze:120, ignis:100, zeln:90, atro:80, karl:70,
-                         lance:60, sera:60, selena:50, elimo:45, kikuri:35, vargas:30 };
+                         lance:60, sera:60, selena:50, margonia:45, kikuri:35, vargas:30 };
     const dmgFactor = dmgFactors[id] || 40;
     const dmg = dps * dmgFactor;
     
     const ov = document.getElementById('bb-overlay'); ov.classList.add('active');
-    ov.querySelector('.bb-portrait').src = getHeroImage(id, h.stars);
+    ov.querySelector('.bb-portrait').src = getHeroImage(id, h.stars, 'full');
     ov.querySelector('.bb-text').textContent = 'BRAVE BURST'; ov.querySelector('.bb-dmg-text').textContent = fmt(dmg);
     ov.querySelector('.bb-bg').style.opacity = '0.85'; ov.querySelector('.bb-stripe').style.transform = 'scaleY(1)';
     Sound.playBB();
@@ -3728,12 +5075,8 @@ function useBB(id) {
         G.partyDef = Math.floor(G.partyDef * 1.50);
         G.lanceShieldActive = true;
         updatePartyHpBar();
-        setTimeout(() => {
-            G.lanceShieldActive = false;
-            updatePartyStats();
-        }, 10000);
+        setTimeout(() => { G.lanceShieldActive = false; updatePartyStats(); }, 10000);
     } else if (id === 'vargas') {
-        // Recharge +30 BC à toute la squad
         G.squad.forEach(sid => {
             if (sid && G.heroes[sid]) {
                 if (!G.bbGauges[sid]) G.bbGauges[sid] = 0;
@@ -3741,11 +5084,11 @@ function useBB(id) {
             }
         });
         renderFooterBB();
-    } else if (id === 'elimo') {
-        G.monsterFrozen = 6; // 6 secondes -50% ATK
+    } else if (id === 'margonia') {
+        G.monsterFrozen = 6; // Bloque et réduit de 50% l'ATK du monstre pendant 6s
         screenFlash('rgba(100,200,255,0.35)');
     } else if (id === 'kikuri') {
-        G.monsterDebuff = 8; // 8 secondes -40% ATK
+        G.monsterDebuff = 8; // Maudit et réduit de 40% l'ATK du monstre pendant 8s
         screenFlash('rgba(160,0,255,0.3)');
     }
     
@@ -3827,7 +5170,7 @@ window.claimAchievement = function(id) {
 function renderPrestigePanel() {
     document.getElementById('panel-prestige').innerHTML = `<div class="prestige-panel">
         <div class="prestige-icon">♾️</div><div class="prestige-title">Prestige</div>
-        <div style="font-size:12px; color:#a0b0c0;">Recommencez (perdez Or, Zones et Niveaux des Héros, mais conservez les Héros, Gemmes, Doublons, Types et Matériaux) pour obtenir des Cristaux (+1% Stats globales).</div>
+        <div style="font-size:12px; color:#a0b0c0;">Recommencez (perdez Or, Zones et Niveaux des Héros, mais conservez les Héros, Gemmes, Doublons, Types et Matériaux) pour obtenir des Cristaux (+10% Stats globales par cristal).</div>
         <div style="color:#00d2ff; font-weight:700; margin:10px 0;">Cristaux possédés : <span id="pres-crystals-val">0</span> (+<span id="pres-crystals-bonus">0</span>% Stats)</div>
         <button class="prestige-btn" onclick="doPrestige()">REBIRTH (Req. Zone 50)</button>
     </div>`;
@@ -3843,7 +5186,8 @@ function doPrestige() {
     G.partyHp = G.partyMaxHp;
     Sound.playPrestige(); screenFlash('#c084fc'); spawnMonster(); saveGame(); updateDisplays();
     document.getElementById('pres-crystals-val').textContent = G.prestigeCrystals;
-    document.getElementById('pres-crystals-bonus').textContent = G.prestigeCrystals;
+    // §2.6 — le bonus est +10% par cristal, donc on affiche cristaux * 10
+    document.getElementById('pres-crystals-bonus').textContent = G.prestigeCrystals * 10;
 }
 
 // =============================================================
@@ -3871,8 +5215,9 @@ function openDrawer(tabName) {
     
     // Render logic
     if(tabName === 'heroes') renderHeroesGrid();
-    if(tabName === 'skills') renderSkills();
+    if(tabName === 'skills') { renderSkills(); renderFooterBB(); }
     if(tabName === 'achievements') renderAchievements();
+    if(tabName === 'gacha') renderMaterialsPanel();
     if(tabName === 'prestige') {
         renderPrestigePanel();
         const presValEl = document.getElementById('pres-crystals-val');
@@ -3904,6 +5249,7 @@ function initResponsiveLayout() {
     _currentLayoutMode = targetMode;
 
     const leftWing = document.getElementById('left-wing');
+    const rightWing = document.getElementById('right-wing');
     const rightWingTabContent = document.getElementById('right-wing-tab-content');
     const mobileTabContent = document.getElementById('tab-content');
     const tabBar = document.getElementById('tab-bar');
@@ -3916,13 +5262,32 @@ function initResponsiveLayout() {
     const panelAchievements = document.getElementById('panel-achievements');
     const panelPrestige = document.getElementById('panel-prestige');
     const panelSettings = document.getElementById('panel-settings');
+    const heroModal = document.getElementById('hero-modal');
 
     if (isDesktop) {
         // Desktop Layout
-        // Move Achievements & Prestige to Left Wing
+        // Move Achievements & Prestige to Left Wing with headers
         if (leftWing && panelAchievements && panelPrestige) {
+            let achHeader = document.getElementById('left-wing-ach-header');
+            if (!achHeader) {
+                achHeader = document.createElement('div');
+                achHeader.id = 'left-wing-ach-header';
+                achHeader.className = 'left-wing-header';
+                achHeader.innerHTML = '🏆 Complétion (Quêtes)';
+                leftWing.appendChild(achHeader);
+            }
             leftWing.appendChild(panelAchievements);
+
+            let presHeader = document.getElementById('left-wing-pres-header');
+            if (!presHeader) {
+                presHeader = document.createElement('div');
+                presHeader.id = 'left-wing-pres-header';
+                presHeader.className = 'left-wing-header';
+                presHeader.innerHTML = '♾️ Réinitialisation (Prestige)';
+                leftWing.appendChild(presHeader);
+            }
             leftWing.appendChild(panelPrestige);
+
             panelAchievements.classList.add('active');
             panelPrestige.classList.add('active');
         }
@@ -3938,6 +5303,11 @@ function initResponsiveLayout() {
         // Move Tab Bar to Right Wing Header
         if (rightWingTabBar && tabBar) {
             rightWingTabBar.appendChild(tabBar);
+        }
+
+        // Route Hero Modal inside Right Wing
+        if (rightWing && heroModal) {
+            rightWing.appendChild(heroModal);
         }
         
         // On desktop, force the active tab-panel to align with the active tab button
@@ -3965,6 +5335,12 @@ function initResponsiveLayout() {
         setTimeout(resizeP, 100);
     } else {
         // Mobile Layout
+        // Remove left wing headers
+        const achHeader = document.getElementById('left-wing-ach-header');
+        if (achHeader) achHeader.remove();
+        const presHeader = document.getElementById('left-wing-pres-header');
+        if (presHeader) presHeader.remove();
+
         // Move all panels to the mobile sliding drawer
         if (mobileTabContent && panelHeroes && panelGacha && panelSkills && panelAchievements && panelPrestige && panelSettings) {
             mobileTabContent.appendChild(panelHeroes);
@@ -3979,6 +5355,11 @@ function initResponsiveLayout() {
         const mobileTabBarContainer = document.getElementById('mobile-tab-bar-container');
         if (mobileTabBarContainer && tabBar) {
             mobileTabBarContainer.appendChild(tabBar);
+        }
+
+        // Route Hero Modal back to body
+        if (heroModal) {
+            document.body.appendChild(heroModal);
         }
         
         // Remove active class from panels unless they match active button
@@ -4030,12 +5411,283 @@ if(!loadGame()) {
 } 
 
 spawnMonster();
+// §1.2 — Forcer HP à plein après l'initialisation (updatePartyStats calcule partyMaxHp)
+updatePartyStats();
+G.partyHp = G.partyMaxHp;
+updatePartyHpBar();
+// Moteur de rafraîchissement visuel de l'inventaire des sphères
+function updateSpheresInventoryDisplay() {
+    const container = document.getElementById('global-spheres-stock');
+    if (!container) return;
+    
+    let html = '';
+    let count = 0;
+    
+    Object.keys(SPHERE_DEFS).forEach(sId => {
+        const owned = G.spheres[sId] || 0;
+        if (owned > 0) {
+            count++;
+            const def = SPHERE_DEFS[sId];
+            let icon = '🔮';
+            if(sId === 'bijou_sacre') icon = '💎';
+            if(sId === 'barre_legwand') icon = '🪙';
+            html += `<span class="material-badge" style="background:#1c2445; border: 1px solid #00d2ff; padding: 5px 8px;">
+                ${icon} ${def.name} (x${owned}) — <small style="color:#7a8ba8">${def.desc}</small>
+            </span>`;
+        }
+    });
+    
+    if(count === 0) {
+        html = `<span style="font-size:10px; color:#5a6a8a; font-style: italic;">Aucune sphère inactive en stock. Ouvrez des Rare Summons pour en trouver !</span>`;
+    }
+    container.innerHTML = html;
+}
+
+// Système de calcul automatique des gains hors-ligne (Idle Away Engine)
+function checkOfflineGains() {
+    if (!G.lastSave) return;
+    
+    const now = Date.now();
+    const elapsedSeconds = Math.min(Math.floor((now - G.lastSave) / 1000), 28800);
+    
+    // Le joueur doit être parti au moins 2 minutes (120s)
+    if (elapsedSeconds >= 120) {
+        const teamDps = getTotalDPS();
+        if (teamDps > 0) {
+            // §5.3 — Gain équilibré : 35% du DPS d'équipe généré par seconde d'absence
+            const offlineGoldGained = Math.floor(elapsedSeconds * teamDps * 0.35);
+            
+            if (offlineGoldGained > 0) {
+                // §5.3 — Mettre à jour lastSave AVANT de créditer pour éviter le double-crédit
+                G.lastSave = Date.now();
+                G.gold += offlineGoldGained;
+                G.totalGold += offlineGoldGained;
+                saveGame(); // persiste immédiatement
+                
+                // §5.3 — Modale stylée au lieu de alert()
+                setTimeout(() => showOfflineModal(elapsedSeconds, offlineGoldGained), 600);
+            }
+        }
+    }
+}
+
+function showOfflineModal(elapsed, gold) {
+    const mins = Math.floor(elapsed / 60);
+    const hours = Math.floor(mins / 60);
+    const timeStr = hours > 0 ? `${hours}h ${mins % 60}min` : `${mins} minutes`;
+    
+    // Créer une modale overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'offline-modal';
+    overlay.style.cssText = `
+        position: fixed; inset: 0; z-index: 400; display: flex;
+        align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.82); backdrop-filter: blur(8px);
+    `;
+    overlay.innerHTML = `
+        <div style="background: linear-gradient(160deg,#0d1a30,#060e1a); border: 2px solid #b4934c;
+            border-radius: 16px; padding: 28px 32px; max-width: 340px; width: 90%; text-align: center;
+            box-shadow: 0 0 40px rgba(180,147,76,0.3), inset 0 0 20px rgba(0,0,0,0.8);">
+            <div style="font-size: 40px; margin-bottom: 12px;">💤</div>
+            <div style="font-family: 'Cinzel', serif; font-size: 18px; color: #f1c40f; font-weight: 700; margin-bottom: 8px;">
+                Bon retour, Invocateur !
+            </div>
+            <div style="font-size: 13px; color: #a0b0c0; margin-bottom: 16px;">
+                Pendant <strong style="color:#fff">${timeStr}</strong> d'absence,<br>
+                ton équipe a continué de batailler.
+            </div>
+            <div style="font-family: 'Cinzel', serif; font-size: 22px; color: #f1c40f; font-weight: 700;
+                background: rgba(241,196,15,0.1); border: 1px solid rgba(241,196,15,0.3);
+                border-radius: 10px; padding: 10px 16px; margin-bottom: 20px;">
+                🪙 +${fmt(gold)} Pièces d'Or
+            </div>
+            <button onclick="document.getElementById('offline-modal').remove(); updateDisplays();"
+                style="background: linear-gradient(135deg,#b4934c,#8a6d38); border: none; color: #fff;
+                font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; padding: 10px 28px;
+                border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                Reprendre l'aventure !
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+// =============================================================
+// §5.1 — STATISTIQUES JOUEUR
+// =============================================================
+function renderStats() {
+    const el = document.getElementById('stats-content');
+    if (!el) return;
+    el.innerHTML = `
+        <div class="settings-row"><span>Monstres tués</span><b>${fmt(G.totalKills || 0)}</b></div>
+        <div class="settings-row"><span>Boss vaincus</span><b>${fmt(G.bossKills || 0)}</b></div>
+        <div class="settings-row"><span>Or total amassé</span><b>${fmt(G.totalGold || 0)}</b></div>
+        <div class="settings-row"><span>Clics totaux</span><b>${fmt(G.totalClicks || 0)}</b></div>
+        <div class="settings-row"><span>Meilleur combo</span><b>×${(1 + (G.maxCombo||0) * 0.1).toFixed(1)}</b></div>
+        <div class="settings-row"><span>Zone maximum</span><b>${G.maxZone || 1}</b></div>
+        <div class="settings-row"><span>Prestiges effectués</span><b>${G.totalPrestiges || 0}</b></div>
+    `;
+}
+
+// =============================================================
+// §5.2 — EXPORT / IMPORT DE SAUVEGARDE
+// =============================================================
+function exportSave() {
+    try {
+        const code = btoa(unescape(encodeURIComponent(JSON.stringify(G))));
+        navigator.clipboard.writeText(code).then(() => {
+            showNotif('📋 Sauvegarde copiée dans le presse-papier !');
+        }).catch(() => {
+            // Fallback si clipboard non autorisé
+            const ta = document.createElement('textarea');
+            ta.value = code;
+            document.body.appendChild(ta);
+            ta.select(); document.execCommand('copy');
+            ta.remove();
+            showNotif('📋 Sauvegarde copiée !');
+        });
+    } catch(e) { showNotif('❌ Erreur lors de l\'export.'); }
+}
+
+function importSavePrompt() {
+    const code = prompt('Collez votre code de sauvegarde ici :');
+    if (!code) return;
+    try {
+        const parsed = migrateSave(JSON.parse(decodeURIComponent(escape(atob(code.trim())))));
+        G = { ...G, ...parsed };
+        saveGame();
+        showNotif('✅ Sauvegarde importée ! Rechargement…');
+        setTimeout(() => location.reload(), 1200);
+    } catch(e) { showNotif('❌ Code de sauvegarde invalide.'); }
+}
+
+// §5.1 renderStats est appelée par renderSettingsPanel (définie au-dessus)
+
+
+// Injection des lanceurs automatiques dans les cycles d'initialisation de ton jeu
+const originalUpdateDisplays = updateDisplays;
+updateDisplays = function() {
+    originalUpdateDisplays();
+    updateSpheresInventoryDisplay();
+    
+    // Met à jour dynamiquement l'affichage des trois boutons de Tap sur PC/Mobile
+    // CORRECTION : Harmonisation avec le coefficient 1.14
+    let tapCost1 = Math.floor(10 * Math.pow(1.14, G.tapDamageLevel));
+    let tapCost10 = 0;
+    for (let i = 0; i < 10; i++) tapCost10 += Math.floor(10 * Math.pow(1.14, G.tapDamageLevel + i));
+    
+    let tapMaxCount = 0;
+    let tapMaxCost = 0;
+    while (true) {
+        let nextCost = Math.floor(10 * Math.pow(1.14, G.tapDamageLevel + tapMaxCount));
+        if (G.gold >= tapMaxCost + nextCost) {
+            tapMaxCost += nextCost;
+            tapMaxCount++;
+        } else {
+            break;
+        }
+    }
+
+    const btn1 = document.getElementById('tap-btn-1');
+    const btn10 = document.getElementById('tap-btn-10');
+    const btnMax = document.getElementById('tap-btn-max');
+
+    if (btn1) { btn1.textContent = `+1 (${fmt(tapCost1)})`; btn1.disabled = G.gold < tapCost1; }
+    if (btn10) { btn10.textContent = `×10 (${fmt(tapCost10)})`; btn10.disabled = G.gold < tapCost10; }
+    if (btnMax) {
+        btnMax.textContent = tapMaxCount > 0 ? `MAX (+${tapMaxCount})` : 'MAX';
+        btnMax.disabled = tapMaxCount === 0;
+    }
+
+    // Live DPS : affiche le vrai DPS en vert si l'activité dépasse le passif
+    const dpsDisplayEl = document.getElementById('dps-display');
+    if (dpsDisplayEl) {
+        let passiveDps = getTotalDPS();
+        if (G.playerSkillsActive.frenzy > 0) passiveDps *= 3;
+        if (liveDpsValue > passiveDps) {
+            dpsDisplayEl.innerHTML = `⚔️ LIVE DPS : <span style="color:#2ecc71;text-shadow:0 0 10px rgba(46,204,113,0.4);font-weight:800;">${fmt(liveDpsValue)}/s</span>`;
+        } else {
+            let dpsStr = fmt(passiveDps);
+            if (G.playerSkillsActive.frenzy > 0) dpsStr = `<span style="color:#f1c40f">${fmt(passiveDps)} (Frénésie)</span>`;
+            dpsDisplayEl.innerHTML = `⚔ DPS : ${dpsStr}/s`;
+        }
+    }
+
+    // Indicateurs de touches sur les slots BB (desktop uniquement)
+    if (window.innerWidth >= 1024) {
+        const bbSlots = document.getElementById('footer-bb-slots');
+        if (bbSlots) {
+            const bbHints = ['1', '2', '3', '4'];
+            Array.from(bbSlots.children).forEach((slot, i) => {
+                if (bbHints[i] && !slot.querySelector('.keyboard-key-hint')) {
+                    const hint = document.createElement('div');
+                    hint.className = 'keyboard-key-hint';
+                    hint.textContent = bbHints[i];
+                    slot.appendChild(hint);
+                }
+            });
+        }
+    }
+
+    // Indicateurs de touches sur les sorts d'invocateur (desktop uniquement)
+    if (window.innerWidth >= 1024 && document.querySelector('.tab-btn[data-tab="skills"]')?.classList.contains('active')) {
+        const skillContainer = document.getElementById('player-skills-container');
+        if (skillContainer) {
+            const skillHints = ['A', 'Z', 'E'];
+            Array.from(skillContainer.children).forEach((card, i) => {
+                if (skillHints[i] && !card.querySelector('.keyboard-key-hint')) {
+                    const hint = document.createElement('div');
+                    hint.className = 'keyboard-key-hint';
+                    hint.textContent = skillHints[i];
+                    card.appendChild(hint);
+                }
+            });
+        }
+    }
+};
+
+// Lancement de la vérification de déconnexion dès l'ouverture du client
+setTimeout(checkOfflineGains, 300);
+
+// Rendu initial de l'interface pour peupler les onglets visibles dès le chargement
+renderHeroesGrid();
+renderSkills();
+renderFooterBB();
 updateDisplays();
 
 // Handle responsive startup layout
 initResponsiveLayout();
 
 BGM.update();
+
+// Écouteur d'événements clavier pour les raccourcis d'ergonomie
+window.addEventListener('keydown', (e) => {
+    // 1. Fermeture du modal de héros avec Échap
+    if (e.key === 'Escape' || e.key === 'Esc') {
+        const modal = document.getElementById('hero-modal');
+        if (modal && modal.classList.contains('visible')) {
+            closeHeroModal();
+        }
+    }
+
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+    // 2. Sorts d'Invocateur : A / Z / E — utilisé e.key (insensible au layout AZERTY/QWERTY)
+    const k = e.key.toLowerCase();
+    if (k === 'a') usePlayerSkill('strike');
+    else if (k === 'z') usePlayerSkill('wealth');
+    else if (k === 'e') usePlayerSkill('frenzy');
+
+    // 3. Brave Bursts de la Squad : 1 / 2 / 3 / 4 (touches numériques, AZERTY & QWERTY)
+    const bbKeyMap = { 'Digit1': 0, 'Digit2': 1, 'Digit3': 2, 'Digit4': 3 };
+    if (e.code in bbKeyMap) {
+        const slotIdx = bbKeyMap[e.code];
+        const heroId = G.squad[slotIdx];
+        if (heroId && G.heroes[heroId] && (G.bbGauges[heroId] || 0) >= 100) {
+            useBB(heroId);
+        }
+    }
+});
 </script>
 </body>
 </html>
