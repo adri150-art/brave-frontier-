@@ -2,10 +2,10 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Brave Frontier Clicker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Final Frontier Clicker</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
-    <meta name="description" content="Un jeu Clicker RPG Idle inspiré de Brave Frontier. Cliquez, composez votre équipe active, affrontez des boss, gérez vos jauges BC/HC et faites évoluer physiquement vos héros !">
+    <meta name="description" content="Final Frontier — Clicker RPG Idle. Cliquez, composez votre équipe active, affrontez des boss, gérez vos jauges BC/HC et faites évoluer physiquement vos héros !">
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/rpg-awesome@0.2.0/css/rpg-awesome.min.css" rel="stylesheet">
     <style>
@@ -15,14 +15,21 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html {
     height: 100%; height: 100dvh;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    touch-action: manipulation;
 }
 body {
     height: 100%; min-height: 100svh;
     overflow: hidden;
+    position: fixed;
+    width: 100%;
     background: #060810;
     display: flex; justify-content: center; align-items: center;
     font-family: 'Nunito', sans-serif; color: #e0e6f0;
     user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
 }
 
 /* Fond d'écran PC dynamique flouté */
@@ -480,11 +487,10 @@ body {
     /* ZONE DE COMBAT — CARRÉ 1024×1024 CONTRAINT PAR LA HAUTEUR D'ÉCRAN */
     /* 1. L'ARÈNE SOMBRE AVEC PROJECTEUR CENTRAL */
     #monster-zone {
-        width: min(100%, calc(100vh - 190px)) !important;
-        aspect-ratio: 1 / 1 !important;
+        width: 100% !important;
         max-height: calc(100vh - 190px) !important;
-        margin: 0 auto;
-        flex: none !important;
+        margin: 0;
+        flex: 1 !important;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -499,7 +505,7 @@ body {
         position: absolute;
         inset: 0;
         z-index: 0;
-        background-size: 100% 100% !important;
+        background-size: cover !important;
         background-position: center;
         background-repeat: no-repeat;
         mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 10%, rgba(0,0,0,0.15) 70%);
@@ -3346,9 +3352,335 @@ body { background: var(--c-bg); color: var(--c-text); }
     }
 }
 
+
+/* ============================================= */
+/* ÉCRAN DE MENU DE DÉMARRAGE                    */
+/* ============================================= */
+#start-menu {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #04060f url('assets/menu/menu arriere plan.png') center/cover no-repeat;
+    overflow: hidden;
+    font-family: 'Nunito', sans-serif;
+    color: #e0e6f0;
+    transition: opacity 0.8s ease;
+}
+#start-menu.hide-out { opacity: 0; pointer-events: none; }
+
+/* Vignettte bords */
+#start-menu::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 120px rgba(2,3,10,0.55);
+    pointer-events: none;
+    z-index: 1;
+}
+
+@keyframes smFadeUp {
+    from { opacity:0; transform:translateY(22px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+@keyframes smSlideIn {
+    from { opacity:0; transform:translateX(30px); }
+    to   { opacity:1; transform:translateX(0); }
+}
+@keyframes smFloat {
+    0%,100% { transform:translateY(0); }
+    50%      { transform:translateY(-6px); }
+}
+
+/* ── LOGO centré en haut ── */
+#sm-logo-wrap {
+    position: absolute;
+    top: clamp(18px,3.5vh,40px);
+    left: 50%; transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 10;
+    animation: smFadeUp 0.9s ease both;
+}
+#sm-emblem {
+    width: clamp(60px,9vw,110px);
+    height: clamp(60px,9vw,110px);
+    animation: smFloat 4s ease-in-out infinite;
+}
+#sm-emblem-img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 20px rgba(180,120,255,0.7))
+            drop-shadow(0 0 40px rgba(120,60,220,0.35));
+}
+#sm-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(32px,5.5vw,60px);
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: clamp(5px,1.2vw,12px);
+    text-transform: uppercase;
+    line-height: 1;
+    text-shadow:
+        0 0 30px rgba(160,90,255,0.7),
+        0 0 80px rgba(100,50,200,0.4),
+        0 2px 4px rgba(0,0,0,0.8);
+}
+#sm-subtitle {
+    font-size: clamp(9px,1vw,12px);
+    color: rgba(200,160,255,0.65);
+    letter-spacing: clamp(5px,1.5vw,10px);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* ── PANNEAU DROIT : boutons + save ── */
+#sm-panel {
+    position: absolute;
+    right: clamp(24px,4vw,70px);
+    bottom: clamp(30px,6vh,80px);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    animation: smSlideIn 0.8s 0.25s ease both;
+}
+/* Badge save */
+#sm-save-badge {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: rgba(6,4,18,0.82);
+    border-left: 3px solid #7b3fe8;
+    padding: 9px 16px 9px 12px;
+    border-radius: 4px;
+}
+#sm-save-badge.visible { display: flex; }
+#sm-save-badge-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#2a1050,#7b3fe8);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+#sm-save-badge-text {}
+#sm-save-badge-zone {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px; font-weight: 700;
+    color: #dbbfff;
+    line-height: 1.1;
+}
+#sm-save-badge-gems {
+    font-size: 11px;
+    color: rgba(180,140,240,0.6);
+}
+/* Boutons */
+#sm-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: clamp(180px,22vw,280px);
+}
+.sm-btn {
+    padding: 13px 22px;
+    border: none;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+    border-radius: 3px;
+    position: relative;
+    transition: transform 0.12s, filter 0.15s;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+.sm-btn:hover  { transform: translateX(-3px); filter: brightness(1.15); }
+.sm-btn:active { transform: scale(0.97); }
+.sm-btn-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+}
+.sm-btn-primary {
+    background: linear-gradient(100deg, #4c22b8 0%, #7b3fe8 60%, #9b56f8 100%);
+    color: #fff;
+    box-shadow: -4px 0 0 #c080ff, 0 4px 24px rgba(100,40,220,0.6);
+}
+.sm-btn-primary.hidden { display: none; }
+.sm-btn-secondary {
+    background: rgba(10,6,26,0.85);
+    color: rgba(210,180,255,0.88);
+    border: 1px solid rgba(120,70,200,0.3);
+    box-shadow: -3px 0 0 rgba(120,70,200,0.4);
+}
+.sm-btn-secondary:hover {
+    background: rgba(20,10,50,0.9);
+    color: #fff;
+}
+
+/* ── HÉROS : plein bas d'écran ── */
+#sm-heroes {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0;
+    z-index: 5;
+    pointer-events: none;
+    height: 72%;
+}
+.sm-hf {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1;
+    max-width: 260px;
+    height: 100%;
+    transition: filter 0.3s;
+}
+/* Lumière de sol sous chaque héros */
+.sm-hf::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%; transform: translateX(-50%);
+    width: 70%;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--hglow, rgba(160,100,255,0.25));
+    filter: blur(12px);
+    z-index: 0;
+}
+/* Fondu bas sur chaque héros */
+.sm-hf::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 35%;
+    background: linear-gradient(0deg, rgba(4,6,15,0.9) 0%, transparent 100%);
+    z-index: 2;
+    pointer-events: none;
+}
+.sm-hf img {
+    display: block;
+    width: 100%;
+    max-width: 220px;
+    height: auto;
+    object-fit: contain;
+    object-position: bottom;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.9));
+    animation: smFadeUp 0.9s ease both;
+}
+.sm-hf.center img {
+    max-width: 280px;
+    filter:
+        drop-shadow(0 0 25px var(--hglow-c, rgba(160,100,255,0.6)))
+        drop-shadow(0 8px 20px rgba(0,0,0,0.9));
+}
+/* Héros latéraux légèrement assombris */
+.sm-hf.side img {
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.9)) brightness(0.82);
+    max-width: 190px;
+}
+.sm-hf.outer img {
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.9)) brightness(0.65);
+    max-width: 160px;
+}
+.sm-hf-name {
+    position: absolute;
+    bottom: 12px;
+    left: 50%; transform: translateX(-50%);
+    z-index: 3;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(10px,1.1vw,14px);
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-shadow: 0 1px 8px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,0.8);
+}
+
+/* Vignette bas général (sol) */
+#sm-floor-veil {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 18%;
+    background: linear-gradient(0deg, rgba(4,6,15,0.95) 0%, transparent 100%);
+    z-index: 6;
+    pointer-events: none;
+}
+#sm-footer {
+    position: absolute;
+    bottom: 8px; left: 50%; transform: translateX(-50%);
+    font-size: 9px;
+    color: rgba(255,255,255,0.12);
+    letter-spacing: 2px;
+    z-index: 20;
+    white-space: nowrap;
+}
+
     </style>
 </head>
 <body>
+
+    <!-- ===== ÉCRAN DE MENU DE DÉMARRAGE ===== -->
+    <div id="start-menu">
+
+        <!-- Logo + Titre (centré haut) -->
+        <div id="sm-logo-wrap">
+            <div id="sm-emblem">
+                <img id="sm-emblem-img" src="assets/menu/logo.png" alt="Final Frontier Logo">
+            </div>
+            <div id="sm-title">Final Frontier</div>
+            <div id="sm-subtitle">Clicker · RPG</div>
+        </div>
+
+        <!-- Héros (bas d'écran, peuplés par JS) -->
+        <div id="sm-heroes"></div>
+
+        <!-- Sol -->
+        <div id="sm-floor-veil"></div>
+
+        <!-- Panneau droit : save + boutons -->
+        <div id="sm-panel">
+            <div id="sm-save-badge">
+                <div id="sm-save-badge-avatar">🛡️</div>
+                <div id="sm-save-badge-text">
+                    <div id="sm-save-badge-zone">Zone 1</div>
+                    <div id="sm-save-badge-gems">0 Gems</div>
+                </div>
+            </div>
+            <div id="sm-buttons">
+                <button class="sm-btn sm-btn-primary hidden" id="sm-btn-continue" onclick="startMenuContinue()">
+                    <span class="sm-btn-icon">▶</span> Continuer
+                </button>
+                <button class="sm-btn sm-btn-secondary" id="sm-btn-new" onclick="startMenuNewGame()">
+                    <span class="sm-btn-icon">✦</span> Nouvelle Partie
+                </button>
+                <button class="sm-btn sm-btn-secondary" onclick="startMenuOptions()">
+                    <span class="sm-btn-icon">⚙</span> Options
+                </button>
+            </div>
+        </div>
+
+        <div id="sm-footer">FINAL FRONTIER CLICKER · v1.0</div>
+    </div>
+    <!-- ===== FIN MENU ===== -->
 
     <!-- Danger vignette overlay -->
     <div id="danger-vignette"></div>
@@ -3821,7 +4153,7 @@ body { background: var(--c-bg); color: var(--c-text); }
             </div>
 
             <!-- Infos -->
-            <div class="settings-credits">Brave Frontier Clicker · Sauvegarde locale (localStorage)</div>
+            <div class="settings-credits">Final Frontier Clicker · Sauvegarde locale (localStorage)</div>
         </div>
     </div>
 
@@ -6540,29 +6872,29 @@ function spawnMonster() {
     const monsterImg = document.getElementById('monster-emoji');
     if (monsterImg) {
         if (window.innerWidth >= 1024) {
-            // 🖥️ MODE ORDINATEUR : Proportions en % idéales pour le cadre carré
+            // 🖥️ MODE ORDINATEUR : Proportions en % idéales pour le cadre carré agrandi
             if (G.isBoss) {
                 if (G.zone % 10 === 0) {
-                    monsterImg.style.setProperty('height', '80%', 'important');
+                    monsterImg.style.setProperty('height', '92%', 'important');
                 } else {
-                    monsterImg.style.setProperty('height', '68%', 'important');
+                    monsterImg.style.setProperty('height', '82%', 'important');
                 }
             } else {
-                monsterImg.style.setProperty('height', '46%', 'important');
+                monsterImg.style.setProperty('height', '60%', 'important');
             }
         } else {
             // 📱 MODE MOBILE / ANDROID : Utilisation du "vh" (Viewport Height) pour ne jamais déborder
             if (G.isBoss) {
                 if (G.zone % 10 === 0) {
                     // Le gros Boss de fin d'acte reste imposant mais sous le texte
-                    monsterImg.style.setProperty('height', '32vh', 'important');
+                    monsterImg.style.setProperty('height', '42vh', 'important');
                 } else {
                     // Boss classique de zone
-                    monsterImg.style.setProperty('height', '26vh', 'important');
+                    monsterImg.style.setProperty('height', '35vh', 'important');
                 }
             } else {
                 // Les monstres de base restent bien proportionnés au centre
-                monsterImg.style.setProperty('height', '19vh', 'important');
+                monsterImg.style.setProperty('height', '26vh', 'important');
             }
         }
     }
@@ -9299,7 +9631,7 @@ async function generateSquadCard() {
     ctx.shadowColor = 'rgba(241,196,15,0.7)'; ctx.shadowBlur = 14;
     ctx.fillText('⚔  MA SQUAD', W/2, 50); ctx.shadowBlur = 0;
     ctx.font = '11px Nunito, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillText('Brave Frontier Clicker', W/2, 68);
+    ctx.fillText('Final Frontier Clicker', W/2, 68);
 
     // Héros actifs
     const activeHeroes = G.squad.filter(id => id && G.heroes[id]);
@@ -9409,7 +9741,7 @@ async function openSquadShareModal() {
         canvas.style.maxWidth = '100%';
         wrap.innerHTML = ''; wrap.appendChild(canvas);
         document.getElementById('squad-share-share-btn').onclick = () =>
-            shareOrDownload(canvas, 'ma-squad-brave-frontier.png', 'Ma Squad — Brave Frontier Clicker');
+            shareOrDownload(canvas, 'ma-squad-brave-frontier.png', 'Ma Squad — Final Frontier Clicker');
     } catch(e) {
         wrap.innerHTML = '<div style="color:#e55;font-size:12px;padding:20px">Erreur de génération.</div>';
     }
@@ -9472,7 +9804,7 @@ async function generateBossVictoryCard(zone, bossName, timeMs, totalDmg) {
 
     // Footer
     ctx.font = '10px Nunito, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.textAlign = 'center';
-    ctx.fillText('Brave Frontier Clicker', W/2, H-22);
+    ctx.fillText('Final Frontier Clicker', W/2, H-22);
     ctx.font = '9px Nunito, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.fillText(new Date().toLocaleDateString('fr-FR'), W/2, H-8);
 
@@ -9514,7 +9846,7 @@ function shareBossVictory() {
     if (!_bossVictoryCanvas) { showNotif('Image non prête, patiente un instant !'); return; }
     const bossName = document.getElementById('bv-boss-name').textContent;
     shareOrDownload(_bossVictoryCanvas, `victoire-${bossName.replace(/\s+/g,'-').toLowerCase()}.png`,
-        `Boss Vaincu ! ${bossName} — Brave Frontier Clicker`);
+        `Boss Vaincu ! ${bossName} — Final Frontier Clicker`);
 }
 
 function launchVictoryParticles() {
@@ -9563,7 +9895,7 @@ async function triggerAchievementShare(milestoneId, extra) {
         canvas.style.maxWidth = '100%';
         wrap.innerHTML = ''; wrap.appendChild(canvas);
         document.getElementById('ach-share-share-btn').onclick = () =>
-            shareOrDownload(canvas, `achievement-${milestoneId}.png`, ms.title + ' — Brave Frontier Clicker');
+            shareOrDownload(canvas, `achievement-${milestoneId}.png`, ms.title + ' — Final Frontier Clicker');
     } catch(e) {
         wrap.innerHTML = '<div style="color:#e55;font-size:12px;padding:20px">Erreur.</div>';
     }
@@ -9627,7 +9959,7 @@ async function generateAchievementCard(ms, extra) {
 
     // Footer
     ctx.font = '10px Nunito, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    ctx.fillText('Brave Frontier Clicker', W/2, H-18);
+    ctx.fillText('Final Frontier Clicker', W/2, H-18);
     ctx.font = '9px Nunito, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.fillText(new Date().toLocaleDateString('fr-FR'), W/2, H-6);
 
@@ -9778,6 +10110,155 @@ window.addEventListener('keydown', (e) => {
     init();
     tick();
 })();
+</script>
+
+<script>
+// Bloquer le pinch-to-zoom sur les écrans tactiles
+document.addEventListener('touchstart', function(e) {
+    if (e.touches.length > 1) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// Bloquer le zoom double-tap
+let lastTouchTime = 0;
+document.addEventListener('touchend', function(e) {
+    const now = Date.now();
+    if (now - lastTouchTime <= 300) {
+        e.preventDefault();
+    }
+    lastTouchTime = now;
+}, false);
+</script>
+
+<!-- ===== LOGIQUE DU MENU DE DÉMARRAGE ===== -->
+<script>
+(function initStartMenu() {
+
+    const SQUAD_IMGS = {
+        ignis:    "assets/heroes/Squad img/Ignis-trois-etoile.png",
+        vargas:   "assets/heroes/Squad img/vargas-trois-etoile (1).png",
+        selena:   "assets/heroes/Squad img/Selena-trois-etoile.png",
+        margonia: "assets/heroes/Squad img/margonia-trois-etoile.png",
+        lance:    "assets/heroes/Squad img/Lance-trois-etoile.png",
+        zeln:     "assets/heroes/Squad img/Zeln_trois_etoile.png",
+        karl:     "assets/heroes/Squad img/Karl-trois-etoile.png",
+        eze:      "assets/heroes/Squad img/Eza-trois-etoile.png",
+        sera:     "assets/heroes/Squad img/Sera-trois-etoile.png",
+        atro:     "assets/heroes/Squad img/Atro-trois-etoile.png",
+        magress:  "assets/heroes/Squad img/Magress-trois-etoile.png",
+        kikuri:   "assets/heroes/Squad img/Kikuri-trois-etoile.png",
+    };
+    const HERO_NAMES = {
+        ignis:'Ignis', vargas:'Vargas', selena:'Selena', margonia:'Margonia',
+        lance:'Lance', zeln:'Zeln', karl:'Karl', eze:'Eze',
+        sera:'Sera', atro:'Atro', magress:'Magress', kikuri:'Kikuri',
+    };
+    // Couleur de glow par élément
+    const ELEM_GLOW = {
+        fire:    'rgba(255,100,30,0.45)',
+        water:   'rgba(40,160,255,0.45)',
+        earth:   'rgba(60,200,80,0.45)',
+        thunder: 'rgba(255,220,40,0.45)',
+        light:   'rgba(255,240,140,0.5)',
+        dark:    'rgba(180,80,255,0.5)',
+    };
+    const HERO_ELEM = {
+        ignis:'fire', vargas:'fire', selena:'water', margonia:'water',
+        lance:'earth', zeln:'earth', karl:'thunder', eze:'thunder',
+        sera:'light', atro:'light', magress:'dark', kikuri:'dark',
+    };
+
+    const saveRaw = localStorage.getItem('bf_clicker_v4');
+    const heroesZone = document.getElementById('sm-heroes');
+
+    let squad = ['ignis'];
+
+    if (saveRaw) {
+        try {
+            const save = JSON.parse(saveRaw);
+            const zone    = save.maxZone || 1;
+            const gems    = save.gems    || 0;
+            const prestige = save.prestigeCount || 0;
+
+            document.getElementById('sm-save-badge-zone').textContent =
+                `Zone ${zone}${prestige > 0 ? ' · Prestige ×' + prestige : ''}`;
+            document.getElementById('sm-save-badge-gems').textContent =
+                `${gems.toLocaleString()} Gems`;
+            document.getElementById('sm-save-badge').classList.add('visible');
+            document.getElementById('sm-btn-continue').classList.remove('hidden');
+            document.getElementById('sm-btn-new').innerHTML =
+                '<span class="sm-btn-icon">↺</span> Recommencer';
+
+            const raw = (save.squad || ['ignis']).slice(0,4).filter(Boolean);
+            if (raw.length > 0) squad = raw;
+        } catch(e) {}
+    }
+
+    // Classe positionnelle selon index et taille de la squad
+    function posClass(i, total) {
+        if (total === 1) return 'center';
+        const mid = (total - 1) / 2;
+        const dist = Math.abs(i - mid);
+        if (dist < 0.6) return 'center';
+        if (dist < 1.1) return 'side';
+        return 'outer';
+    }
+
+    squad.forEach((heroId, i) => {
+        const cls  = posClass(i, squad.length);
+        const src  = SQUAD_IMGS[heroId];
+        const name = HERO_NAMES[heroId] || heroId;
+        const glow = ELEM_GLOW[HERO_ELEM[heroId]] || 'rgba(160,100,255,0.4)';
+        const delay = 0.15 + i * 0.08;
+
+        const fig = document.createElement('div');
+        fig.className = `sm-hf ${cls}`;
+        fig.style.setProperty('--hglow', glow);
+        fig.style.setProperty('--hglow-c', glow);
+
+        if (src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = name;
+            img.style.animationDelay = delay + 's';
+            fig.appendChild(img);
+        }
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'sm-hf-name';
+        nameEl.textContent = name;
+        fig.appendChild(nameEl);
+
+        heroesZone.appendChild(fig);
+    });
+})();
+
+function startMenuContinue() {
+    const menu = document.getElementById('start-menu');
+    menu.classList.add('hide-out');
+    setTimeout(() => { menu.style.display = 'none'; }, 720);
+}
+
+function startMenuNewGame() {
+    if (localStorage.getItem('bf_clicker_v4')) {
+        const ok = confirm('⚠️ Recommencer effacera ta partie en cours.\nVeux-tu vraiment créer une nouvelle partie ?');
+        if (!ok) return;
+        localStorage.removeItem('bf_clicker_v4');
+        localStorage.removeItem('bf_clicker_backup');
+        location.reload();
+        return;
+    }
+    startMenuContinue();
+}
+
+function startMenuOptions() {
+    startMenuContinue();
+    setTimeout(() => {
+        const optBtn = document.querySelector('[data-tab="settings"]');
+        if (optBtn) optBtn.click();
+    }, 750);
+}
 </script>
 </body>
 </html>
