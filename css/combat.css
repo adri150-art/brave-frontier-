@@ -1,0 +1,1293 @@
+/* =============================================================
+   COMBAT.CSS — AAA COMBAT INTERFACE (Final Frontier)
+   Complete visual redesign for premium JRPG mobile experience.
+   Loads AFTER tokens.css. Does NOT require styles.css.
+   ============================================================= */
+
+/* =============================================================
+   §1  FOUNDATIONS — viewport lock, flex column, safe areas
+   ============================================================= */
+html, body {
+  height: 100%; margin: 0; padding: 0;
+  overflow: hidden; overscroll-behavior: none;
+  background: #030509;
+  font-family: var(--font-ui);
+}
+#game-window {
+  display: flex; flex-direction: column;
+  height: 100vh; height: 100dvh;
+  min-height: 0; overflow: hidden;
+  background: var(--bg-0);
+  width: 100%;
+  position: relative;
+}
+#combat-arena {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  position: relative;
+}
+#combat-arena > #header   { flex: 0 0 auto; }
+#combat-arena > #monster-zone { flex: 1 1 55%; }
+#combat-arena > #footer   { flex: 0 0 auto; }
+
+/* Screen shake support — JS toggles .shake class */
+#combat-arena.shake {
+  animation: screen-shake 320ms cubic-bezier(.36,.07,.19,.97) both;
+}
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  10% { transform: translate(-5px, 2px) rotate(-0.3deg); }
+  20% { transform: translate(4px, -3px) rotate(0.2deg); }
+  30% { transform: translate(-3px, 4px) rotate(-0.2deg); }
+  40% { transform: translate(5px, -1px) rotate(0.3deg); }
+  50% { transform: translate(-4px, 3px) rotate(-0.15deg); }
+  60% { transform: translate(3px, -4px) rotate(0.15deg); }
+  70% { transform: translate(-5px, 1px) rotate(-0.1deg); }
+  80% { transform: translate(3px, -2px) rotate(0.1deg); }
+  90% { transform: translate(-2px, 3px) rotate(0deg); }
+}
+
+/* =============================================================
+   §2  CINEMATIC AMBIANCE — particles, vignette, atmosphere
+   ============================================================= */
+
+/* Ambient floating particles (fire embers by default) */
+#combat-particles {
+  position: absolute; inset: 0;
+  overflow: hidden; pointer-events: none;
+  z-index: 3;
+}
+#combat-particles::before,
+#combat-particles::after {
+  content: '';
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  top: 100%;
+  background: transparent;
+}
+#combat-particles::before {
+  box-shadow:
+    25px -20px 6px 1px rgba(255,180,50,.55),
+    85px -60px 4px 0   rgba(255,200,80,.35),
+    155px -30px 5px 1px rgba(255,160,40,.45),
+    210px -80px 3px 0   rgba(255,220,100,.3),
+    45px -120px 5px 1px rgba(255,180,50,.5),
+    120px -160px 4px 0  rgba(255,200,80,.4),
+    280px -50px 6px 1px rgba(255,160,40,.35),
+    320px -140px 3px 0  rgba(255,220,100,.45),
+    180px -200px 5px 1px rgba(255,180,50,.4),
+    60px -240px 4px 0   rgba(255,200,80,.5),
+    350px -100px 5px 1px rgba(255,160,40,.3),
+    240px -260px 6px 0  rgba(255,220,100,.35),
+    15px -300px 4px 1px rgba(255,180,50,.45),
+    300px -200px 3px 0  rgba(255,200,80,.3);
+  animation: particle-drift-1 18s linear infinite;
+}
+#combat-particles::after {
+  box-shadow:
+    70px -40px 5px 1px rgba(255,140,30,.4),
+    140px -90px 3px 0   rgba(255,180,50,.5),
+    200px -20px 6px 1px rgba(255,200,80,.35),
+    30px -150px 4px 0   rgba(255,160,40,.45),
+    260px -70px 5px 1px rgba(255,220,100,.3),
+    100px -200px 3px 0  rgba(255,140,30,.5),
+    340px -130px 6px 1px rgba(255,180,50,.35),
+    170px -250px 4px 0  rgba(255,200,80,.4),
+    50px -300px 5px 1px rgba(255,160,40,.45),
+    310px -180px 3px 0  rgba(255,220,100,.35),
+    220px -350px 6px 1px rgba(255,140,30,.3),
+    90px -280px 4px 0   rgba(255,180,50,.4);
+  animation: particle-drift-2 22s linear infinite;
+  animation-delay: -6s;
+}
+@keyframes particle-drift-1 {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-120vh); }
+}
+@keyframes particle-drift-2 {
+  0%   { transform: translateY(0) translateX(0); }
+  50%  { transform: translateY(-60vh) translateX(15px); }
+  100% { transform: translateY(-120vh) translateX(0); }
+}
+
+/* Cinematic vignette */
+#combat-vignette {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 4;
+  background: radial-gradient(ellipse at 50% 40%,
+    transparent 45%,
+    rgba(3,5,9,.35) 70%,
+    rgba(3,5,9,.7) 100%
+  );
+}
+
+/* Full-screen flash overlay (JS toggles .flash-red / .flash-gold / .flash-white) */
+#screen-flash {
+  position: absolute; inset: 0;
+  z-index: 90; pointer-events: none;
+  opacity: 0;
+}
+#screen-flash.flash-red {
+  background: radial-gradient(ellipse at 50% 50%, rgba(229,72,77,.45) 0%, rgba(229,72,77,.05) 70%);
+  animation: flash-burst 400ms ease-out forwards;
+}
+#screen-flash.flash-gold {
+  background: radial-gradient(ellipse at 50% 50%, rgba(242,193,78,.5) 0%, rgba(242,193,78,.08) 70%);
+  animation: flash-burst 500ms ease-out forwards;
+}
+#screen-flash.flash-white {
+  background: rgba(255,255,255,.7);
+  animation: flash-burst 200ms ease-out forwards;
+}
+@keyframes flash-burst {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* =============================================================
+   §3  HEADER — compact resource bar with depth
+   ============================================================= */
+#combat-arena #header {
+  background: linear-gradient(180deg, rgba(19,24,38,.97) 0%, rgba(11,14,20,.95) 100%);
+  border: none;
+  border-bottom: 1px solid var(--stroke);
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  width: 100%; max-width: 100%;
+  aspect-ratio: auto; height: auto; min-height: 0;
+  padding: 10px 14px 8px;
+  box-sizing: border-box;
+  position: relative; z-index: 20;
+  margin: 0;
+  display: flex; flex-direction: column;
+  justify-content: center; gap: 6px;
+}
+/* Subtle animated border glow at bottom */
+#combat-arena #header::after {
+  content: '';
+  position: absolute; bottom: -1px; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(242,193,78,.35), rgba(78,201,242,.25), transparent);
+  animation: header-glow-sweep 6s ease-in-out infinite;
+}
+@keyframes header-glow-sweep {
+  0%, 100% { opacity: .3; }
+  50%      { opacity: .8; }
+}
+
+#combat-arena #header .header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+#combat-arena #header .zone-info {
+  display: flex; flex-direction: column;
+  align-items: center; text-align: center;
+  margin: 0 auto;
+}
+#combat-arena #header .zone-name {
+  font-family: var(--font-display);
+  font-size: 14px; font-weight: 700;
+  color: var(--txt-1);
+  text-shadow: 0 1px 3px rgba(0,0,0,.8);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+#combat-arena #header .zone-progress {
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 600;
+  color: var(--txt-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 1px;
+}
+
+/* Currency badges */
+#combat-arena #header .currency-bar {
+  display: flex; position: static; transform: none;
+  gap: 6px; align-items: center; z-index: 5;
+  background: none; border: none; padding: 0; margin: 0;
+}
+#combat-arena #header .currency {
+  height: auto; margin: 0;
+  background: rgba(28,35,51,.7);
+  border: 1px solid rgba(42,51,73,.8);
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; gap: 4px;
+  color: var(--txt-2);
+  transition: border-color .2s ease;
+}
+#combat-arena #header .currency i {
+  display: inline-block; font-size: 11px;
+}
+#combat-arena #header .currency.gems i  { color: var(--gem); }
+#combat-arena #header .currency.gold i  { color: var(--gold); }
+#combat-arena #header .currency.honor i { color: var(--hp); }
+
+/* Hub button */
+#combat-arena #header #hub-home-btn {
+  position: static; transform: none;
+  width: auto; min-width: 44px; height: 32px; min-height: 32px;
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 700;
+  margin: 0; padding: 0 12px;
+  background: rgba(28,35,51,.6);
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  color: var(--txt-2);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all .2s ease;
+  display: flex; align-items: center; justify-content: center;
+}
+#combat-arena #header #hub-home-btn:hover {
+  border-color: var(--txt-3);
+  color: var(--txt-1);
+  background: rgba(28,35,51,.9);
+}
+
+/* Stats row: turn mode + turn counter */
+#combat-arena #header .stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border-top: 1px solid rgba(42,51,73,.5);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+#combat-arena #header .stats-row .tap-dmg-display {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--gem);
+  font-weight: 600;
+}
+/* Turn counter badge */
+#combat-arena #header .stats-row .dps-display {
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(242,193,78,.3);
+  transition: transform .3s var(--ease);
+}
+#combat-arena #header .stats-row .dps-display.turn-pulse {
+  animation: turn-pop 550ms var(--ease);
+}
+@keyframes turn-pop {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.25); text-shadow: 0 0 16px rgba(242,193,78,.6); }
+  60%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+/* Hide empty combo display */
+#combat-arena #header .stats-row .combo-display { display: none; }
+
+/* =============================================================
+   §4  MONSTER ZONE — background, vignette, name, HP bar
+   ============================================================= */
+#monster-zone {
+  min-height: 0; overflow: hidden;
+  position: relative;
+  display: flex; flex-direction: column;
+  justify-content: flex-end;
+}
+
+/* Background image layer */
+#combat-arena #monster-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background-color: var(--bg-0);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+/* Dark gradient overlay for contrast */
+#combat-arena #monster-zone::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    rgba(3,5,9,.6) 0%,
+    rgba(3,5,9,.1) 30%,
+    rgba(3,5,9,.05) 55%,
+    rgba(3,5,9,.5) 85%,
+    rgba(3,5,9,.85) 100%
+  );
+}
+
+/* Monster container */
+#monster-zone .monster-container {
+  justify-content: flex-end;
+  flex: 1; display: flex; flex-direction: column;
+  position: relative; z-index: 2;
+}
+
+/* Boss label — hidden by default, shown if needed */
+#boss-label { display: none; }
+
+/* ── Monster name — premium cinematic treatment ── */
+#monster-zone #monster-name {
+  position: absolute;
+  top: 10px; bottom: auto;
+  left: 50%; transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: var(--fs-3); font-weight: 700;
+  color: var(--txt-1);
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  z-index: 10;
+  white-space: nowrap;
+  text-shadow:
+    0 0 20px rgba(0,0,0,.9),
+    0 0 40px rgba(0,0,0,.5),
+    0 2px 4px rgba(0,0,0,.8);
+}
+/* Decorative golden underline */
+#monster-zone #monster-name::after {
+  content: '';
+  display: block;
+  width: 36px; height: 1px;
+  margin: 5px auto 0;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  box-shadow: 0 0 8px rgba(242,193,78,.3);
+}
+
+/* ── Monster HP Bar — Crystal style ── */
+#monster-zone .monster-hp-bar {
+  display: block;
+  position: absolute;
+  top: 42px; left: 50%; transform: translateX(-50%);
+  width: 300px; max-width: 85vw;
+  height: 20px;
+  background: linear-gradient(180deg, rgba(5,7,13,.9) 0%, rgba(11,14,20,.95) 100%);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  overflow: visible;
+  z-index: 10;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,.6),
+    0 2px 12px rgba(0,0,0,.5);
+}
+/* 10-segment markers */
+#combat-arena #monster-zone .monster-hp-bar::after {
+  content: "";
+  position: absolute; inset: 0; z-index: 5;
+  pointer-events: none; border-radius: inherit;
+  background: repeating-linear-gradient(90deg,
+    transparent 0, transparent calc(10% - 1px),
+    rgba(0,0,0,.6) calc(10% - 1px), rgba(0,0,0,.6) 10%
+  );
+}
+#monster-zone .monster-hp-fill-wrapper {
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  overflow: hidden; border-radius: 10px; z-index: 1;
+}
+/* HP fill — gradient with glossy highlight */
+#monster-zone #hp-bar-fill {
+  position: absolute;
+  left: 0; top: 0; height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,.18) 0%,
+    var(--hp) 35%,
+    #c0353a 100%
+  );
+  z-index: 3;
+  transition: width 0.3s ease-out;
+  overflow: hidden;
+  box-shadow: 0 0 12px rgba(229,72,77,.4);
+}
+/* Animated shine sweep on HP fill */
+#monster-zone #hp-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -80%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255,255,255,.25),
+    transparent
+  );
+  animation: hp-shine-sweep 3.5s ease-in-out infinite;
+}
+@keyframes hp-shine-sweep {
+  0%   { left: -80%; }
+  50%  { left: 130%; }
+  100% { left: 130%; }
+}
+/* Delay (yellow/gold trail) bar */
+#monster-zone #hp-bar-delay {
+  position: absolute;
+  left: 0; top: 0; height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--gold) 0%, #b8922d 100%);
+  z-index: 2;
+  transition: width 0.8s ease-out;
+  overflow: hidden;
+}
+/* HP text */
+#monster-zone #hp-text {
+  position: absolute;
+  left: 0; top: 0; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px #000, 0 0 6px rgba(0,0,0,.9);
+  z-index: 8;
+  letter-spacing: 0.8px;
+}
+
+/* AUTO button */
+#monster-zone #combat-auto-btn {
+  position: absolute;
+  width: auto; min-width: 56px; height: 30px;
+  top: 12px; left: 12px; right: auto;
+  background: rgba(11,14,20,.7);
+  border: 1px solid rgba(42,51,73,.6);
+  border-radius: var(--radius-pill);
+  color: var(--txt-3);
+  font-family: var(--font-ui);
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all .25s ease;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+  padding: 0 10px;
+}
+#monster-zone #combat-auto-btn:hover,
+#monster-zone #combat-auto-btn.active {
+  border-color: var(--gem);
+  color: var(--gem);
+  background: rgba(78,201,242,.08);
+  box-shadow: 0 0 12px rgba(78,201,242,.2);
+}
+
+/* =============================================================
+   §5  MONSTER SPRITE — idle animation, ground shadow
+   ============================================================= */
+#monster-zone #monster-emoji-container {
+  margin-top: auto; margin-bottom: 0;
+  position: relative; z-index: 2;
+  display: flex; justify-content: center;
+  animation: monster-breathe 4s ease-in-out infinite;
+}
+@keyframes monster-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-2%) scale(1.01); }
+}
+#monster-zone #monster-emoji {
+  height: auto; width: 90%;
+  max-width: 400px; max-height: none;
+  object-fit: contain;
+  object-position: bottom center;
+  display: block; margin: 0 auto;
+  transform: translateY(15%);
+  animation: none; /* Override any inherited idle */
+  filter: drop-shadow(0 4px 20px rgba(0,0,0,.6));
+}
+#monster-zone #monster-emoji-container::after { display: none; }
+
+/* Ground shadow under monster */
+#combat-arena #monster-zone #monster-emoji-container::before {
+  content: "";
+  position: absolute;
+  left: 50%; bottom: 6%;
+  width: 55%; height: 8%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center,
+    rgba(0,0,0,.6) 0%,
+    rgba(0,0,0,.2) 50%,
+    transparent 70%
+  );
+  z-index: -1; pointer-events: none;
+  filter: blur(4px);
+}
+
+/* =============================================================
+   §6  FOOTER STRUCTURE
+   ============================================================= */
+#combat-arena #footer {
+  flex: 0 0 auto;
+  position: relative;
+  display: flex; flex-direction: column;
+  gap: 8px;
+  padding: 0 8px max(8px, env(safe-area-inset-bottom)) 8px;
+  background: linear-gradient(180deg, rgba(11,14,20,.3) 0%, rgba(11,14,20,.95) 15%, var(--bg-0) 100%);
+  z-index: 10;
+}
+
+/* =============================================================
+   §7  LEADER PANEL — team HP + combat button
+   ============================================================= */
+#footer .leader-panel {
+  width: 100%; max-width: 600px;
+  background: linear-gradient(135deg, rgba(19,24,38,.9) 0%, rgba(28,35,51,.8) 100%);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  margin: 6px auto 0;
+  padding: 10px 12px;
+  display: flex; align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 12px rgba(0,0,0,.4);
+}
+
+/* Team HP bar */
+#footer .squad-party-hp-bar {
+  flex: 1;
+  position: relative;
+  height: 22px;
+  background: linear-gradient(180deg, rgba(5,7,13,.9) 0%, rgba(11,14,20,.95) 100%);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 11px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.5);
+}
+#footer .squad-party-hp-bar::after {
+  display: none; content: none;
+}
+#footer .squad-party-hp-fill-wrapper {
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  overflow: hidden; border-radius: 11px; z-index: 1;
+}
+#footer #party-hp-bar-fill {
+  position: absolute;
+  left: 0; top: 0; height: 100%;
+  border-radius: 11px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,.15) 0%,
+    var(--energy) 35%,
+    #3cb87e 100%
+  );
+  transition: width .3s ease-out, background .3s ease;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(87,217,163,.35);
+}
+/* Animated shine on team HP */
+#footer #party-hp-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -80%;
+  width: 45%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.2), transparent);
+  animation: hp-shine-sweep 4s ease-in-out infinite;
+  animation-delay: -1.5s;
+}
+/* Danger mode */
+#footer #party-hp-bar-fill.low {
+  background: linear-gradient(180deg,
+    rgba(255,255,255,.12) 0%,
+    var(--hp) 35%,
+    #b3363b 100%
+  );
+  box-shadow: 0 0 14px rgba(229,72,77,.5);
+  animation: hp-danger-pulse 1s ease-in-out infinite;
+}
+@keyframes hp-danger-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(229,72,77,.3); }
+  50%      { box-shadow: 0 0 22px rgba(229,72,77,.6); }
+}
+#footer #party-hp-text {
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-ui);
+  font-size: 12px; font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px #000, 0 0 4px rgba(0,0,0,.8);
+  z-index: 6;
+  letter-spacing: 0.8px;
+}
+
+/* =============================================================
+   §8  COMBAT BUTTON — premium golden call to action
+   ============================================================= */
+#cc-fight {
+  position: relative;
+  min-width: 115px; height: 42px; min-height: 42px;
+  background: linear-gradient(145deg, #c8991e 0%, #f2c14e 30%, #ffe082 55%, #f2c14e 75%, #c8991e 100%);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 10px;
+  color: #1a1100;
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0; padding: 0 14px;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,.4),
+    0 0 20px rgba(242,193,78,.25),
+    inset 0 1px 0 rgba(255,255,255,.35),
+    inset 0 -2px 4px rgba(0,0,0,.15);
+  transition: transform .12s ease, filter .2s ease, box-shadow .2s ease;
+  animation: fight-pulse 2.5s ease-in-out infinite;
+}
+/* Shine sweep */
+#cc-fight::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent);
+  animation: btn-shine 4.5s ease-in-out infinite;
+  z-index: 1;
+}
+@keyframes btn-shine {
+  0%, 60%  { left: -100%; }
+  80%      { left: 160%; }
+  100%     { left: 160%; }
+}
+/* Idle pulse — breathing glow */
+@keyframes fight-pulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,.4), 0 0 15px rgba(242,193,78,.2), inset 0 1px 0 rgba(255,255,255,.35); }
+  50%      { box-shadow: 0 2px 8px rgba(0,0,0,.4), 0 0 30px rgba(242,193,78,.4), inset 0 1px 0 rgba(255,255,255,.35); }
+}
+#cc-fight:hover {
+  filter: brightness(1.08);
+  transform: scale(1.03);
+}
+#cc-fight:active {
+  transform: scale(0.97) translateY(1px);
+  filter: brightness(0.95);
+}
+#cc-fight:disabled {
+  opacity: 0.45;
+  filter: grayscale(1) brightness(.7);
+  cursor: not-allowed;
+  animation: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,.3);
+}
+#cc-fight:disabled::before { display: none; }
+
+/* =============================================================
+   §9  HERO CARDS — portrait, BB ring, name, ATT/DEF
+   ============================================================= */
+#combat-arena #footer-bb-slots {
+  display: flex;
+  gap: 6px;
+  width: 100%; max-width: 600px;
+  margin: 0 auto;
+  padding: 0;
+  align-items: stretch;
+}
+
+/* Card base */
+#combat-arena #footer-bb-slots .footer-bb {
+  flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column;
+  align-items: stretch; gap: 0;
+  padding: 0;
+  background: linear-gradient(180deg, var(--bg-2) 0%, rgba(19,24,38,.95) 100%);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: default;
+  position: relative;
+  box-shadow:
+    0 3px 12px rgba(0,0,0,.5),
+    inset 0 1px 0 rgba(255,255,255,.04);
+  transition: border-color .2s ease, box-shadow .3s ease, transform .15s ease;
+}
+/* Remove inherited pseudo-elements */
+#footer-bb-slots .footer-bb::after { content: none; background: none; }
+
+/* Elemental accent glow at bottom of card */
+#combat-arena #footer-bb-slots .footer-bb::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 15%; right: 15%;
+  height: 1px; z-index: 5;
+  background: var(--elem, var(--gold));
+  box-shadow: 0 0 10px var(--elem, var(--gold)), 0 0 20px var(--elem, var(--gold));
+  opacity: .35;
+  transition: opacity .3s ease;
+}
+/* Card entry stagger animation */
+#combat-arena #footer-bb-slots .footer-bb {
+  animation: card-enter 450ms var(--ease) backwards;
+}
+#combat-arena #footer-bb-slots .footer-bb:nth-child(1) { animation-delay: 50ms; }
+#combat-arena #footer-bb-slots .footer-bb:nth-child(2) { animation-delay: 130ms; }
+#combat-arena #footer-bb-slots .footer-bb:nth-child(3) { animation-delay: 210ms; }
+#combat-arena #footer-bb-slots .footer-bb:nth-child(4) { animation-delay: 290ms; }
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Hover */
+#combat-arena #footer-bb-slots .footer-bb:hover {
+  transform: none; background: inherit;
+}
+
+/* ── Portrait ── */
+#combat-arena #footer-bb-slots .fbb-portrait-wrap {
+  position: relative;
+  width: 100%; height: auto;
+  aspect-ratio: 1 / 1;
+  padding: 3px;
+  border: none; border-radius: 0;
+  /* BB charge ring using conic-gradient */
+  background: conic-gradient(
+    var(--elem, var(--gold)) var(--bb, 0%),
+    rgba(42,51,73,.3) var(--bb, 0%)
+  );
+  cursor: pointer;
+  overflow: hidden;
+}
+#combat-arena #footer-bb-slots .fbb-portrait-container {
+  width: 100%; height: 100%;
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--bg-0);
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.5),
+    inset 0 -24px 28px rgba(0,0,0,.55);
+}
+#combat-arena #footer-bb-slots .fbb-portrait-img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  filter: saturate(.95) contrast(1.05);
+  transition: filter .2s ease;
+}
+
+/* BB charge bar indicator (bottom of portrait) */
+#combat-arena #footer-bb-slots .fbb-portrait-wrap::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 4px;
+  width: var(--bb, 0%);
+  background: var(--elem, var(--gold));
+  box-shadow: 0 0 8px var(--elem, var(--gold));
+  transition: width .3s ease;
+  z-index: 5;
+}
+
+/* Element badge */
+#combat-arena #footer-bb-slots .fbb-elem-badge {
+  position: absolute;
+  right: 5px; bottom: 7px; left: auto;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 9px;
+  z-index: 6;
+  background-image: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,.5);
+}
+#footer-bb-slots .fbb-elem-badge.elem-Feu     { background: var(--feu); }
+#footer-bb-slots .fbb-elem-badge.elem-Eau      { background: var(--eau); }
+#footer-bb-slots .fbb-elem-badge.elem-Terre    { background: var(--terre); }
+#footer-bb-slots .fbb-elem-badge.elem-Foudre   { background: var(--foudre); color: var(--bg-0); }
+#footer-bb-slots .fbb-elem-badge.elem-Lumière  { background: var(--lumiere); color: var(--bg-0); }
+#footer-bb-slots .fbb-elem-badge.elem-Ténèbres { background: var(--tenebres); }
+
+/* BB ready tag */
+#combat-arena #footer-bb-slots .fbb-ready-tag {
+  position: absolute;
+  top: 5px; left: 5px; z-index: 7;
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 9px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, var(--gold), #ffe082);
+  color: #1a1100;
+  box-shadow: 0 1px 6px rgba(242,193,78,.5);
+  letter-spacing: 0.5px;
+}
+
+/* BB ready state — golden glow around card */
+#combat-arena #footer-bb-slots .footer-bb.ready {
+  border-color: rgba(242,193,78,.5);
+  box-shadow:
+    0 3px 12px rgba(0,0,0,.5),
+    0 0 18px rgba(242,193,78,.3),
+    inset 0 0 12px rgba(242,193,78,.08);
+  animation: card-enter 450ms var(--ease) backwards, bb-ready-glow 1.8s ease-in-out infinite;
+}
+@keyframes bb-ready-glow {
+  0%, 100% {
+    box-shadow: 0 3px 12px rgba(0,0,0,.5), 0 0 12px rgba(242,193,78,.2), inset 0 0 8px rgba(242,193,78,.06);
+    border-color: rgba(242,193,78,.35);
+  }
+  50% {
+    box-shadow: 0 3px 12px rgba(0,0,0,.5), 0 0 28px rgba(242,193,78,.45), inset 0 0 16px rgba(242,193,78,.12);
+    border-color: rgba(242,193,78,.6);
+  }
+}
+/* Pulsing portrait ring when ready */
+#combat-arena #footer-bb-slots .footer-bb.ready .fbb-portrait-wrap {
+  animation: ring-pulse-ready 1.5s ease-in-out infinite;
+}
+@keyframes ring-pulse-ready {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 14px 2px var(--elem, var(--gold)); }
+}
+
+/* ── Hero Name ── */
+#combat-arena #footer-bb-slots .fbb-name {
+  text-align: center;
+  font-family: var(--font-ui);
+  font-weight: 700; font-size: 11px;
+  color: var(--txt-1);
+  white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 5px 4px 3px;
+  background: rgba(19,24,38,.8);
+  letter-spacing: .3px;
+}
+
+/* ── ATT / DEF segmented buttons ── */
+#combat-arena #footer-bb-slots .cc-actions {
+  display: flex; gap: 0;
+  padding: 5px 5px 6px;
+}
+#combat-arena #footer-bb-slots .cc-act {
+  flex: 1; min-width: 0; min-height: 36px;
+  border: 1px solid var(--stroke);
+  background: rgba(11,14,20,.6);
+  color: var(--txt-3);
+  border-radius: 0;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: all .15s ease;
+  display: flex; align-items: center; justify-content: center;
+  gap: 3px;
+  box-shadow: none;
+}
+/* Segmented shape: left rounded, right rounded */
+#combat-arena #footer-bb-slots .cc-att {
+  border-radius: 7px 0 0 7px;
+  border-right: none;
+}
+#combat-arena #footer-bb-slots .cc-def {
+  border-radius: 0 7px 7px 0;
+}
+/* Active states */
+#combat-arena #footer-bb-slots .cc-att.on {
+  background: linear-gradient(145deg, var(--hp), #c0353a);
+  border-color: var(--hp);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 0 10px rgba(229,72,77,.3);
+  text-shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+#combat-arena #footer-bb-slots .cc-def.on {
+  background: linear-gradient(145deg, var(--gem), #2d9cc8);
+  border-color: var(--gem);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 0 10px rgba(78,201,242,.3);
+  text-shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+/* Button icon sizing */
+#combat-arena #footer-bb-slots .cc-act i {
+  font-size: 11px;
+  opacity: .8;
+}
+#combat-arena #footer-bb-slots .cc-act.on i {
+  opacity: 1;
+}
+
+/* =============================================================
+   §10  HERO TARGETING — pulsing danger border + flame overlay
+   ============================================================= */
+#combat-arena #footer-bb-slots .footer-bb.cc-targeted {
+  border-color: var(--cc-col, var(--hp));
+  overflow: visible; z-index: 20;
+  animation: card-enter 450ms var(--ease) backwards, target-danger-pulse 1.2s ease-in-out infinite !important;
+}
+@keyframes target-danger-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px var(--cc-col, #e74c3c),
+      0 0 14px -2px var(--cc-glow, rgba(231,76,60,.6)),
+      0 3px 12px rgba(0,0,0,.5);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--cc-col, #e74c3c),
+      0 0 30px 2px var(--cc-glow, rgba(231,76,60,.9)),
+      0 3px 12px rgba(0,0,0,.5);
+  }
+}
+/* Flame overlay on targeted hero */
+#combat-arena .footer-bb .cc-flame {
+  position: absolute; inset: 0; z-index: 6;
+  pointer-events: none; border-radius: inherit;
+  background: radial-gradient(ellipse at 50% 60%,
+    var(--cc-glow, rgba(231,76,60,.7)) 0%,
+    transparent 65%
+  );
+  mix-blend-mode: screen;
+  opacity: .35;
+  animation: flame-breathe 1.3s ease-in-out infinite;
+}
+@keyframes flame-breathe {
+  0%, 100% { opacity: .25; }
+  50%      { opacity: .55; }
+}
+
+/* =============================================================
+   §11  ITEMS BAR — premium potion slots
+   ============================================================= */
+#combat-items-bar::after { content: none; background: none; }
+#combat-items-bar {
+  background: linear-gradient(135deg, rgba(19,24,38,.85) 0%, rgba(28,35,51,.75) 100%);
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  gap: 5px;
+  padding: 6px 6px;
+  box-sizing: border-box;
+  width: 100%; max-width: 600px;
+  height: auto; aspect-ratio: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+#combat-arena .combat-item-slot {
+  flex: 1;
+  min-height: 44px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 6px 3px 5px;
+  background: rgba(11,14,20,.5);
+  border: 1px solid rgba(42,51,73,.5);
+  border-radius: 8px;
+  position: relative;
+  transition: all .2s ease;
+  cursor: pointer;
+}
+#combat-arena .combat-item-slot:hover {
+  background: rgba(28,35,51,.8);
+  border-color: var(--txt-3);
+}
+#combat-arena .combat-item-slot:active {
+  transform: scale(0.93);
+}
+/* Item icon */
+#combat-arena .combat-item-slot .item-icon {
+  font-size: 18px;
+  margin-bottom: 2px;
+  transition: filter .2s ease;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.5));
+}
+#combat-arena .combat-item-slot:hover .item-icon {
+  filter: drop-shadow(0 0 6px currentColor);
+}
+/* Potion colors */
+#combat-arena .combat-item-slot .item-icon.cure       { color: #52b788; }
+#combat-arena .combat-item-slot .item-icon.high-cure   { color: #40916c; }
+#combat-arena .combat-item-slot .item-icon.atk-pot     { color: #e63946; }
+#combat-arena .combat-item-slot .item-icon.holy-water  { color: #a8dadc; }
+#combat-arena .combat-item-slot .item-icon.stimulant   { color: #f4a261; }
+
+/* Item label */
+#combat-arena .combat-item-slot .item-label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 9px; font-weight: 600;
+  color: var(--txt-3);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin: 0;
+  text-align: center;
+}
+/* Count badge */
+#combat-arena .combat-item-slot .item-count {
+  position: absolute;
+  top: -5px; right: -4px;
+  background: linear-gradient(145deg, var(--hp), #c0353a);
+  border: 1px solid rgba(0,0,0,.3);
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-family: var(--font-ui);
+  font-size: 10px; font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  z-index: 2;
+  bottom: auto; left: auto;
+}
+
+/* =============================================================
+   §12  COMBAT FX — damage floats, flashes, callouts, chains
+   ============================================================= */
+
+/* Damage numbers */
+#combat-arena .dmg-float {
+  position: absolute; z-index: 30; pointer-events: none;
+  font-family: var(--font-display); font-weight: 700; line-height: 1;
+  font-size: var(--fs-5); color: var(--txt-1); white-space: nowrap;
+  text-shadow: 0 0 3px #000, 0 2px 6px #000, 0 0 12px rgba(0,0,0,.5);
+  -webkit-text-stroke: 1px rgba(0,0,0,.6);
+  animation: dmg-pop 950ms var(--ease) forwards;
+}
+@keyframes dmg-pop {
+  0%   { opacity: 0; transform: translate(-50%, 8px) scale(.6); }
+  12%  { opacity: 1; transform: translate(-50%, -4px) scale(1.15); }
+  25%  { transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -45px) scale(0.9); }
+}
+/* Critical / Brave Burst damage */
+#combat-arena .dmg-float.crit {
+  font-size: var(--fs-6); color: var(--gold);
+  -webkit-text-stroke: 1.5px rgba(0,0,0,.7);
+  text-shadow: 0 0 4px #000, 0 2px 6px #000, 0 0 20px rgba(242,193,78,.4);
+  animation: dmg-crit 1100ms var(--ease) forwards;
+}
+@keyframes dmg-crit {
+  0%   { opacity: 0; transform: translate(-50%, 10px) scale(.5); }
+  15%  { opacity: 1; transform: translate(-50%, -6px) scale(1.35); }
+  30%  { transform: translate(-50%, -2px) scale(1); }
+  45%  { transform: translate(-50%, -10px) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -60px) scale(1); }
+}
+
+/* Monster hit flash */
+#combat-arena .cc-flash {
+  position: absolute; inset: 0; z-index: 25; pointer-events: none;
+  background: #fff; opacity: 0;
+  animation: hit-flash 200ms steps(2, end) forwards;
+}
+@keyframes hit-flash {
+  0%   { opacity: 0; }
+  15%  { opacity: .8; }
+  40%  { opacity: .15; }
+  100% { opacity: 0; }
+}
+
+/* Callout text (SPARK!, synergy name) */
+#combat-arena .cc-callout {
+  position: absolute; left: 50%; z-index: 31; pointer-events: none;
+  white-space: nowrap;
+  font-family: var(--font-display); font-weight: 700;
+  letter-spacing: 3px; font-size: var(--fs-5);
+  background: linear-gradient(180deg, #ffe082, var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 6px rgba(242,193,78,.5)) drop-shadow(0 2px 4px rgba(0,0,0,.8));
+  animation: callout-burst 900ms var(--ease) forwards;
+}
+@keyframes callout-burst {
+  0%   { opacity: 0; transform: translate(-50%, 12px) scale(.7); }
+  18%  { opacity: 1; transform: translate(-50%, -2px) scale(1.15); }
+  40%  { transform: translate(-50%, -5px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -28px) scale(1.05); }
+}
+
+/* Chain pulse (synergy reaction on hero portraits) */
+#combat-arena #footer-bb-slots .footer-bb.cc-chain .fbb-portrait-wrap {
+  animation: chain-flash 650ms var(--ease);
+}
+@keyframes chain-flash {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  35%      { box-shadow: 0 0 18px 4px var(--elem, var(--gold)); }
+}
+
+/* =============================================================
+   §13  BRAVE BURST OVERLAY — cinematic fullscreen animation
+   ============================================================= */
+#cc-bb-new {
+  position: absolute; inset: 0; z-index: 200;
+  display: none;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+}
+#cc-bb-new.show { display: flex; }
+
+#cc-bb-new .bg {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.8);
+  opacity: 0;
+  animation: bb-bg 1.8s forwards;
+}
+@keyframes bb-bg {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+#cc-bb-new .img-container {
+  position: relative;
+  width: 100%; max-width: 100%;
+  aspect-ratio: 1024 / 283;
+  z-index: 2;
+  animation: bb-img-pop 1.8s forwards;
+}
+@keyframes bb-img-pop {
+  0%   { transform: scale(0.85) translateY(10px); opacity: 0; }
+  12%  { transform: scale(1) translateY(0); opacity: 1; }
+  82%  { transform: scale(1) translateY(0); opacity: 1; }
+  100% { transform: scale(1.08) translateY(-5px); opacity: 0; }
+}
+
+#cc-bb-new img {
+  width: 100%; height: 100%;
+  position: absolute; top: 0; left: 0;
+  object-fit: contain;
+}
+#cc-bb-new .img-off {
+  opacity: 0;
+  animation: bb-off 1.8s forwards;
+  filter: grayscale(100%) brightness(.9);
+}
+@keyframes bb-off {
+  0%, 12% { opacity: 1; }
+  42%     { opacity: 1; }
+  44%     { opacity: 0; }
+  100%    { opacity: 0; }
+}
+#cc-bb-new .img-on {
+  opacity: 0;
+  animation: bb-on 1.8s forwards;
+  filter: drop-shadow(0 0 24px rgba(255,215,0,.9));
+}
+@keyframes bb-on {
+  0%, 43% { opacity: 0; }
+  45%     { opacity: 1; }
+  82%     { opacity: 1; }
+  100%    { opacity: 0; }
+}
+#cc-bb-new .flash {
+  position: absolute; inset: 0;
+  background: #fff;
+  z-index: 3; opacity: 0;
+  animation: bb-flash 1.8s forwards;
+}
+@keyframes bb-flash {
+  0%, 38% { opacity: 0; }
+  44%     { opacity: .95; }
+  55%     { opacity: 0; }
+  100%    { opacity: 0; }
+}
+
+/* =============================================================
+   §14  END GAME BANNER — victory / defeat overlay
+   ============================================================= */
+#cc-banner {
+  position: fixed; inset: 0;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(3,5,9,.92);
+  z-index: 100;
+}
+#cc-banner.show { display: flex; }
+
+#cc-banner .card {
+  background: linear-gradient(145deg, var(--bg-1), var(--bg-2));
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  padding: 32px 36px;
+  text-align: center;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,.6),
+    inset 0 1px 0 rgba(255,255,255,.05);
+}
+#cc-banner.show .card {
+  animation: banner-pop 350ms var(--ease);
+}
+@keyframes banner-pop {
+  from { transform: scale(.88) translateY(10px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+#cc-banner h2 {
+  margin: 0 0 20px;
+  font-family: var(--font-display);
+  font-size: var(--fs-6);
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px currentColor;
+}
+#cc-banner.win h2 { color: var(--gold); }
+#cc-banner.lose h2 { color: var(--hp); }
+
+#cc-banner button {
+  min-height: 44px; margin: 6px 5px 0;
+  padding: 0 24px;
+  font-family: var(--font-display); font-weight: 700; font-size: 13px;
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  background: linear-gradient(145deg, #c8991e, #f2c14e);
+  color: #1a1100;
+  cursor: pointer;
+  transition: all .2s ease;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+#cc-banner button:hover {
+  filter: brightness(1.1);
+  transform: scale(1.02);
+}
+#cc-banner button.cc-secondary {
+  background: transparent;
+  color: var(--txt-2);
+  border-color: var(--stroke);
+}
+#cc-banner button.cc-secondary:hover {
+  border-color: var(--txt-2);
+  color: var(--txt-1);
+}
+
+/* =============================================================
+   §15  RESPONSIVE — desktop phone frame
+   ============================================================= */
+html, body { background: #030509; }
+#game-window { background: var(--bg-0); }
+@media (min-width: 540px) {
+  body {
+    display: flex; align-items: center; justify-content: center;
+  }
+  #game-window {
+    width: 430px; max-width: 430px;
+    height: 92dvh; min-height: 0;
+    border: 1px solid rgba(42,51,73,.5);
+    border-radius: 22px;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.03),
+      0 8px 40px rgba(0,0,0,.6),
+      0 0 80px rgba(0,0,0,.3);
+    overflow: hidden;
+  }
+}
+
+/* =============================================================
+   §16  UNUSED SELECTORS SAFETY — prevent leaks from styles.css
+   ============================================================= */
+/* Prevent styles.css overrides if loaded alongside */
+#combat-arena #footer-bb-slots .fbb-stats-container { display: none; }
+#combat-arena #footer-bb-slots .fbb-bc-bar-track { display: none; }
+#combat-arena #footer-bb-slots .fbb-portrait-container.empty { display: none; }

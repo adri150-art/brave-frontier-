@@ -1,0 +1,1205 @@
+{
+  "generatedAt": "2026-06-16T08:58:55.565Z",
+  "config": {
+    "rarity": {
+      "1": {
+        "stars": 1,
+        "levelCap": 30,
+        "statMult": 1,
+        "growthPerLevel": 0.04,
+        "label": "★"
+      },
+      "2": {
+        "stars": 2,
+        "levelCap": 40,
+        "statMult": 1.55,
+        "growthPerLevel": 0.045,
+        "label": "★★"
+      },
+      "3": {
+        "stars": 3,
+        "levelCap": 60,
+        "statMult": 2.4,
+        "growthPerLevel": 0.05,
+        "label": "★★★"
+      },
+      "4": {
+        "stars": 4,
+        "levelCap": 80,
+        "statMult": 3.7,
+        "growthPerLevel": 0.055,
+        "label": "★★★★"
+      },
+      "5": {
+        "stars": 5,
+        "levelCap": 100,
+        "statMult": 5.6,
+        "growthPerLevel": 0.06,
+        "label": "★★★★★"
+      },
+      "6": {
+        "stars": 6,
+        "levelCap": 120,
+        "statMult": 8.5,
+        "growthPerLevel": 0.065,
+        "label": "★★★★★★"
+      }
+    },
+    "types": {
+      "Lord": {
+        "atk": 1,
+        "def": 1,
+        "hp": 1
+      },
+      "Anima": {
+        "atk": 1,
+        "def": 0.85,
+        "hp": 1.25
+      },
+      "Breaker": {
+        "atk": 1.25,
+        "def": 0.85,
+        "hp": 0.9
+      },
+      "Guardian": {
+        "atk": 0.85,
+        "def": 1.25,
+        "hp": 1
+      },
+      "Oracle": {
+        "atk": 0.95,
+        "def": 0.9,
+        "hp": 0.95
+      }
+    },
+    "roles": {
+      "mage": {
+        "atk": 1.3,
+        "def": 0.8,
+        "hp": 0.85
+      },
+      "tank": {
+        "atk": 0.75,
+        "def": 1.45,
+        "hp": 1.3
+      },
+      "support": {
+        "atk": 0.9,
+        "def": 1.05,
+        "hp": 1.1
+      },
+      "brute": {
+        "atk": 1.15,
+        "def": 0.95,
+        "hp": 1.2
+      },
+      "boss": {
+        "atk": 1.25,
+        "def": 1.2,
+        "hp": 2.5
+      }
+    },
+    "elementWheel": {
+      "fire": "earth",
+      "earth": "thunder",
+      "thunder": "water",
+      "water": "fire",
+      "light": "dark",
+      "dark": "light"
+    },
+    "leaderSkills": {
+      "brasier_ardent": {
+        "name": "Brasier Ardent",
+        "target": "element",
+        "targetDetail": "fire",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "maree_glaciale": {
+        "name": "Marée Glaciale",
+        "target": "element",
+        "targetDetail": "water",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "fureur_sauvage": {
+        "name": "Fureur Sauvage",
+        "target": "element",
+        "targetDetail": "earth",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "orage_dechaine": {
+        "name": "Orage Déchaîné",
+        "target": "element",
+        "targetDetail": "thunder",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "jugement_sacre": {
+        "name": "Jugement Sacré",
+        "target": "element",
+        "targetDetail": "light",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "malediction": {
+        "name": "Malédiction",
+        "target": "element",
+        "targetDetail": "dark",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "rage_des_mages": {
+        "name": "Rage des Mages",
+        "target": "role",
+        "targetDetail": "mage",
+        "stat": "atk",
+        "value": 0.5
+      },
+      "assaut_total": {
+        "name": "Assaut Total",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "atk",
+        "value": 0.3
+      },
+      "rempart_de_gaia": {
+        "name": "Rempart de Gaïa",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "def",
+        "value": 0.35
+      },
+      "garde_des_ombres": {
+        "name": "Garde des Ombres",
+        "target": "element",
+        "targetDetail": "dark",
+        "stat": "def",
+        "value": 0.45
+      },
+      "mur_de_fer": {
+        "name": "Mur de Fer",
+        "target": "role",
+        "targetDetail": "tank",
+        "stat": "def",
+        "value": 0.55
+      },
+      "benediction_vie": {
+        "name": "Bénédiction de Vie",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "hp",
+        "value": 0.25
+      },
+      "coeur_aquatique": {
+        "name": "Cœur Aquatique",
+        "target": "element",
+        "targetDetail": "water",
+        "stat": "hp",
+        "value": 0.4
+      },
+      "flux_de_brave": {
+        "name": "Flux de Brave",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "bb_rate",
+        "value": 0.3
+      },
+      "economie_brave": {
+        "name": "Économie Brave",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "bb_cost",
+        "value": -0.2
+      }
+    },
+    "burstTiers": {
+      "BB": {
+        "key": "BB",
+        "label": "Brave Burst",
+        "gaugeCost": 100,
+        "atkBuff": 0.5,
+        "defBuff": 0.25,
+        "dmgMult": 1.8,
+        "duration": 1,
+        "color": "#00d2ff"
+      },
+      "SBB": {
+        "key": "SBB",
+        "label": "Super BB",
+        "gaugeCost": 100,
+        "atkBuff": 1,
+        "defBuff": 0.5,
+        "dmgMult": 2.6,
+        "duration": 2,
+        "color": "#f1c40f"
+      },
+      "UBB": {
+        "key": "UBB",
+        "label": "⚡ Ultimate BB",
+        "gaugeCost": 100,
+        "atkBuff": 2.5,
+        "defBuff": 1.5,
+        "dmgMult": 4.5,
+        "duration": 3,
+        "color": "#ff3366"
+      }
+    }
+  },
+  "heroes": [
+    {
+      "id": "ignis",
+      "name": "Ignis",
+      "element": "Feu",
+      "role": "mage",
+      "rarity": 3,
+      "type": "Breaker",
+      "base": {
+        "atk": 13,
+        "def": 6,
+        "hp": 85
+      },
+      "statsLv1": {
+        "atk": 39,
+        "def": 12,
+        "hp": 184
+      },
+      "statsMax": {
+        "atk": 154,
+        "def": 48,
+        "hp": 725,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Brasier Ardent",
+        "target": "element",
+        "targetDetail": "fire",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "burst": {
+        "key": "SBB",
+        "label": "Super BB",
+        "gaugeCost": 100,
+        "atkBuff": 1,
+        "defBuff": 0.5,
+        "dmgMult": 2.6,
+        "duration": 2,
+        "color": "#f1c40f"
+      }
+    },
+    {
+      "id": "vargas",
+      "name": "Vargas",
+      "element": "Feu",
+      "role": "support",
+      "rarity": 3,
+      "type": "Oracle",
+      "base": {
+        "atk": 9,
+        "def": 7,
+        "hp": 110
+      },
+      "statsLv1": {
+        "atk": 21,
+        "def": 15,
+        "hp": 251
+      },
+      "statsMax": {
+        "atk": 81,
+        "def": 60,
+        "hp": 991,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Flux de Brave",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "bb_rate",
+        "value": 0.3
+      },
+      "burst": {
+        "key": "BB",
+        "label": "Brave Burst",
+        "gaugeCost": 100,
+        "atkBuff": 0.5,
+        "defBuff": 0.25,
+        "dmgMult": 1.8,
+        "duration": 1,
+        "color": "#00d2ff"
+      }
+    },
+    {
+      "id": "selena",
+      "name": "Selena",
+      "element": "Eau",
+      "role": "support",
+      "rarity": 3,
+      "type": "Oracle",
+      "base": {
+        "atk": 9,
+        "def": 7,
+        "hp": 110
+      },
+      "statsLv1": {
+        "atk": 21,
+        "def": 15,
+        "hp": 251
+      },
+      "statsMax": {
+        "atk": 81,
+        "def": 60,
+        "hp": 991,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Cœur Aquatique",
+        "target": "element",
+        "targetDetail": "water",
+        "stat": "hp",
+        "value": 0.4
+      },
+      "burst": {
+        "key": "BB",
+        "label": "Brave Burst",
+        "gaugeCost": 100,
+        "atkBuff": 0.5,
+        "defBuff": 0.25,
+        "dmgMult": 1.8,
+        "duration": 1,
+        "color": "#00d2ff"
+      }
+    },
+    {
+      "id": "margonia",
+      "name": "Margonia",
+      "element": "Eau",
+      "role": "mage",
+      "rarity": 3,
+      "type": "Breaker",
+      "base": {
+        "atk": 13,
+        "def": 6,
+        "hp": 85
+      },
+      "statsLv1": {
+        "atk": 39,
+        "def": 12,
+        "hp": 184
+      },
+      "statsMax": {
+        "atk": 154,
+        "def": 48,
+        "hp": 725,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Marée Glaciale",
+        "target": "element",
+        "targetDetail": "water",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "burst": {
+        "key": "SBB",
+        "label": "Super BB",
+        "gaugeCost": 100,
+        "atkBuff": 1,
+        "defBuff": 0.5,
+        "dmgMult": 2.6,
+        "duration": 2,
+        "color": "#f1c40f"
+      }
+    },
+    {
+      "id": "lance",
+      "name": "Lance",
+      "element": "Terre",
+      "role": "tank",
+      "rarity": 3,
+      "type": "Guardian",
+      "base": {
+        "atk": 8,
+        "def": 10,
+        "hp": 130
+      },
+      "statsLv1": {
+        "atk": 16,
+        "def": 30,
+        "hp": 312
+      },
+      "statsMax": {
+        "atk": 64,
+        "def": 119,
+        "hp": 1232,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Rempart de Gaïa",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "def",
+        "value": 0.35
+      },
+      "burst": {
+        "key": "BB",
+        "label": "Brave Burst",
+        "gaugeCost": 100,
+        "atkBuff": 0.5,
+        "defBuff": 0.25,
+        "dmgMult": 1.8,
+        "duration": 1,
+        "color": "#00d2ff"
+      }
+    },
+    {
+      "id": "zeln",
+      "name": "Zeln",
+      "element": "Terre",
+      "role": "mage",
+      "rarity": 3,
+      "type": "Breaker",
+      "base": {
+        "atk": 13,
+        "def": 6,
+        "hp": 85
+      },
+      "statsLv1": {
+        "atk": 39,
+        "def": 12,
+        "hp": 184
+      },
+      "statsMax": {
+        "atk": 154,
+        "def": 48,
+        "hp": 725,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Rage des Mages",
+        "target": "role",
+        "targetDetail": "mage",
+        "stat": "atk",
+        "value": 0.5
+      },
+      "burst": {
+        "key": "SBB",
+        "label": "Super BB",
+        "gaugeCost": 100,
+        "atkBuff": 1,
+        "defBuff": 0.5,
+        "dmgMult": 2.6,
+        "duration": 2,
+        "color": "#f1c40f"
+      }
+    },
+    {
+      "id": "karl",
+      "name": "Karl",
+      "element": "Foudre",
+      "role": "support",
+      "rarity": 3,
+      "type": "Anima",
+      "base": {
+        "atk": 9,
+        "def": 7,
+        "hp": 110
+      },
+      "statsLv1": {
+        "atk": 22,
+        "def": 14,
+        "hp": 330
+      },
+      "statsMax": {
+        "atk": 85,
+        "def": 56,
+        "hp": 1304,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Économie Brave",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "bb_cost",
+        "value": -0.2
+      },
+      "burst": {
+        "key": "BB",
+        "label": "Brave Burst",
+        "gaugeCost": 100,
+        "atkBuff": 0.5,
+        "defBuff": 0.25,
+        "dmgMult": 1.8,
+        "duration": 1,
+        "color": "#00d2ff"
+      }
+    },
+    {
+      "id": "eze",
+      "name": "Eze",
+      "element": "Foudre",
+      "role": "mage",
+      "rarity": 3,
+      "type": "Breaker",
+      "base": {
+        "atk": 13,
+        "def": 6,
+        "hp": 85
+      },
+      "statsLv1": {
+        "atk": 39,
+        "def": 12,
+        "hp": 184
+      },
+      "statsMax": {
+        "atk": 154,
+        "def": 48,
+        "hp": 725,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Orage Déchaîné",
+        "target": "element",
+        "targetDetail": "thunder",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "burst": {
+        "key": "SBB",
+        "label": "Super BB",
+        "gaugeCost": 100,
+        "atkBuff": 1,
+        "defBuff": 0.5,
+        "dmgMult": 2.6,
+        "duration": 2,
+        "color": "#f1c40f"
+      }
+    },
+    {
+      "id": "sera",
+      "name": "Sera",
+      "element": "Lumière",
+      "role": "support",
+      "rarity": 3,
+      "type": "Oracle",
+      "base": {
+        "atk": 9,
+        "def": 7,
+        "hp": 110
+      },
+      "statsLv1": {
+        "atk": 21,
+        "def": 15,
+        "hp": 251
+      },
+      "statsMax": {
+        "atk": 81,
+        "def": 60,
+        "hp": 991,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Bénédiction de Vie",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "hp",
+        "value": 0.25
+      },
+      "burst": {
+        "key": "BB",
+        "label": "Brave Burst",
+        "gaugeCost": 100,
+        "atkBuff": 0.5,
+        "defBuff": 0.25,
+        "dmgMult": 1.8,
+        "duration": 1,
+        "color": "#00d2ff"
+      }
+    },
+    {
+      "id": "atro",
+      "name": "Atro",
+      "element": "Lumière",
+      "role": "mage",
+      "rarity": 3,
+      "type": "Lord",
+      "base": {
+        "atk": 13,
+        "def": 6,
+        "hp": 85
+      },
+      "statsLv1": {
+        "atk": 31,
+        "def": 14,
+        "hp": 204
+      },
+      "statsMax": {
+        "atk": 123,
+        "def": 57,
+        "hp": 806,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Jugement Sacré",
+        "target": "element",
+        "targetDetail": "light",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "burst": {
+        "key": "SBB",
+        "label": "Super BB",
+        "gaugeCost": 100,
+        "atkBuff": 1,
+        "defBuff": 0.5,
+        "dmgMult": 2.6,
+        "duration": 2,
+        "color": "#f1c40f"
+      }
+    },
+    {
+      "id": "magress",
+      "name": "Magress",
+      "element": "Ténèbres",
+      "role": "tank",
+      "rarity": 3,
+      "type": "Guardian",
+      "base": {
+        "atk": 8,
+        "def": 10,
+        "hp": 130
+      },
+      "statsLv1": {
+        "atk": 16,
+        "def": 30,
+        "hp": 312
+      },
+      "statsMax": {
+        "atk": 64,
+        "def": 119,
+        "hp": 1232,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Garde des Ombres",
+        "target": "element",
+        "targetDetail": "dark",
+        "stat": "def",
+        "value": 0.45
+      },
+      "burst": {
+        "key": "BB",
+        "label": "Brave Burst",
+        "gaugeCost": 100,
+        "atkBuff": 0.5,
+        "defBuff": 0.25,
+        "dmgMult": 1.8,
+        "duration": 1,
+        "color": "#00d2ff"
+      }
+    },
+    {
+      "id": "kikuri",
+      "name": "Kikuri",
+      "element": "Ténèbres",
+      "role": "support",
+      "rarity": 3,
+      "type": "Oracle",
+      "base": {
+        "atk": 9,
+        "def": 7,
+        "hp": 110
+      },
+      "statsLv1": {
+        "atk": 21,
+        "def": 15,
+        "hp": 251
+      },
+      "statsMax": {
+        "atk": 81,
+        "def": 60,
+        "hp": 991,
+        "level": 60
+      },
+      "leaderSkill": {
+        "name": "Malédiction",
+        "target": "element",
+        "targetDetail": "dark",
+        "stat": "atk",
+        "value": 0.45
+      },
+      "burst": {
+        "key": "BB",
+        "label": "Brave Burst",
+        "gaugeCost": 100,
+        "atkBuff": 0.5,
+        "defBuff": 0.25,
+        "dmgMult": 1.8,
+        "duration": 1,
+        "color": "#00d2ff"
+      }
+    },
+    {
+      "id": "unit_10012",
+      "name": "Vargas Céleste",
+      "element": "Lumière",
+      "role": "mage",
+      "rarity": 5,
+      "type": "Lord",
+      "base": {
+        "atk": 13,
+        "def": 6,
+        "hp": 85
+      },
+      "statsLv1": {
+        "atk": 73,
+        "def": 34,
+        "hp": 476
+      },
+      "statsMax": {
+        "atk": 505,
+        "def": 233,
+        "hp": 3303,
+        "level": 100
+      },
+      "leaderSkill": {
+        "name": "Assaut Total",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "atk",
+        "value": 0.3
+      },
+      "burst": {
+        "key": "UBB",
+        "label": "⚡ Ultimate BB",
+        "gaugeCost": 100,
+        "atkBuff": 2.5,
+        "defBuff": 1.5,
+        "dmgMult": 4.5,
+        "duration": 3,
+        "color": "#ff3366"
+      }
+    },
+    {
+      "id": "unit_10013",
+      "name": "Selena Sombre",
+      "element": "Ténèbres",
+      "role": "mage",
+      "rarity": 5,
+      "type": "Breaker",
+      "base": {
+        "atk": 13,
+        "def": 6,
+        "hp": 85
+      },
+      "statsLv1": {
+        "atk": 91,
+        "def": 29,
+        "hp": 428
+      },
+      "statsMax": {
+        "atk": 632,
+        "def": 198,
+        "hp": 2973,
+        "level": 100
+      },
+      "leaderSkill": {
+        "name": "Assaut Total",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "atk",
+        "value": 0.3
+      },
+      "burst": {
+        "key": "UBB",
+        "label": "⚡ Ultimate BB",
+        "gaugeCost": 100,
+        "atkBuff": 2.5,
+        "defBuff": 1.5,
+        "dmgMult": 4.5,
+        "duration": 3,
+        "color": "#ff3366"
+      }
+    },
+    {
+      "id": "unit_ignis_frame",
+      "name": "Ignis Divin",
+      "element": "Feu",
+      "role": "mage",
+      "rarity": 6,
+      "type": "Breaker",
+      "base": {
+        "atk": 13,
+        "def": 6,
+        "hp": 85
+      },
+      "statsLv1": {
+        "atk": 138,
+        "def": 43,
+        "hp": 650
+      },
+      "statsMax": {
+        "atk": 1207,
+        "def": 379,
+        "hp": 5680,
+        "level": 120
+      },
+      "leaderSkill": {
+        "name": "Assaut Total",
+        "target": "all",
+        "targetDetail": "",
+        "stat": "atk",
+        "value": 0.3
+      },
+      "burst": {
+        "key": "UBB",
+        "label": "⚡ Ultimate BB",
+        "gaugeCost": 100,
+        "atkBuff": 2.5,
+        "defBuff": 1.5,
+        "dmgMult": 4.5,
+        "duration": 3,
+        "color": "#ff3366"
+      }
+    }
+  ],
+  "monsters": [
+    {
+      "id": "mob_b1_1",
+      "name": "Slime de Lave",
+      "element": "Feu",
+      "kind": "common",
+      "biome": 1,
+      "rarity": 1,
+      "stats": {
+        "atk": 14,
+        "def": 8,
+        "hp": 147,
+        "level": 10
+      }
+    },
+    {
+      "id": "mob_b1_2",
+      "name": "Canidé d’Enfer",
+      "element": "Feu",
+      "kind": "common",
+      "biome": 1,
+      "rarity": 1,
+      "stats": {
+        "atk": 14,
+        "def": 8,
+        "hp": 147,
+        "level": 10
+      }
+    },
+    {
+      "id": "mob_b1_3",
+      "name": "Élémentaire de Scorie",
+      "element": "Feu",
+      "kind": "common",
+      "biome": 1,
+      "rarity": 1,
+      "stats": {
+        "atk": 23,
+        "def": 14,
+        "hp": 235,
+        "level": 10
+      }
+    },
+    {
+      "id": "boss_b1",
+      "name": "Dragon d’Agni",
+      "element": "Feu",
+      "kind": "boss",
+      "biome": 1,
+      "rarity": 2,
+      "stats": {
+        "atk": 78,
+        "def": 52,
+        "hp": 1568,
+        "level": 10
+      }
+    },
+    {
+      "id": "mob_b2_1",
+      "name": "Méduse de Cristal",
+      "element": "Eau",
+      "kind": "common",
+      "biome": 2,
+      "rarity": 2,
+      "stats": {
+        "atk": 29,
+        "def": 17,
+        "hp": 311,
+        "level": 20
+      }
+    },
+    {
+      "id": "mob_b2_2",
+      "name": "Éclaireur Squalide",
+      "element": "Eau",
+      "kind": "common",
+      "biome": 2,
+      "rarity": 2,
+      "stats": {
+        "atk": 29,
+        "def": 17,
+        "hp": 311,
+        "level": 20
+      }
+    },
+    {
+      "id": "mob_b2_3",
+      "name": "Tortue de Récif",
+      "element": "Eau",
+      "kind": "common",
+      "biome": 2,
+      "rarity": 2,
+      "stats": {
+        "atk": 49,
+        "def": 29,
+        "hp": 497,
+        "level": 20
+      }
+    },
+    {
+      "id": "boss_b2",
+      "name": "Léviathan",
+      "element": "Eau",
+      "kind": "boss",
+      "biome": 2,
+      "rarity": 3,
+      "stats": {
+        "atk": 168,
+        "def": 112,
+        "hp": 3370,
+        "level": 20
+      }
+    },
+    {
+      "id": "mob_b3_1",
+      "name": "Rôdeur Sylvestre",
+      "element": "Terre",
+      "kind": "common",
+      "biome": 3,
+      "rarity": 3,
+      "stats": {
+        "atk": 59,
+        "def": 35,
+        "hp": 635,
+        "level": 30
+      }
+    },
+    {
+      "id": "mob_b3_2",
+      "name": "Golem de Mousse",
+      "element": "Terre",
+      "kind": "common",
+      "biome": 3,
+      "rarity": 3,
+      "stats": {
+        "atk": 59,
+        "def": 35,
+        "hp": 635,
+        "level": 30
+      }
+    },
+    {
+      "id": "mob_b3_3",
+      "name": "Mante Géante",
+      "element": "Terre",
+      "kind": "common",
+      "biome": 3,
+      "rarity": 3,
+      "stats": {
+        "atk": 100,
+        "def": 59,
+        "hp": 1017,
+        "level": 30
+      }
+    },
+    {
+      "id": "boss_b3",
+      "name": "Gardien de Gaïa",
+      "element": "Terre",
+      "kind": "boss",
+      "biome": 3,
+      "rarity": 4,
+      "stats": {
+        "atk": 346,
+        "def": 230,
+        "hp": 6913,
+        "level": 30
+      }
+    },
+    {
+      "id": "mob_b4_1",
+      "name": "Harpie Statique",
+      "element": "Foudre",
+      "kind": "common",
+      "biome": 4,
+      "rarity": 4,
+      "stats": {
+        "atk": 116,
+        "def": 70,
+        "hp": 1257,
+        "level": 40
+      }
+    },
+    {
+      "id": "mob_b4_2",
+      "name": "Élémentaire d’Orage",
+      "element": "Foudre",
+      "kind": "common",
+      "biome": 4,
+      "rarity": 4,
+      "stats": {
+        "atk": 116,
+        "def": 70,
+        "hp": 1257,
+        "level": 40
+      }
+    },
+    {
+      "id": "mob_b4_3",
+      "name": "Wyverne Électrique",
+      "element": "Foudre",
+      "kind": "common",
+      "biome": 4,
+      "rarity": 4,
+      "stats": {
+        "atk": 198,
+        "def": 116,
+        "hp": 2013,
+        "level": 40
+      }
+    },
+    {
+      "id": "boss_b4",
+      "name": "Seigneur du Tonnerre",
+      "element": "Foudre",
+      "kind": "boss",
+      "biome": 4,
+      "rarity": 5,
+      "stats": {
+        "atk": 673,
+        "def": 449,
+        "hp": 13467,
+        "level": 40
+      }
+    },
+    {
+      "id": "mob_b5_1",
+      "name": "Séraphin Déchu",
+      "element": "Lumière",
+      "kind": "common",
+      "biome": 5,
+      "rarity": 5,
+      "stats": {
+        "atk": 221,
+        "def": 132,
+        "hp": 2383,
+        "level": 50
+      }
+    },
+    {
+      "id": "mob_b5_2",
+      "name": "Gardien Doré",
+      "element": "Lumière",
+      "kind": "common",
+      "biome": 5,
+      "rarity": 5,
+      "stats": {
+        "atk": 221,
+        "def": 132,
+        "hp": 2383,
+        "level": 50
+      }
+    },
+    {
+      "id": "mob_b5_3",
+      "name": "Spectre Lumineux",
+      "element": "Lumière",
+      "kind": "common",
+      "biome": 5,
+      "rarity": 5,
+      "stats": {
+        "atk": 375,
+        "def": 221,
+        "hp": 3817,
+        "level": 50
+      }
+    },
+    {
+      "id": "boss_b5",
+      "name": "Archange Corrompu",
+      "element": "Lumière",
+      "kind": "boss",
+      "biome": 5,
+      "rarity": 6,
+      "stats": {
+        "atk": 1281,
+        "def": 854,
+        "hp": 25612,
+        "level": 50
+      }
+    },
+    {
+      "id": "mob_b6_1",
+      "name": "Ombre Rampante",
+      "element": "Ténèbres",
+      "kind": "common",
+      "biome": 6,
+      "rarity": 6,
+      "stats": {
+        "atk": 411,
+        "def": 247,
+        "hp": 4439,
+        "level": 60
+      }
+    },
+    {
+      "id": "mob_b6_2",
+      "name": "Liche Maudite",
+      "element": "Ténèbres",
+      "kind": "common",
+      "biome": 6,
+      "rarity": 6,
+      "stats": {
+        "atk": 411,
+        "def": 247,
+        "hp": 4439,
+        "level": 60
+      }
+    },
+    {
+      "id": "mob_b6_3",
+      "name": "Démon du Vide",
+      "element": "Ténèbres",
+      "kind": "common",
+      "biome": 6,
+      "rarity": 6,
+      "stats": {
+        "atk": 699,
+        "def": 411,
+        "hp": 7110,
+        "level": 60
+      }
+    },
+    {
+      "id": "boss_b6",
+      "name": "Souverain du Néant",
+      "element": "Ténèbres",
+      "kind": "boss",
+      "biome": 6,
+      "rarity": 6,
+      "stats": {
+        "atk": 1480,
+        "def": 986,
+        "hp": 29590,
+        "level": 60
+      }
+    }
+  ]
+}

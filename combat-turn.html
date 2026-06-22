@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Combat Tour par Tour — Final Frontier</title>
+<!-- MÊMES ressources que index.html (copie fidèle) -->
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/rpg-awesome@0.2.0/css/rpg-awesome.min.css" rel="stylesheet">
+<link rel="stylesheet" href="./css/tokens.css">
+<link rel="stylesheet" href="./css/combat.css">
+</head>
+<body>
+<div id="game-window">
+  <div id="combat-arena" class="fantasy-panel">
+
+    <!-- HEADER (ressources) -->
+    <div id="header">
+      <div class="header-top">
+        <button id="hub-home-btn" title="Hub" onclick="location.href='index.html'">HUB</button>
+        <div class="zone-info">
+          <div class="zone-name">Cavernes d'Agni</div>
+          <div class="zone-progress">Monstre 10 / 10</div>
+        </div>
+        <div class="currency-bar">
+          <div class="currency gems"><i class="ra ra-gem"></i> 89</div>
+          <div class="currency gold"><i class="ra ra-gold-bar"></i> 646</div>
+          <div class="currency honor"><i class="ra ra-sword"></i> 990 PH</div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <span class="tap-dmg-display"><i class="ra ra-aura" style="color:#60a5fa"></i> Tour par tour</span>
+        <span class="dps-display" id="cc-turnlbl">Tour 1</span>
+        <span class="combo-display"></span>
+      </div>
+    </div>
+
+    <!-- MONSTER ZONE -->
+    <div id="monster-zone">
+      <div id="monster-bg"></div>
+      <div id="combat-particles"></div>
+      <div id="combat-vignette"></div>
+      <button id="combat-auto-btn">AUTO</button>
+      <div class="monster-container">
+        <span class="boss-label visible" id="boss-label"><i class="ra ra-skull"></i> BOSS</span>
+        <div id="monster-name">BOSS OGRE</div>
+        <div class="hp-bar-container monster-hp-bar">
+          <div class="monster-hp-fill-wrapper">
+            <div id="hp-bar-delay" style="width:100%"></div>
+            <div id="hp-bar-fill" style="width:100%"></div>
+          </div>
+          <div id="hp-text">6000 / 6000</div>
+        </div>
+        <div id="monster-emoji-container">
+          <img id="monster-emoji" alt="Boss Ogre">
+        </div>
+      </div>
+      
+      <!-- Nouvelle Animation Brave Burst (centrée sur le monstre) -->
+      <div id="cc-bb-new">
+        <div class="bg"></div>
+        <div class="img-container">
+          <img id="cc-bb-new-off" class="img-off" src="assets/heroes/FINAL%20BURST/OFF/IGNIS-3.png" alt="OFF">
+          <img id="cc-bb-new-on" class="img-on" src="assets/heroes/FINAL%20BURST/ON/IGNIS-3.png" alt="ON">
+        </div>
+        <div class="flash"></div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div id="footer">
+      <!-- Panneau Leader (Vie + Bouton GO) -->
+      <div class="leader-panel">
+        <div class="hp-bar-container squad-party-hp-bar">
+          <div class="squad-party-hp-fill-wrapper">
+            <div id="party-hp-bar-fill" style="width:100%;"></div>
+          </div>
+          <div id="party-hp-text">5000 / 5000</div>
+        </div>
+        <button id="cc-fight">Combattre</button>
+      </div>
+
+      <!-- Slots de l'équipe (Héros) -->
+      <div class="footer-bb-slots" id="footer-bb-slots"></div>
+
+      <!-- Barre d'objets (markup réel du jeu) -->
+      <div id="combat-items-bar">
+        <div class="combat-item-slot"><span class="item-count">x10</span><i class="ra ra-potion item-icon cure"></i><span class="item-label">Cure</span></div>
+        <div class="combat-item-slot"><span class="item-count">x7</span><i class="ra ra-potion item-icon high-cure"></i><span class="item-label">High Cure</span></div>
+        <div class="combat-item-slot"><span class="item-count">x5</span><i class="ra ra-potion item-icon atk-pot"></i><span class="item-label">Atk Potion</span></div>
+        <div class="combat-item-slot"><span class="item-count">x10</span><i class="ra ra-glass-pot item-icon holy-water"></i><span class="item-label">Holy Water</span></div>
+        <div class="combat-item-slot"><span class="item-count">x10</span><i class="ra ra-glass-pot item-icon stimulant"></i><span class="item-label">Stimulant</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div id="screen-flash"></div>
+</div>
+
+<div id="cc-banner"><div class="card"><h2 id="cc-btitle"></h2><button onclick="location.reload()">Rejouer</button> <button class="cc-secondary" onclick="location.href='index.html'">Retour au Hub</button></div></div>
+
+<script src="combat-turn-engine.js"></script>
+<script>
+const TC = window.TurnCombatEngine.TurnCombat;
+const refract = window.TurnCombatEngine.refraction;
+const ELEM_FR = { fire:'Feu', water:'Eau', earth:'Terre', thunder:'Foudre', light:'Lumière', dark:'Ténèbres' };
+const ELEM_HEX = { fire:'#FF4D29', water:'#38C8FF', earth:'#3FBF6B', thunder:'#FFD93D', light:'#FFE08A', dark:'#B14CFF' };
+const ELEM_RGB = { fire:'255,77,41', water:'56,200,255', earth:'63,191,107', thunder:'255,217,61', light:'255,224,138', dark:'177,76,255' };
+const ELEM_RA_ICONS = { fire: 'ra ra-burning-embers', water: 'ra ra-water-drop', earth: 'ra ra-vine-whip', thunder: 'ra ra-lightning-bolt', light: 'ra ra-sun', dark: 'ra ra-skull' };
+const ELEM_TOKEN = { fire:'var(--feu)', water:'var(--eau)', earth:'var(--terre)', thunder:'var(--foudre)', light:'var(--lumiere)', dark:'var(--tenebres)' };
+const HERO_IMG = {
+  ignis:"assets/heroes/Squad img/IGNIS-3_g.webp",
+  selena:"assets/heroes/Squad img/SELENA-3_g.webp",
+  lance:"assets/heroes/Squad img/bc/Lance-trois-etoile_g.webp", // legacy : ancienne image
+  sera:"assets/heroes/Squad img/SERA-3_g.webp",
+};
+const MONSTER_IMG = "assets/img-combat/boss ogre_g.webp";
+// Images "full" pour l'animation Brave Burst (portrait)
+const FULL_IMG = { ignis:"assets/heroes/full img/IGNIS-3.png" };
+// Héros disposant d'une illustration de Final Burst (assets/heroes/FINAL BURST/ON|OFF/NOM-3.png).
+// La clé = id du héros ; la valeur = nom EXACT du fichier (attention : magress -> MAGRUSS).
+const FB_BASENAME = { ignis:'IGNIS', selena:'SELENA', sera:'SERA', atro:'ATRO', karl:'KARL', magress:'MAGRUSS' };
+const ELEM_GRAD = { fire:['#ff7a2d','#ffd24d'], water:['#2e86ff','#9fd4ff'], earth:['#2ecc71','#bff5c8'],
+                    thunder:['#f1c40f','#fff3a8'], light:['#ffe27a','#fffbe0'], dark:['#9b59b6','#d9b3ff'] };
+const LAVA_BG = "assets/Biome/agni_g.webp";
+
+const config = {
+  team:{ maxHp:5000 },
+  heroes:[
+    { id:'ignis',  name:'Ignis',  element:'fire',  atk:300, def:120 },
+    { id:'selena', name:'Selena', element:'water', atk:280, def:150 },
+    { id:'lance',  name:'Lance',  element:'earth', atk:260, def:90  },
+    { id:'sera',   name:'Sera',   element:'light', atk:320, def:80  },
+  ],
+  monster:{ name:'BOSS OGRE', element:'fire', hp:6000, atk:900, def:50 },
+};
+
+let C;
+function el(id){ return document.getElementById(id); }
+function pct(c,m){ return Math.max(0,Math.min(100,c/m*100)); }
+
+/* ===== AAA EFFECTS ENGINE ===== */
+
+/** Screen shake — applies CSS animation on #combat-arena */
+function screenShake(intensity) {
+  const arena = el('combat-arena');
+  arena.classList.remove('shake');
+  void arena.offsetWidth; // force reflow
+  arena.classList.add('shake');
+  arena.addEventListener('animationend', () => arena.classList.remove('shake'), { once: true });
+}
+
+/** Full-screen colored flash ('flash-red', 'flash-gold', 'flash-white') */
+function screenFlash(type) {
+  const flash = el('screen-flash');
+  if (!flash) return;
+  flash.className = '';
+  void flash.offsetWidth;
+  flash.classList.add(type);
+  flash.addEventListener('animationend', () => { flash.className = ''; }, { once: true });
+}
+
+/** Turn label pulse animation */
+function pulseTurn() {
+  const lbl = el('cc-turnlbl');
+  lbl.classList.remove('turn-pulse');
+  void lbl.offsetWidth;
+  lbl.classList.add('turn-pulse');
+  lbl.addEventListener('animationend', () => lbl.classList.remove('turn-pulse'), { once: true });
+}
+
+/** Enhanced monster hit — shake + visual recoil */
+function hit() {
+  const m = el('monster-emoji');
+  screenShake();
+  // Monster recoil
+  m.style.transition = 'transform .08s cubic-bezier(.2,.8,.2,1)';
+  m.style.transform = 'translateY(15%) scale(0.95) rotate(-1deg)';
+  setTimeout(() => {
+    m.style.transform = 'translateY(15%) scale(1.03) rotate(0.5deg)';
+  }, 80);
+  setTimeout(() => {
+    m.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1)';
+    m.style.transform = 'translateY(15%)';
+  }, 180);
+}
+
+/* ===== CORE GAME FLOW ===== */
+
+function start(){
+  // ── Contexte transmis par le hub (facultatif : sinon valeurs par défaut) ──
+  let bgPath = LAVA_BG;
+  window._ccReward = 0;
+  window._ccStage = null;
+  try {
+    const ctx = JSON.parse(localStorage.getItem('bf_turncombat_ctx') || 'null');
+    if (ctx) {
+      if (ctx.element)     config.monster.element = ctx.element;
+      if (ctx.monsterName) config.monster.name    = ctx.monsterName;
+      if (ctx.bg)          bgPath = ctx.bg;
+      if (ctx.heroes && ctx.heroes.length) {   // équipe = squad du joueur
+        config.heroes = ctx.heroes;
+        if (ctx.teamHp) config.team.maxHp = ctx.teamHp;
+      }
+      window._ccReward = Number(ctx.reward) || 0;
+      window._ccStage  = ctx.stage || null;   // {a,s,isBoss} → renvoyé au hub si victoire
+    }
+    localStorage.removeItem('bf_turncombat_ctx'); // consommé
+  } catch (e) {}
+
+  C = new TC(config, { onEvent: handleEvent });
+  const safeBg = encodeURI(bgPath).replace(/'/g, '%27');   // l'apostrophe casse url() sinon
+  el('monster-bg').style.backgroundImage = `url("${safeBg}")`;
+  el('monster-emoji').src = encodeURI(MONSTER_IMG);
+  renderAll();
+}
+
+function renderFooter(){
+  const box = el('footer-bb-slots'); let html='';
+  const mEl = C.monster.element;
+  const colStyle = `--cc-col:${ELEM_HEX[mEl]||'#FF4D29'};--cc-glow:rgba(${ELEM_RGB[mEl]||'255,77,41'},.9)`;
+  for(const h of C.heroes){
+    if(!h) continue;
+    if(h.action==null) h.action='DEF';            // défaut : DEF si le joueur ne fait rien
+    const ready = h.bbGauge >= h.bbMax;
+    const targeted = h.id===C.targetId;
+    const elemFr = ELEM_FR[h.element];
+    const atk = h.action==='ATT';
+    const bb = pct(h.bbGauge,h.bbMax);
+    const style = `--elem:${ELEM_TOKEN[h.element]||'var(--gold)'};--bb:${bb}%;${targeted?colStyle:''}`;
+    html += `<div class="footer-bb ${ready?'ready':''} ${targeted?'cc-targeted':''}" data-id="${h.id}" style="${style}">
+      ${targeted?'<div class="cc-flame"></div>':''}
+      <div class="fbb-portrait-wrap" data-port="${h.id}">
+        <div class="fbb-portrait-container"><img class="fbb-portrait-img" src="${h.img ? h.img : encodeURI(HERO_IMG[h.id] || '')}" alt="${h.name}"></div>
+        <div class="fbb-elem-badge elem-${elemFr}"><i class="${ELEM_RA_ICONS[h.element] || ''}"></i></div>
+        ${ready?'<div class="fbb-ready-tag">BB</div>':''}
+      </div>
+      <div class="fbb-name">${h.name}</div>
+      <div class="cc-actions">
+        <button class="cc-act cc-att ${atk?'on':''}" data-id="${h.id}" data-act="ATT"><i class="ra ra-sword"></i> ATT</button>
+        <button class="cc-act cc-def ${atk?'':'on'}" data-id="${h.id}" data-act="DEF"><i class="ra ra-shield"></i> DEF</button>
+      </div>
+    </div>`;
+  }
+  box.innerHTML = html;
+  // Boutons ATT/DEF (exclusifs) ; tap sur le portrait = Brave Burst
+  box.querySelectorAll('.cc-act').forEach(b=> b.onclick=(e)=>{ e.stopPropagation(); setAction(b.dataset.id, b.dataset.act); });
+  box.querySelectorAll('[data-port]').forEach(p=> p.onclick=(e)=>{ e.stopPropagation(); tapPortrait(p.dataset.port); });
+}
+
+let _prevTurn = 0;
+function renderAll(){
+  const turn = C.turn;
+  el('cc-turnlbl').textContent = 'Tour '+turn;
+  // Pulse animation on turn change
+  if (turn !== _prevTurn) { pulseTurn(); _prevTurn = turn; }
+  el('monster-name').textContent = C.monster.name;
+  // HP bar with delayed drain effect
+  const mHpPct = pct(C.monster.hp, C.monster.maxHp);
+  el('hp-bar-fill').style.width = mHpPct+'%';
+  setTimeout(() => { el('hp-bar-delay').style.width = mHpPct+'%'; }, 350);
+  el('hp-text').textContent = `${C.monster.hp} / ${C.monster.maxHp}`;
+  const teamRatio = C.team.hp / C.team.maxHp;
+  el('party-hp-bar-fill').style.width = pct(C.team.hp,C.team.maxHp)+'%';
+  el('party-hp-bar-fill').classList.toggle('low', teamRatio <= 0.25);
+  el('party-hp-text').textContent = `${C.team.hp} / ${C.team.maxHp}`;
+  renderFooter();
+}
+
+function setAction(id, act){                          // ATT ou DEF, exclusif
+  if(C.phase!=='HEROS' || !id) return;
+  const h=C.heroes.find(x=>x.id===id);
+  if(!h) return;
+  h.action = (act==='ATT') ? 'ATT' : 'DEF';
+  renderFooter();
+}
+function toggleAction(id){                            // conservé (compat)
+  if(C.phase!=='HEROS' || !id) return;
+  const h=C.heroes.find(x=>x.id===id);
+  if(!h) return;
+  h.action = (h.action==='ATT') ? 'DEF' : 'ATT';
+  renderFooter();
+}
+
+/* ===== COMBAT FX ENGINE ===== */
+let fxSeq = 0;
+function spawnFloat(parent, text, opts){
+  opts = opts || {};
+  if(!parent) return;
+  const s = document.createElement('span');
+  s.className = 'dmg-float' + (opts.crit ? ' crit' : '');
+  s.textContent = text;
+  if(opts.color) s.style.color = opts.color;
+  const jitter = ((fxSeq++ % 7) - 3) * 12;
+  s.style.left = `calc(50% + ${jitter}px)`;
+  s.style.top = (opts.topPct != null ? opts.topPct : 42) + '%';
+  parent.appendChild(s);
+  s.addEventListener('animationend', ()=> s.remove());
+}
+function flashMonster(){
+  const z = el('monster-zone'); if(!z) return;
+  const f = document.createElement('div'); f.className = 'cc-flash';
+  z.appendChild(f); f.addEventListener('animationend', ()=> f.remove());
+}
+function calloutMonster(text, topPct){
+  const z = el('monster-zone'); if(!z) return;
+  const c = document.createElement('div'); c.className = 'cc-callout'; c.textContent = text;
+  c.style.top = (topPct != null ? topPct : 30) + '%';
+  z.appendChild(c); c.addEventListener('animationend', ()=> c.remove());
+}
+function pulseChain(seq){
+  if(!seq) return;
+  document.querySelectorAll('#footer-bb-slots .footer-bb').forEach(card=>{
+    const h = C.heroes.find(x=> x.id === card.dataset.id);
+    if(h && seq.includes(h.element)){
+      card.classList.remove('cc-chain'); void card.offsetWidth; card.classList.add('cc-chain');
+    }
+  });
+}
+
+/* ===== EVENT HANDLER — enriched with AAA effects ===== */
+function handleEvent(ev){
+  try{
+    if(ev.type === 'ATTAQUE_HERO'){
+      const h = C.heroes.find(x=> x.id === ev.heroId);
+      spawnFloat(el('monster-zone'), '-'+ev.dmg, { color: h ? ELEM_HEX[h.element] : null, topPct: 40 });
+    } else if(ev.type === 'BRAVE_BURST'){
+      spawnFloat(el('monster-zone'), '-'+ev.dmg, { crit: true, topPct: 36 });
+      flashMonster(); calloutMonster('SPARK!', 26);
+      screenFlash('flash-gold');
+    } else if(ev.type === 'ATTAQUE_MONSTRE'){
+      const footer = el('footer');
+      screenShake();
+      screenFlash('flash-red');
+      if(ev.refraction != null && ev.refraction < 1 && ev.finalDmg > 0){
+        spawnFloat(footer, 'RÉSISTE', { color: 'var(--gem)', topPct: 2 });
+      }
+      spawnFloat(footer, '-'+ev.finalDmg, { color: 'var(--hp)', crit: ev.refraction > 1, topPct: 6 });
+    } else if(ev.type === 'SYNERGIE'){
+      calloutMonster(ev.name + ' +' + ev.bonus, 42);
+      pulseChain(ev.sequence);
+      screenFlash('flash-gold');
+    }
+  }catch(e){}
+}
+
+function tapPortrait(id){
+  if(C.phase!=='HEROS') return;
+  const h=C.hero(id);
+  if(h.bbGauge < h.bbMax) return;
+  
+  if (FB_BASENAME[h.id]) {
+    playBB(h,
+      ()=>{ C.useBraveBurst(id); hit(); },                                              // impact : dégâts
+      ()=>{ if(C.phase==='VICTOIRE'){ renderAll(); endGame(true); return; } renderAll(); } // fin
+    );
+  } else {
+    C.useBraveBurst(id); hit();
+    if(C.phase==='VICTOIRE'){ renderAll(); endGame(true); return; }
+    renderAll();
+  }
+}
+function playBB(h, onImpact, onEnd){
+  const ov=el('cc-bb-new');
+  // Nom de fichier exact via FB_BASENAME (gère magress -> MAGRUSS) ; fallback majuscule de l'id
+  const base = FB_BASENAME[h.id] || h.id.toUpperCase();
+  el('cc-bb-new-off').src = `assets/heroes/FINAL%20BURST/OFF/${base}-3.png`;
+  el('cc-bb-new-on').src = `assets/heroes/FINAL%20BURST/ON/${base}-3.png`;
+  
+  ov.classList.remove('show'); void ov.offsetWidth; ov.classList.add('show');  // relance les keyframes
+  setTimeout(()=>{ onImpact&&onImpact(); }, 900);
+  setTimeout(()=>{ ov.classList.remove('show'); onEnd&&onEnd(); }, 1800);
+}
+el('cc-fight').onclick = ()=>{
+  if(C.phase!=='HEROS') return;
+  C.resolveHeroPhase(); hit();
+  if(C.phase==='VICTOIRE'){ renderAll(); endGame(true); return; }
+  C.resolveMonsterPhase(); renderAll();
+  if(C.phase==='DEFAITE') endGame(false);
+};
+function endGame(win){
+  el('cc-banner').classList.add('show', win?'win':'lose');
+  el('cc-btitle').textContent = win ? 'VICTOIRE !' : 'DÉFAITE';
+  el('cc-fight').disabled = true;
+  if (win) screenFlash('flash-gold');
+  else screenFlash('flash-red');
+  try {
+    localStorage.setItem('bf_turncombat_result', JSON.stringify({
+      win: !!win,
+      gold: win ? (window._ccReward||0) : 0,
+      stage: win ? (window._ccStage||null) : null,
+      ts: Date.now()
+    }));
+  } catch (e) {}
+}
+
+start();
+</script>
+</body>
+</html>

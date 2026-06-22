@@ -1,0 +1,1125 @@
+(() => {
+  var __defProp = Object.defineProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+
+  // src/core/bignum.js
+  var _Dec = class __Dec {
+    constructor(v) {
+      if (v instanceof __Dec) {
+        this.m = v.m;
+        this.e = v.e;
+        return;
+      }
+      if (typeof v === "string") {
+        v = parseFloat(v);
+      }
+      if (!v || !isFinite(v)) {
+        this.m = v === Infinity ? 1 : 0;
+        this.e = v === Infinity ? 9999 : 0;
+        return;
+      }
+      const s = v < 0 ? -1 : 1;
+      const av = Math.abs(v);
+      this.e = av === 0 ? 0 : Math.floor(Math.log10(av));
+      this.m = v / Math.pow(10, this.e);
+      this._n();
+    }
+    _n() {
+      if (this.m === 0) {
+        this.e = 0;
+        return;
+      }
+      while (Math.abs(this.m) >= 10) {
+        this.m /= 10;
+        this.e++;
+      }
+      while (Math.abs(this.m) > 0 && Math.abs(this.m) < 1) {
+        this.m *= 10;
+        this.e--;
+      }
+    }
+    add(o) {
+      o = D(o);
+      if (this.e - o.e > 15) return new __Dec(this);
+      if (o.e - this.e > 15) return new __Dec(o);
+      const diff = this.e - o.e;
+      const r = new __Dec(0);
+      r.m = this.m * Math.pow(10, diff) + o.m;
+      r.e = o.e;
+      r._n();
+      return r;
+    }
+    sub(o) {
+      o = D(o);
+      const r = new __Dec(o);
+      r.m = -r.m;
+      return this.add(r);
+    }
+    mul(o) {
+      o = D(o);
+      const r = new __Dec(0);
+      r.m = this.m * o.m;
+      r.e = this.e + o.e;
+      r._n();
+      return r;
+    }
+    div(o) {
+      o = D(o);
+      if (o.m === 0) return new __Dec(0);
+      const r = new __Dec(0);
+      r.m = this.m / o.m;
+      r.e = this.e - o.e;
+      r._n();
+      return r;
+    }
+    gt(o) {
+      o = D(o);
+      if (o.m === 0) return this.m > 0;
+      if (this.m === 0) return false;
+      if (this.m > 0 !== o.m > 0) return this.m > 0;
+      const pos = this.m > 0;
+      if (this.e !== o.e) return pos ? this.e > o.e : this.e < o.e;
+      return this.m > o.m;
+    }
+    gte(o) {
+      o = D(o);
+      return this.gt(o) || this.e === o.e && Math.abs(this.m - o.m) < 1e-9;
+    }
+    lt(o) {
+      return !this.gte(o);
+    }
+    lte(o) {
+      return !this.gt(o);
+    }
+    isZero() {
+      return this.m === 0;
+    }
+    floor() {
+      if (this.e < 0) return new __Dec(0);
+      if (this.e >= 15) return new __Dec(this);
+      const p = Math.pow(10, this.e);
+      return new __Dec(Math.floor(this.m * p));
+    }
+    ceil() {
+      if (this.e < 0) return new __Dec(this.m > 0 ? 1 : 0);
+      if (this.e >= 15) return new __Dec(this);
+      const p = Math.pow(10, this.e);
+      return new __Dec(Math.ceil(this.m * p));
+    }
+    toNumber() {
+      return this.m * Math.pow(10, this.e);
+    }
+    valueOf() {
+      return this.toNumber();
+    }
+    // permet G.gold < number sans coercion fragile
+    toJSON() {
+      return this.e === 0 ? String(this.m) : this.m + "e" + this.e;
+    }
+    toString() {
+      return this.toJSON();
+    }
+  };
+  function D(v) {
+    return v instanceof _Dec ? v : new _Dec(v);
+  }
+  function fmt(n) {
+    const d = D(n);
+    const e = d.e;
+    if (e < 3) return String(Math.floor(d.toNumber()));
+    const SUFFIXES = [
+      "",
+      "K",
+      "M",
+      "B",
+      "T",
+      "Qa",
+      "Qi",
+      "Sx",
+      "Sp",
+      "Oc",
+      "No",
+      "Dc",
+      "UDc",
+      "DDc",
+      "TDc",
+      "QaDc",
+      "QiDc",
+      "SxDc",
+      "SpDc",
+      "OcDc",
+      "NoDc",
+      "Vi"
+    ];
+    const tier = Math.floor(e / 3);
+    if (tier < SUFFIXES.length) {
+      const val = d.toNumber() / Math.pow(1e3, tier);
+      return val.toFixed(val < 10 ? 2 : val < 100 ? 1 : 0) + SUFFIXES[tier];
+    }
+    return d.m.toFixed(2) + "e" + d.e;
+  }
+
+  // src/core/events.js
+  var _listeners = {};
+  function on(event, fn) {
+    (_listeners[event] = _listeners[event] || []).push(fn);
+  }
+  function off(event, fn) {
+    if (!_listeners[event]) return;
+    _listeners[event] = _listeners[event].filter((f) => f !== fn);
+  }
+  function emit(event, payload) {
+    (_listeners[event] || []).forEach((fn) => fn(payload));
+  }
+
+  // src/core/rng.js
+  function createRng(seed) {
+    let s = seed >>> 0;
+    return function() {
+      s |= 0;
+      s = s + 1831565813 | 0;
+      let t = Math.imul(s ^ s >>> 15, 1 | s);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  var rng = createRng(Date.now());
+
+  // src/data/affixes.js
+  var affixes_exports = {};
+  __export(affixes_exports, {
+    AFFIX_TABLE: () => AFFIX_TABLE,
+    ITEM_RARITIES: () => ITEM_RARITIES,
+    ITEM_SLOTS: () => ITEM_SLOTS,
+    ITEM_SLOT_ICONS: () => ITEM_SLOT_ICONS,
+    ITEM_SLOT_NAMES: () => ITEM_SLOT_NAMES,
+    MATERIAL_DEFS: () => MATERIAL_DEFS,
+    SPHERE_DEFS: () => SPHERE_DEFS
+  });
+  var ITEM_RARITIES = {
+    common: { name: "Commun", color: "#9aa5b4", maxAffixes: 1, dropWeight: 50 },
+    magic: { name: "Magique", color: "#4f8fff", maxAffixes: 2, dropWeight: 28 },
+    rare: { name: "Rare", color: "#f1c40f", maxAffixes: 3, dropWeight: 14 },
+    epic: { name: "\xC9pique", color: "#c084fc", maxAffixes: 4, dropWeight: 6 },
+    legendary: { name: "L\xE9gendaire", color: "#ff8c00", maxAffixes: 5, dropWeight: 2 },
+    mythic: { name: "Mythique", color: "#ff3366", maxAffixes: 6, dropWeight: 0.5 }
+  };
+  var ITEM_SLOTS = ["weapon", "armor", "helm", "boots", "ring", "amulet"];
+  var ITEM_SLOT_NAMES = { weapon: "Arme", armor: "Armure", helm: "Casque", boots: "Bottes", ring: "Anneau", amulet: "Amulette" };
+  var ITEM_SLOT_ICONS = { weapon: "\u2694", armor: "\u{1F6E1}", helm: "\u26D1", boots: "\u{1F462}", ring: "\u{1F48D}", amulet: "\u{1F4FF}" };
+  var AFFIX_TABLE = [
+    { id: "dps_pct", label: "% DPS", stat: "dps_pct", min: 0.05, max: 0.3 },
+    { id: "hp_pct", label: "% HP", stat: "hp_pct", min: 0.05, max: 0.25 },
+    { id: "crit_ch", label: "% Crit", stat: "crit_ch", min: 0.02, max: 0.12 },
+    { id: "crit_dmg", label: "% D\xE9g\xE2ts Crit", stat: "crit_dmg", min: 0.1, max: 0.6 },
+    { id: "spark_dmg", label: "% Spark Dmg", stat: "spark_dmg", min: 0.08, max: 0.4 },
+    { id: "bc_gen", label: "% Gen BC", stat: "bc_gen", min: 0.05, max: 0.25 },
+    { id: "gold_pct", label: "% Or", stat: "gold_pct", min: 0.05, max: 0.35 },
+    { id: "cd_red", label: "R\xE9duction CD", stat: "cd_red", min: 0.05, max: 0.2 },
+    { id: "fire_dmg", label: "% D\xE9g Feu", stat: "elem_fire", min: 0.1, max: 0.4 },
+    { id: "water_dmg", label: "% D\xE9g Eau", stat: "elem_water", min: 0.1, max: 0.4 },
+    { id: "thunder_dmg", label: "% D\xE9g Foudre", stat: "elem_thunder", min: 0.1, max: 0.4 },
+    { id: "light_dmg", label: "% D\xE9g Lumi\xE8re", stat: "elem_light", min: 0.1, max: 0.4 },
+    { id: "dark_dmg", label: "% D\xE9g T\xE9n\xE8bres", stat: "elem_dark", min: 0.1, max: 0.4 }
+  ];
+  var SPHERE_DEFS = {
+    bijou_sacre: { name: "Bijou Sacr\xE9", desc: "+20% Stats", multiplier: 1.2 },
+    barre_legwand: { name: "Barre Legwand", desc: "+30% Stats", multiplier: 1.3 },
+    pierre_choc: { name: "Pierre de Choc", desc: "+25% D\xE9g\xE2ts", multiplier: 1.25 }
+  };
+  var MATERIAL_DEFS = {
+    fire_crystal: { name: "Cristal de Feu", color: "#e74c3c", rarity: "3\u2605 Component" },
+    fire_idol: { name: "Idole de Feu", color: "#c0392b", rarity: "4\u2605 Component" },
+    fire_totem: { name: "Totem de Feu", color: "#962d22", rarity: "5\u2605 Component" },
+    water_crystal: { name: "Cristal d'Eau", color: "#3498db", rarity: "3\u2605 Component" },
+    water_idol: { name: "Idole d'Eau", color: "#2980b9", rarity: "4\u2605 Component" },
+    water_totem: { name: "Totem d'Eau", color: "#1a5276", rarity: "5\u2605 Component" },
+    earth_crystal: { name: "Cristal de Terre", color: "#2ecc71", rarity: "3\u2605 Component" },
+    earth_idol: { name: "Idole de Terre", color: "#27ae60", rarity: "4\u2605 Component" },
+    earth_totem: { name: "Totem de Terre", color: "#1e8449", rarity: "5\u2605 Component" },
+    thunder_crystal: { name: "Cristal Foudre", color: "#f1c40f", rarity: "3\u2605 Component" },
+    thunder_idol: { name: "Idole Foudre", color: "#d4ac0d", rarity: "4\u2605 Component" },
+    thunder_totem: { name: "Totem Foudre", color: "#9a7d0a", rarity: "5\u2605 Component" },
+    light_crystal: { name: "Cristal Lumi\xE8re", color: "#fcf3cf", rarity: "3\u2605 Component" },
+    light_idol: { name: "Idole Lumi\xE8re", color: "#f9e79f", rarity: "4\u2605 Component" },
+    light_totem: { name: "Totem Lumi\xE8re", color: "#f7dc6f", rarity: "5\u2605 Component" },
+    dark_crystal: { name: "Cristal T\xE9n\xE8bres", color: "#9b59b6", rarity: "3\u2605 Component" },
+    dark_idol: { name: "Idole T\xE9n\xE8bres", color: "#8e44ad", rarity: "4\u2605 Component" },
+    dark_totem: { name: "Totem T\xE9n\xE8bres", color: "#6c3483", rarity: "5\u2605 Component" },
+    mimic: { name: "Mimic", color: "#a0b0c0", rarity: "Universal Component" }
+  };
+
+  // src/data/balance.js
+  var balance_exports = {};
+  __export(balance_exports, {
+    BB_TIER_COLOR: () => BB_TIER_COLOR,
+    BB_TIER_LABEL: () => BB_TIER_LABEL,
+    BB_TIER_MULT: () => BB_TIER_MULT,
+    BOSS_HERO_DROP: () => BOSS_HERO_DROP,
+    CREATE_RECIPE: () => CREATE_RECIPE,
+    ELEMENT_ADVANTAGE: () => ELEMENT_ADVANTAGE2,
+    ELITE_FRAGMENT_DROP: () => ELITE_FRAGMENT_DROP,
+    ESSENCE_REWARDS: () => ESSENCE_REWARDS,
+    EVO_COSTS: () => EVO_COSTS,
+    EVO_LEVEL_CAPS: () => EVO_LEVEL_CAPS,
+    EVO_MATS: () => EVO_MATS,
+    EVO_ZONE_GATES: () => EVO_ZONE_GATES,
+    FRAGMENTS_PER_HERO: () => FRAGMENTS_PER_HERO,
+    GEM_FAUCET_TARGET_MULT: () => GEM_FAUCET_TARGET_MULT,
+    GEM_REWARDS: () => GEM_REWARDS,
+    HERO_TYPES: () => HERO_TYPES,
+    HONOR_EXCHANGE: () => HONOR_EXCHANGE,
+    HONOR_RATES: () => HONOR_RATES,
+    HONOR_SUMMON_COST: () => HONOR_SUMMON_COST,
+    MASTER_POINTS_DUPE: () => MASTER_POINTS_DUPE,
+    MASTER_SHOP_COST: () => MASTER_SHOP_COST,
+    MILESTONES: () => MILESTONES,
+    MILESTONE_LABELS: () => MILESTONE_LABELS,
+    NODE_DROP_RATES: () => NODE_DROP_RATES,
+    NODE_GOLD_MULT: () => NODE_GOLD_MULT,
+    RARE_PITY: () => RARE_PITY,
+    RARE_RATES: () => RARE_RATES,
+    RARE_SUMMON_COST: () => RARE_SUMMON_COST,
+    RARE_SUMMON_COST_10: () => RARE_SUMMON_COST_10,
+    SPARK_WINDOW_MS: () => SPARK_WINDOW_MS,
+    STORAGE_EXPAND_COST: () => STORAGE_EXPAND_COST,
+    TYPE_MODS: () => TYPE_MODS
+  });
+  var EVO_LEVEL_CAPS = [0, 0, 0, 50, 80, 100, 150];
+  var EVO_COSTS = [0, 0, 0, 1e3, 1e4, 1e5];
+  var EVO_ZONE_GATES = [0, 0, 0, 1, 16, 36, 61];
+  var ELEMENT_ADVANTAGE2 = { "Feu": "Terre", "Eau": "Feu", "Terre": "Foudre", "Foudre": "Eau", "Lumi\xE8re": "T\xE9n\xE8bres", "T\xE9n\xE8bres": "Lumi\xE8re" };
+  var MILESTONES = [10, 25, 50, 100];
+  var MILESTONE_LABELS = { 10: "\u2726 \xC9veil I (\xD72,5)", 25: "\u2014 cap supprim\xE9 \u2014", 50: "\u2726\u2726 \xC9veil II (\xD73,5)", 100: "\u2726\u2726\u2726 \xC9veil III (\xD75)" };
+  var HERO_TYPES = ["Lord", "Anima", "Breaker", "Guardian", "Oracle"];
+  var TYPE_MODS = {
+    "Lord": { dps: 1, hp: 1, def: 1 },
+    "Anima": { dps: 1, hp: 1.25, def: 0.85 },
+    "Breaker": { dps: 1.25, hp: 0.9, def: 0.85 },
+    "Guardian": { dps: 0.85, hp: 1, def: 1.25 },
+    "Oracle": { dps: 0.95, hp: 0.95, def: 0.9, heal: 1.3 }
+  };
+  var BB_TIER_MULT = { BB: 1, SBB: 1.8, UBB: 4.5 };
+  var BB_TIER_LABEL = { BB: "Brave Burst", SBB: "Super BB", UBB: "\u26A1 ULTIMATE BB" };
+  var BB_TIER_COLOR = { BB: "#00d2ff", SBB: "#f1c40f", UBB: "#ff3366" };
+  var SPARK_WINDOW_MS = 1200;
+  var RARE_SUMMON_COST = 5;
+  var RARE_SUMMON_COST_10 = 45;
+  var RARE_RATES = { S: 0.05, A: 0.2, B: 0.35, base: 0.4 };
+  var RARE_PITY = 40;
+  var HONOR_SUMMON_COST = 500;
+  var HONOR_RATES = { hero3: 0.15, idol4: 0.15, crystal: 0.5, totem: 0.1, mimic: 0.1 };
+  var FRAGMENTS_PER_HERO = 50;
+  var BOSS_HERO_DROP = 0.03;
+  var ELITE_FRAGMENT_DROP = 0.05;
+  var NODE_DROP_RATES = {
+    combat: { crystal: 0.1, mimic: 0.02 },
+    elite: { idol: 0.35, fragment: ELITE_FRAGMENT_DROP },
+    treasure: { guaranteed: { crystal: 0.6, idol: 0.3, totem: 0.1 }, mimic: 0.05 },
+    boss: { totemFirstClear: 1, totemRepeat: 0.2, idol: 0.3, mimic: 0.1, hero: BOSS_HERO_DROP }
+  };
+  var NODE_GOLD_MULT = { combat: 1, elite: 2, treasure: 3, boss: 5, event: 2 };
+  var EVO_MATS = [
+    null,
+    null,
+    null,
+    { crystal: 5 },
+    // [3] 3★ → 4★
+    { idol: 5, mimic: 2 },
+    // [4] 4★ → 5★   (mimic réduit : 3 → 2)
+    { totem: 5, mimic: 3 }
+    // [5] 5★ → 6★   (mimic réduit : 5 → 3)
+  ];
+  var MASTER_POINTS_DUPE = { 3: 500, 4: 1500, 5: 5e3, 6: 15e3 };
+  var MASTER_SHOP_COST = { 3: 5e3, 4: 15e3, 5: 4e4, 6: 9e4 };
+  var GEM_FAUCET_TARGET_MULT = 1.4;
+  var GEM_REWARDS = {
+    stageFirstClear: 3,
+    // premier clear d'un stage normal
+    bossFirstClear: 5,
+    // premier clear d'un boss de biome
+    bossRepeat: 1
+    // boss rejoué
+  };
+  var STORAGE_EXPAND_COST = 5;
+  var CREATE_RECIPE = {
+    B: { gold: 4e3, crystal: 6 },
+    A: { gold: 3e4, idol: 6, mimic: 2 },
+    // §ÉCO v2 : mimic réduit 4 → 2
+    S: { gold: 15e4, totem: 8, mimic: 3, essence: 3 }
+    // mimic réduit 6 → 3
+  };
+  var HONOR_EXCHANGE = { crystal: 200, idol: 600, mimic: 1500 };
+  var ESSENCE_REWARDS = { stageFirstClear: 1, bossFirstClear: 3, bossRepeat: 0 };
+
+  // src/data/banners.js
+  var banners_exports = {};
+  __export(banners_exports, {
+    SUMMON_POOLS: () => SUMMON_POOLS
+  });
+  var SUMMON_POOLS = {
+    S: ["sera", "magress"],
+    A: ["margonia", "eze", "atro", "kikuri"],
+    B: ["ignis", "vargas", "selena", "lance", "zeln", "karl"]
+  };
+
+  // src/data/biomes.js
+  var biomes_exports = {};
+  __export(biomes_exports, {
+    BIOME_BGS: () => BIOME_BGS,
+    BIOME_GLOW_COLORS: () => BIOME_GLOW_COLORS,
+    ELEM_BADGE_COLOR: () => ELEM_BADGE_COLOR,
+    ELEM_COLORS: () => ELEM_COLORS,
+    ELEM_ICONS: () => ELEM_ICONS,
+    TIER_PREFIXES: () => TIER_PREFIXES,
+    ZONE_THEMES: () => ZONE_THEMES2
+  });
+  var ZONE_THEMES2 = [
+    { name: "Cavernes d'Agni", elem: "Feu", bossName: "Dragon d'Agni", monsters: ["Slime de Lave", "Canid\xE9 d'Enfer", "\xC9l\xE9mentaire de Scorie"], bgHue: 0 },
+    { name: "Oc\xE9an \xC9ternel", elem: "Eau", bossName: "L\xE9viathan", monsters: ["M\xE9duse de Cristal", "\xC9claireur Squalide", "Tortue de R\xE9cif"], bgHue: 185 },
+    { name: "For\xEAt de Ga\xEFa", elem: "Terre", bossName: "Ancien Gardien", monsters: ["Mandragore Bourgeonnante", "Esprit Sylvestre", "Arachnide des Bois"], bgHue: 95 },
+    { name: "Pic Foudroy\xE9", elem: "Foudre", bossName: "Titan Foudre", monsters: ["Scarab\xE9e Volte", "Rapace des Nu\xE9es", "Renard de Foudre"], bgHue: 50 },
+    { name: "Sanctuaire C\xE9leste", elem: "Lumi\xE8re", bossName: "Archange D\xE9chu", monsters: ["\xC9clat Flottant", "P\xE9gase de Marbre", "Sentinelle Sacr\xE9e"], bgHue: 40 },
+    { name: "N\xE9ant des Ombres", elem: "T\xE9n\xE8bres", bossName: "Faucheur d'\xC2mes", monsters: ["Ombre Errante", "Gargouille de Crypte", "Spectre Maudit"], bgHue: 270 }
+  ];
+  var TIER_PREFIXES = ["", "Alfa ", "L\xE9gendaire ", "Mythique ", "Divin "];
+  var BIOME_BGS = [
+    "assets/Biome/Biome FEU _ Les Cavernes d'Agni.png",
+    // 0 — Feu      ✓
+    "assets/Biome/Biome EAU _ L'Oc\xE9an \xC9ternel.png",
+    // 1 — Eau      ✓
+    "assets/Biome/Biome TERRE _ La For\xEAt de Ga\xEFa.png",
+    // 2 — Terre    ✓
+    "assets/Biome/Biome FOUDRE _ Le Pic Foudroy\xE9.png",
+    // 3 — Foudre   ✓
+    "assets/Biome/Biome LUMI\xC8RE _ Le Sanctuaire C\xE9leste.png",
+    // 4 — Lumière  ✓
+    "assets/Biome/Biome T\xC9N\xC8BRES _ Le N\xE9ant des Ombres.png"
+    // 5 — Ténèbres ✓
+  ];
+  var BIOME_GLOW_COLORS = [
+    "rgba(231, 76,  60,  0.75)",
+    // Feu
+    "rgba(52,  152, 219, 0.75)",
+    // Eau
+    "rgba(39,  174, 96,  0.75)",
+    // Terre
+    "rgba(241, 196, 15,  0.75)",
+    // Foudre
+    "rgba(253, 243, 150, 0.75)",
+    // Lumière
+    "rgba(155, 89,  182, 0.75)"
+    // Ténèbres
+  ];
+  var ELEM_BADGE_COLOR = {
+    Feu: "#e74c3c",
+    Eau: "#3498db",
+    Terre: "#2ecc71",
+    Foudre: "#f1c40f",
+    Lumi\u00E8re: "#fcf3cf",
+    T\u00E9n\u00E8bres: "#9b59b6"
+  };
+  var ELEM_ICONS = {
+    "Feu": '<i class="ra ra-fire"></i>',
+    "Eau": '<i class="ra ra-droplet"></i>',
+    "Terre": '<i class="ra ra-leaf"></i>',
+    "Foudre": '<i class="ra ra-lightning-bolt"></i>',
+    "Lumi\xE8re": '<i class="ra ra-sun"></i>',
+    "T\xE9n\xE8bres": '<i class="ra ra-skull"></i>'
+  };
+  var ELEM_COLORS = { "Feu": "#e74c3c", "Eau": "#3498db", "Terre": "#2ecc71", "Foudre": "#f1c40f", "Lumi\xE8re": "#fff9c4", "T\xE9n\xE8bres": "#9b59b6" };
+
+  // src/data/heroes.js
+  var heroes_exports = {};
+  __export(heroes_exports, {
+    HERO_DEFS: () => HERO_DEFS
+  });
+  var HERO_DEFS = [
+    // ── FEU ──
+    {
+      id: "ignis",
+      name: "Ignis",
+      role: "mage",
+      element: "fire",
+      rarity: 3,
+      baseDPS: 2,
+      baseCost: 50,
+      baseBudget: 100,
+      titles: ["\xC9p\xE9iste Ignis", "Chevalier Ignis", "G\xE9n\xE9ral Ignis", "Dieu du Feu Ignis"],
+      lore: "Un guerrier impulsif maniant une \xE9p\xE9e envelopp\xE9e de flammes c\xE9lestes.",
+      elem: "Feu",
+      icon: '<i class="ra ra-fire"></i>',
+      bb: { cost: 100, multiplier: 120, effectType: "damage_pure", effectValue: 0 },
+      leaderSkill: { target: "element", targetDetail: "fire", statModifier: "dps", modifierValue: 0.35 }
+    },
+    {
+      id: "vargas",
+      name: "Vargas",
+      role: "support",
+      element: "fire",
+      rarity: 3,
+      baseDPS: 3,
+      baseCost: 80,
+      baseBudget: 150,
+      titles: ["Soldat Vargas", "V\xE9t\xE9ran Vargas", "Commandant Vargas", "L\xE9gendaire Vargas"],
+      lore: "Un ancien commandant qui galvanise ses alli\xE9s en surchargeant leur jauge de BC.",
+      elem: "Feu",
+      icon: '<i class="ra ra-fire"></i>',
+      bb: { cost: 50, multiplier: 40, effectType: "heal_bc", effectValue: 30 },
+      leaderSkill: { target: "all", targetDetail: "", statModifier: "bc_rate", modifierValue: 0.3 }
+    },
+    // ── EAU ──
+    {
+      id: "selena",
+      name: "Selena",
+      role: "support",
+      element: "water",
+      rarity: 3,
+      baseDPS: 5,
+      baseCost: 200,
+      baseBudget: 300,
+      titles: ["Mage Selena", "Sir\xE8ne Selena", "Reine Selena", "D\xE9esse de Glace Selena"],
+      lore: "H\xE9riti\xE8re l\xE9gendaire d'une ancienne lign\xE9e capable de soigner et de doubler la fortune.",
+      elem: "Eau",
+      icon: '<i class="ra ra-droplet"></i>',
+      bb: { cost: 50, multiplier: 35, effectType: "heal_bc", effectValue: 0.5 },
+      leaderSkill: { target: "element", targetDetail: "water", statModifier: "pv", modifierValue: 0.4 }
+    },
+    {
+      id: "margonia",
+      name: "Margonia",
+      role: "mage",
+      element: "water",
+      rarity: 3,
+      baseDPS: 9,
+      baseCost: 380,
+      baseBudget: 500,
+      titles: ["Mage Margonia", "Cryomage Margonia", "Archimage Margonia", "Ma\xEEtresse du Givre Margonia"],
+      lore: "Une enchanteresse qui lance des pics de givre pour figer et geler compl\xE8tement les cibles.",
+      elem: "Eau",
+      icon: '<i class="ra ra-droplet"></i>',
+      bb: { cost: 100, multiplier: 130, effectType: "damage_pure", effectValue: 0 },
+      leaderSkill: { target: "element", targetDetail: "water", statModifier: "dps", modifierValue: 0.35 }
+    },
+    // ── TERRE ──
+    {
+      id: "lance",
+      name: "Lance",
+      role: "tank",
+      element: "earth",
+      rarity: 3,
+      baseDPS: 15,
+      baseCost: 800,
+      baseBudget: 1e3,
+      titles: ["Garde Lance", "Lancier Lance", "Protecteur Lance", "Ga\xEFa Lance"],
+      lore: "Un guerrier li\xE9 \xE0 l'Arbre Monde prot\xE9geant l'\xE9quipe derri\xE8re un rempart v\xE9g\xE9tal.",
+      elem: "Terre",
+      icon: '<i class="ra ra-leaf"></i>',
+      bb: { cost: 60, multiplier: 45, effectType: "mitigation", effectValue: 0.5 },
+      leaderSkill: { target: "all", targetDetail: "", statModifier: "def", modifierValue: 0.3 }
+    },
+    {
+      id: "zeln",
+      name: "Zeln",
+      role: "mage",
+      element: "earth",
+      rarity: 3,
+      baseDPS: 22,
+      baseCost: 1400,
+      baseBudget: 1500,
+      titles: ["Chasseur Zeln", "Traqueur Zeln", "Ma\xEEtre des Bois Zeln", "Esprit de la For\xEAt Zeln"],
+      lore: "Un chasseur furtif ex\xE9cutant de triples frappes rapides d'une violence inou\xEFe.",
+      elem: "Terre",
+      icon: '<i class="ra ra-leaf"></i>',
+      bb: { cost: 100, multiplier: 140, effectType: "damage_pure", effectValue: 0 },
+      leaderSkill: { target: "role", targetDetail: "mage", statModifier: "dps", modifierValue: 0.4 }
+    },
+    // ── FOUDRE ──
+    {
+      id: "karl",
+      name: "Karl",
+      role: "support",
+      element: "thunder",
+      rarity: 3,
+      baseDPS: 50,
+      baseCost: 3e3,
+      baseBudget: 3e3,
+      titles: ["Dragon Karl", "Cavalier Karl", "Dragon Foudroyant Karl", "D\xE9mon Karl"],
+      lore: "Mi-humain, mi-dragon, d\xE9clenchant des souffles \xE9lectriques foudroyants.",
+      elem: "Foudre",
+      icon: '<i class="ra ra-lightning-bolt"></i>',
+      bb: { cost: 50, multiplier: 45, effectType: "heal_bc", effectValue: 30 },
+      leaderSkill: { target: "all", targetDetail: "", statModifier: "bb_cost", modifierValue: -0.2 }
+    },
+    {
+      id: "eze",
+      name: "Eze",
+      role: "mage",
+      element: "thunder",
+      rarity: 3,
+      baseDPS: 85,
+      baseCost: 6e3,
+      baseBudget: 5e3,
+      titles: ["Sauvage Eze", "Guerrier Eze", "Berserker Eze", "Dieu Foudre Eze"],
+      lore: "Un gladiateur redoutable qui tire sa force brute de la foudre pour des coups critiques massifs.",
+      elem: "Foudre",
+      icon: '<i class="ra ra-lightning-bolt"></i>',
+      bb: { cost: 100, multiplier: 150, effectType: "damage_pure", effectValue: 0 },
+      leaderSkill: { target: "element", targetDetail: "thunder", statModifier: "dps", modifierValue: 0.35 }
+    },
+    // ── LUMIÈRE ──
+    {
+      id: "sera",
+      name: "Sera",
+      role: "support",
+      element: "light",
+      rarity: 3,
+      baseDPS: 250,
+      baseCost: 35e3,
+      baseBudget: 15e3,
+      titles: ["Sainte Sera", "Valkyrie Sera", "Archange Sera", "D\xE9esse Cr\xE9atrice Sera"],
+      lore: "La paladine sacr\xE9e descendue des cieux pour restaurer int\xE9gralement la vie de la squad.",
+      elem: "Lumi\xE8re",
+      icon: '<i class="ra ra-sun"></i>',
+      bb: { cost: 50, multiplier: 50, effectType: "heal_bc", effectValue: 1 },
+      leaderSkill: { target: "all", targetDetail: "", statModifier: "pv", modifierValue: 0.25 }
+    },
+    {
+      id: "atro",
+      name: "Atro",
+      role: "mage",
+      element: "light",
+      rarity: 3,
+      baseDPS: 400,
+      baseCost: 55e3,
+      baseBudget: 25e3,
+      titles: ["Paladin Atro", "Seigneur Atro", "Champion C\xE9leste Atro", "Dieu Solaire Atro"],
+      lore: "Un paladin d'\xE9lite alliant frappe sacr\xE9e offensive et soins l\xE9gers de soutien.",
+      elem: "Lumi\xE8re",
+      icon: '<i class="ra ra-sun"></i>',
+      bb: { cost: 100, multiplier: 110, effectType: "damage_pure", effectValue: 0 },
+      leaderSkill: { target: "element", targetDetail: "light", statModifier: "dps", modifierValue: 0.35 }
+    },
+    // ── TÉNÈBRES ──
+    {
+      id: "magress",
+      name: "Magress",
+      role: "tank",
+      element: "dark",
+      rarity: 3,
+      baseDPS: 700,
+      baseCost: 95e3,
+      baseBudget: 4e4,
+      titles: ["Guerrier Magress", "Chevalier Noir Magress", "Seigneur des Ombres Magress", "D\xE9mon Absolu Magress"],
+      lore: "Un ancien g\xE9n\xE9ral corrompu dont l'\xE9p\xE9e d\xE9vore les \xE2mes pour infliger le plus haut multiplicateur.",
+      elem: "T\xE9n\xE8bres",
+      icon: '<i class="ra ra-skull"></i>',
+      bb: { cost: 60, multiplier: 50, effectType: "mitigation", effectValue: 0.5 },
+      leaderSkill: { target: "element", targetDetail: "dark", statModifier: "def", modifierValue: 0.4 }
+    },
+    {
+      id: "kikuri",
+      name: "Kikuri",
+      role: "support",
+      element: "dark",
+      rarity: 3,
+      baseDPS: 500,
+      baseCost: 72e3,
+      baseBudget: 3e4,
+      titles: ["Apprentie Kikuri", "Pr\xEAtresse Kikuri", "Grande Pr\xEAtresse Kikuri", "D\xE9esse des Mal\xE9dictions Kikuri"],
+      lore: "Une pr\xEAtresse spectrale qui maudit les ennemis pour affaiblir d\xE9finitivement leur puissance.",
+      elem: "T\xE9n\xE8bres",
+      icon: '<i class="ra ra-skull"></i>',
+      bb: { cost: 50, multiplier: 30, effectType: "heal_bc", effectValue: 0.5 },
+      leaderSkill: { target: "element", targetDetail: "dark", statModifier: "dps", modifierValue: 0.35 }
+    },
+    {
+      id: "unit_10012",
+      name: "Vargas C\xE9leste",
+      role: "mage",
+      element: "light",
+      rarity: 5,
+      baseDPS: 1e3,
+      baseCost: 0,
+      baseBudget: 1,
+      titles: ["Invocateur 10012", "Guerrier C\xE9leste 10012", "Dieu Supr\xEAme 10012"],
+      lore: "H\xE9ros exp\xE9rimental issu d'une faille temporelle, programm\xE9 pour terrasser les cibles de test.",
+      elem: "Lumi\xE8re",
+      icon: '<i class="ra ra-sun"></i>',
+      bb: { cost: 80, multiplier: 200, effectType: "damage_pure", effectValue: 0 },
+      leaderSkill: { target: "all", targetDetail: "", statModifier: "dps", modifierValue: 0.5 }
+    },
+    {
+      id: "unit_10013",
+      name: "Selena Sombre",
+      role: "mage",
+      element: "dark",
+      rarity: 5,
+      baseDPS: 1200,
+      baseCost: 0,
+      baseBudget: 1,
+      titles: ["Apprentie 10013", "Guerrier Ombre 10013", "Imp\xE9ratrice 10013"],
+      lore: "Une manifestation de l'ombre invoqu\xE9e sp\xE9cifiquement pour analyser la force de frappe des \xE9quipes.",
+      elem: "T\xE9n\xE8bres",
+      icon: '<i class="ra ra-skull"></i>',
+      bb: { cost: 80, multiplier: 220, effectType: "damage_pure", effectValue: 0 },
+      leaderSkill: { target: "all", targetDetail: "", statModifier: "dps", modifierValue: 0.5 }
+    },
+    {
+      id: "unit_ignis_frame",
+      name: "Ignis Divin",
+      role: "mage",
+      element: "fire",
+      rarity: 5,
+      baseDPS: 1500,
+      baseCost: 0,
+      baseBudget: 1,
+      titles: ["Dieu Flamboyant Ignis", "Seigneur Embras\xE9 Ignis", "Ignis Divin"],
+      lore: "Le guerrier de feu originel rev\xEAtu d'une armure d'orbe divin, dot\xE9 d'animations d'impact d\xE9vastatrices.",
+      elem: "Feu",
+      icon: '<i class="ra ra-fire"></i>',
+      bb: { cost: 80, multiplier: 250, effectType: "damage_pure", effectValue: 0 },
+      leaderSkill: { target: "all", targetDetail: "", statModifier: "dps", modifierValue: 0.5 }
+    }
+  ];
+
+  // src/data/liveops.js
+  var liveops_exports = {};
+  __export(liveops_exports, {
+    ACHIEVEMENTS_DEFS: () => ACHIEVEMENTS_DEFS,
+    DQ_POOL: () => DQ_POOL,
+    LOGIN_REWARDS: () => LOGIN_REWARDS,
+    OBJECTIVES: () => OBJECTIVES,
+    WEEKLY_BOSSES: () => WEEKLY_BOSSES
+  });
+  var ACHIEVEMENTS_DEFS = [
+    { id: "k10", name: "D\xE9butant", desc: "Tuez 10 Monstres", req: (s) => s.totalKills >= 10, reward: 5 },
+    { id: "k100", name: "Chasseur", desc: "Tuez 100 Monstres", req: (s) => s.totalKills >= 100, reward: 10 },
+    { id: "z10", name: "Explorateur", desc: "Atteignez la Zone 10", req: (s) => s.maxZone >= 10, reward: 15 },
+    { id: "c1k", name: "Clickeur", desc: "Faites 1 000 Clics", req: (s) => s.totalClicks >= 1e3, reward: 5 },
+    { id: "b5", name: "Tueur de Boss", desc: "Tuez 5 Boss", req: (s) => s.bossKills >= 5, reward: 10 },
+    { id: "sum3", name: "Invocateur", desc: "Poss\xE9dez 3 H\xE9ros", req: (s) => Object.keys(s.heroes).length >= 3, reward: 10 }
+  ];
+  var LOGIN_REWARDS = [
+    {
+      icon: "\u2694",
+      label: "Jour 1",
+      val: "500 PH",
+      apply() {
+        G.honorPoints += 500;
+      },
+      desc: "500 PH"
+    },
+    {
+      icon: "\u{1F48E}",
+      label: "Jour 2",
+      val: "2 Gemmes",
+      apply() {
+        G.gems += 2;
+      },
+      desc: "2 \u{1F48E}"
+    },
+    {
+      icon: "\u221E",
+      label: "Jour 3",
+      val: "2 Cristaux",
+      apply() {
+        G.materials.fire_crystal = (G.materials.fire_crystal || 0) + 1;
+        G.materials.water_crystal = (G.materials.water_crystal || 0) + 1;
+      },
+      desc: "2 Cristaux"
+    },
+    {
+      icon: "\u{1F48E}",
+      label: "Jour 4",
+      val: "5 Gemmes",
+      apply() {
+        G.gems += 5;
+      },
+      desc: "5 \u{1F48E}"
+    },
+    {
+      icon: "\u2728",
+      label: "Jour 5",
+      val: "Mimic +1K PH",
+      apply() {
+        G.materials.mimic = (G.materials.mimic || 0) + 1;
+        G.honorPoints += 1e3;
+      },
+      desc: "1 Mimic + 1K PH"
+    },
+    {
+      icon: "\u{1F48E}",
+      label: "Jour 6",
+      val: "10 Gemmes",
+      apply() {
+        G.gems += 10;
+      },
+      desc: "10 \u{1F48E}"
+    },
+    {
+      icon: "\u{1F31F}",
+      label: "Jour 7",
+      val: "INVOCATION",
+      apply() {
+        setTimeout(summonRare, 400);
+      },
+      desc: "Rare Summon offert !"
+    }
+  ];
+  var DQ_POOL = [
+    { id: "dq_k50", name: "Chasseur du Jour", type: "kills", target: 50, apply() {
+      G.gems += 1;
+    }, rewardDesc: "1 \u{1F48E}" },
+    { id: "dq_k150", name: "Tueur de Monstres", type: "kills", target: 150, apply() {
+      G.gems += 2;
+    }, rewardDesc: "2 \u{1F48E}" },
+    { id: "dq_k400", name: "Exterminateur", type: "kills", target: 400, apply() {
+      G.gems += 4;
+    }, rewardDesc: "4 \u{1F48E}" },
+    { id: "dq_b3", name: "Fl\xE9au des Boss", type: "bossKills", target: 3, apply() {
+      G.gems += 2;
+    }, rewardDesc: "2 \u{1F48E}" },
+    { id: "dq_b8", name: "Bosseur Acharn\xE9", type: "bossKills", target: 8, apply() {
+      G.gems += 5;
+    }, rewardDesc: "5 \u{1F48E}" },
+    { id: "dq_bb3", name: "Brave Burst !", type: "bbUses", target: 3, apply() {
+      G.honorPoints += 400;
+    }, rewardDesc: "400 PH" },
+    { id: "dq_bb8", name: "Ma\xEEtre du Burst", type: "bbUses", target: 8, apply() {
+      G.honorPoints += 1e3;
+    }, rewardDesc: "1 000 PH" },
+    { id: "dq_c200", name: "Cliqueur Acharn\xE9", type: "clicks", target: 200, apply() {
+      G.honorPoints += 500;
+    }, rewardDesc: "500 PH" },
+    { id: "dq_c600", name: "Tapeur Infatigable", type: "clicks", target: 600, apply() {
+      G.gems += 1;
+      G.honorPoints += 300;
+    }, rewardDesc: "1 \u{1F48E} + 300 PH" },
+    { id: "dq_g5k", name: "L'Or Coule !", type: "goldGained", target: 5e3, apply() {
+      G.gems += 1;
+    }, rewardDesc: "1 \u{1F48E}" }
+  ];
+  var WEEKLY_BOSSES = [
+    {
+      name: "Titan de Granit",
+      elem: "Terre",
+      icon: "\u{1F5FF}",
+      hp: 5e5,
+      color: "#2ecc71",
+      mat: "earth_totem",
+      gems: 15,
+      ph: 2e3,
+      lore: `"Un colosse de pierre immuable, gardien oubli\xE9 d'un \xE2ge r\xE9volu."`
+    },
+    {
+      name: "Kraken des Abysses",
+      elem: "Eau",
+      icon: "\u{1F991}",
+      hp: 75e4,
+      color: "#3498db",
+      mat: "water_totem",
+      gems: 20,
+      ph: 2500,
+      lore: '"Un monstre marin mill\xE9naire \xE9mergeant des profondeurs les plus obscures."'
+    },
+    {
+      name: "Phoenix \xC9ternel",
+      elem: "Feu",
+      icon: "\u{1F525}",
+      hp: 9e5,
+      color: "#e74c3c",
+      mat: "fire_totem",
+      gems: 25,
+      ph: 3e3,
+      lore: '"Un oiseau l\xE9gendaire renaissant sans cesse de ses cendres ardentes."'
+    },
+    {
+      name: "Hydre Foudre",
+      elem: "Foudre",
+      icon: "\u26A1",
+      hp: 11e5,
+      color: "#f1c40f",
+      mat: "thunder_totem",
+      gems: 30,
+      ph: 3500,
+      lore: '"Une hydre \xE0 sept t\xEAtes crachant des \xE9clairs d\xE9vastateurs."'
+    },
+    {
+      name: "Archange Corrompu",
+      elem: "Lumi\xE8re",
+      icon: "\u{1F47C}",
+      hp: 15e5,
+      color: "#fff9c4",
+      mat: "light_totem",
+      gems: 40,
+      ph: 5e3,
+      lore: '"Un ange d\xE9chu dont la lumi\xE8re divine a \xE9t\xE9 souill\xE9e par les t\xE9n\xE8bres."'
+    },
+    {
+      name: "Seigneur des Ombres",
+      elem: "T\xE9n\xE8bres",
+      icon: "\u{1F480}",
+      hp: 2e6,
+      color: "#9b59b6",
+      mat: "dark_totem",
+      gems: 50,
+      ph: 7e3,
+      lore: `"L'entit\xE9 la plus sombre jamais vaincue par une squad de h\xE9ros."`
+    }
+  ];
+  var OBJECTIVES = [
+    { zone: 5, label: "Atteindre la Zone 5 !" },
+    { zone: 10, label: "Vaincs le Boss de la Zone 10 !" },
+    { zone: 25, label: "Atteins la Zone 25 !" },
+    { zone: 50, label: "Zone 50 \u2014 Prestige disponible !" },
+    { zone: 100, label: "Atteins la Zone 100 \u2014 L\xE9gende !" },
+    { zone: 200, label: "Zone 200 \u2014 Ma\xEEtre Absolu !" }
+  ];
+
+  // src/data/monsters.js
+  var monsters_exports = {};
+  __export(monsters_exports, {
+    MONSTER_IMAGES: () => MONSTER_IMAGES
+  });
+  var MONSTER_IMAGES = [
+    // Biome 1 — Feu (Assets existants)
+    ["assets/monster/biome 1/slime-de-lave-1.png", "assets/monster/biome 1/Canid\xE9-d'enfer-2.png", "assets/monster/biome 1/\xC9l\xE9mentaire-de-Scorie.png", "assets/monster/biome 1/BOSS _ Dragon d'Agni.png"],
+    // Biome 2 — Eau (Assets existants)
+    ["assets/monster/biome 2/M\xE9duse de Cristal (Commun 1).png", "assets/monster/biome 2/\xC9claireur Squalide (Commun 2).png", "assets/monster/biome 2/Tortue de R\xE9cif (Commun 3).png", "assets/monster/biome 2/\u{1F451} BOSS _ L\xE9viathan.png"],
+    // Biomes 3 à 6 (Utilisent la structure de fallback CSS hue-rotate basée sur le Biome 1)
+    null,
+    null,
+    null,
+    null
+  ];
+
+  // src/data/skilltree.js
+  var skilltree_exports = {};
+  __export(skilltree_exports, {
+    PARAGON_CATEGORIES: () => PARAGON_CATEGORIES,
+    SKILL_TREE_DEF: () => SKILL_TREE_DEF
+  });
+  var SKILL_TREE_DEF = {
+    // Branche Offensive
+    off_dps1: { branch: "off", name: "Puissance Brute", desc: "+10% DPS squad", cost: 1, requires: null, bonus: { dps_pct: 0.1 } },
+    off_dps2: { branch: "off", name: "Frappe Pr\xE9cise", desc: "+15% DPS squad", cost: 2, requires: "off_dps1", bonus: { dps_pct: 0.15 } },
+    off_crit1: { branch: "off", name: "\u0152il Critique", desc: "+5% chance crit", cost: 2, requires: "off_dps1", bonus: { crit_ch: 0.05 } },
+    off_spark1: { branch: "off", name: "Ma\xEEtrise Spark", desc: "+20% Spark DMG", cost: 3, requires: "off_crit1", bonus: { spark_dmg: 0.2 } },
+    off_dps3: { branch: "off", name: "Fureur \xC9ternelle", desc: "+25% DPS squad", cost: 5, requires: "off_dps2", bonus: { dps_pct: 0.25 } },
+    // Branche Défensive
+    def_hp1: { branch: "def", name: "Endurance", desc: "+15% HP \xE9quipe", cost: 1, requires: null, bonus: { hp_pct: 0.15 } },
+    def_hp2: { branch: "def", name: "Vitalit\xE9 Sacr\xE9e", desc: "+25% HP \xE9quipe", cost: 2, requires: "def_hp1", bonus: { hp_pct: 0.25 } },
+    def_mit1: { branch: "def", name: "Bouclier \xC9sot\xE9rique", desc: "-15% D\xE9g\xE2ts subis", cost: 3, requires: "def_hp1", bonus: { dmg_red: 0.15 } },
+    def_hp3: { branch: "def", name: "C\u0153ur de Pierre", desc: "+40% HP \xE9quipe", cost: 5, requires: "def_hp2", bonus: { hp_pct: 0.4 } },
+    // Branche Économie
+    eco_gold1: { branch: "eco", name: "Nez pour l'Or", desc: "+20% Or", cost: 1, requires: null, bonus: { gold_pct: 0.2 } },
+    eco_gold2: { branch: "eco", name: "Avalanche d'Or", desc: "+35% Or", cost: 2, requires: "eco_gold1", bonus: { gold_pct: 0.35 } },
+    eco_drop1: { branch: "eco", name: "Chance du Chasseur", desc: "+20% Drop rate", cost: 2, requires: "eco_gold1", bonus: { drop_bonus: 0.2 } },
+    eco_gold3: { branch: "eco", name: "Tr\xE9sorier Supr\xEAme", desc: "+50% Or", cost: 5, requires: "eco_gold2", bonus: { gold_pct: 0.5 } },
+    // Branche Idle
+    idle_off1: { branch: "idl", name: "Synergie Passive", desc: "+10% DPS passif", cost: 1, requires: null, bonus: { idle_dps: 0.1 } },
+    idle_off2: { branch: "idl", name: "Flux Ininterrompu", desc: "+25% gains hors-ligne", cost: 3, requires: "idle_off1", bonus: { offline_mult: 0.25 } },
+    idle_bc1: { branch: "idl", name: "R\xE9sonance BC", desc: "+15% gen BC auto", cost: 2, requires: "idle_off1", bonus: { bc_gen: 0.15 } },
+    // Branche Élémentaire
+    elem_fire1: { branch: "ele", name: "C\u0153ur de Flamme", desc: "+15% Feu", cost: 2, requires: null, bonus: { elem_fire: 0.15 } },
+    elem_water1: { branch: "ele", name: "Torrent Bleu", desc: "+15% Eau", cost: 2, requires: null, bonus: { elem_water: 0.15 } },
+    elem_thunder1: { branch: "ele", name: "Foudre Vivante", desc: "+15% Foudre", cost: 2, requires: null, bonus: { elem_thunder: 0.15 } },
+    elem_all1: { branch: "ele", name: "Harmonie \xC9l\xE9mentaire", desc: "+10% tous \xE9l\xE9m.", cost: 5, requires: "elem_fire1", bonus: { elem_fire: 0.1, elem_water: 0.1, elem_thunder: 0.1, elem_light: 0.1, elem_dark: 0.1 } }
+  };
+  var PARAGON_CATEGORIES = {
+    strength: { label: "Force", stat: "dps_pct", costBase: 1, costGrowth: 1.15 },
+    vitality: { label: "Vitalit\xE9", stat: "hp_pct", costBase: 1, costGrowth: 1.15 },
+    fortune: { label: "Fortune", stat: "gold_pct", costBase: 1, costGrowth: 1.15 },
+    arcane: { label: "Arcane", stat: "bc_gen", costBase: 1, costGrowth: 1.2 }
+  };
+
+  // src/data/squad.js
+  var squad_exports = {};
+  __export(squad_exports, {
+    FORMATIONS: () => FORMATIONS,
+    SYNERGIES: () => SYNERGIES
+  });
+  var FORMATIONS = [
+    {
+      id: "avant-garde",
+      name: "Avant-Garde",
+      icon: '<i class="ra ra-sword"></i>',
+      desc: "\xC9quilibre parfait. Aucun bonus ni malus.",
+      statLine: "DPS \xD71  \xB7  HP \xD71",
+      color: "#94a3b8",
+      dpsMult: 1,
+      hpMult: 1
+    },
+    {
+      id: "assaut",
+      name: "Assaut Total",
+      icon: "\u{1F5E1}\uFE0F",
+      desc: "Frappe fort, tient moins. +25% DPS, -25% HP.",
+      statLine: "DPS +25%  \xB7  HP -25%",
+      color: "#f87171",
+      dpsMult: 1.25,
+      hpMult: 0.75
+    },
+    {
+      id: "tortue",
+      name: "Tortue de Fer",
+      icon: '<i class="ra ra-shield"></i>',
+      desc: "D\xE9fense maximale. -15% DPS, +50% HP, +40% DEF.",
+      statLine: "DPS -15%  \xB7  HP +50%  \xB7  DEF +40%",
+      color: "#60a5fa",
+      dpsMult: 0.85,
+      hpMult: 1.5,
+      defMult: 1.4
+    },
+    {
+      id: "arcane",
+      name: "Cercle Arcane",
+      icon: '<i class="ra ra-crystal-ball"></i>',
+      desc: "Lumi\xE8re, Eau & T\xE9n\xE8bres : +40% DPS. Autres : -10%.",
+      statLine: "Magie +40%  \xB7  Physique -10%",
+      color: "#c084fc",
+      heroMult: (def) => ["Lumi\xE8re", "Eau", "T\xE9n\xE8bres"].includes(def.elem) ? 1.4 : 0.9
+    }
+  ];
+  var SYNERGIES = [
+    {
+      id: "duo_feu",
+      name: "Duo de Feu",
+      icon: "\u{1F525}",
+      condition: (heroes) => heroes.filter((d) => d.elem === "Feu").length >= 2,
+      desc: "+30% DPS global",
+      dpsMult: 1.3,
+      color: "#e05533",
+      borderColor: "rgba(224,85,51,0.4)",
+      bgColor: "rgba(224,85,51,0.1)"
+    },
+    {
+      id: "duo_eau",
+      name: "Bin\xF4me Aquatique",
+      icon: "\u{1F4A7}",
+      condition: (heroes) => heroes.filter((d) => d.elem === "Eau").length >= 2,
+      desc: "+25% DPS, +15% HP",
+      dpsMult: 1.25,
+      hpMult: 1.15,
+      color: "#3388ee",
+      borderColor: "rgba(51,136,238,0.4)",
+      bgColor: "rgba(51,136,238,0.1)"
+    },
+    {
+      id: "duo_terre",
+      name: "Bastion Terrestre",
+      icon: "\u{1FAA8}",
+      condition: (heroes) => heroes.filter((d) => d.elem === "Terre").length >= 2,
+      desc: "+15% DPS, +20% HP",
+      dpsMult: 1.15,
+      hpMult: 1.2,
+      color: "#7ec850",
+      borderColor: "rgba(126,200,80,0.4)",
+      bgColor: "rgba(126,200,80,0.1)"
+    },
+    {
+      id: "duo_foudre",
+      name: "Temp\xEAte \xC9lectrique",
+      icon: "\u26A1",
+      condition: (heroes) => heroes.filter((d) => d.elem === "Foudre").length >= 2,
+      desc: "+35% DPS, -10% HP",
+      dpsMult: 1.35,
+      hpMult: 0.9,
+      color: "#ffe000",
+      borderColor: "rgba(255,224,0,0.4)",
+      bgColor: "rgba(255,224,0,0.08)"
+    },
+    {
+      id: "duo_lumiere",
+      name: "Aura Sacr\xE9e",
+      icon: "\u2728",
+      condition: (heroes) => heroes.filter((d) => d.elem === "Lumi\xE8re").length >= 2,
+      desc: "+20% DPS, +10% HP",
+      dpsMult: 1.2,
+      hpMult: 1.1,
+      color: "#ffe566",
+      borderColor: "rgba(255,229,102,0.4)",
+      bgColor: "rgba(255,229,102,0.08)"
+    },
+    {
+      id: "duo_tenebres",
+      name: "Pacte des Ombres",
+      icon: "\u{1F311}",
+      condition: (heroes) => heroes.filter((d) => d.elem === "T\xE9n\xE8bres").length >= 2,
+      desc: "+25% DPS, Drain HP",
+      dpsMult: 1.25,
+      color: "#c060ff",
+      borderColor: "rgba(192,96,255,0.4)",
+      bgColor: "rgba(192,96,255,0.08)"
+    },
+    {
+      id: "mono_element",
+      name: "Monolithe",
+      icon: "\u{1F48E}",
+      condition: (heroes) => heroes.length >= Math.max(4, G.maxSquadSize || 4) && new Set(heroes.map((d) => d.elem)).size === 1,
+      desc: "+50% DPS, -20% HP (squad pleine, 1 \xE9l\xE9ment)",
+      dpsMult: 1.5,
+      hpMult: 0.8,
+      color: "#f1c40f",
+      borderColor: "rgba(241,196,15,0.4)",
+      bgColor: "rgba(241,196,15,0.1)"
+    },
+    {
+      id: "full_squad",
+      name: "Squad Compl\xE8te",
+      icon: '<i class="ra ra-sword"></i>',
+      condition: (heroes) => heroes.length >= Math.max(4, G.maxSquadSize || 4),
+      desc: "+10% DPS (squad pleine)",
+      dpsMult: 1.1,
+      color: "#34d399",
+      borderColor: "rgba(52,211,153,0.3)",
+      bgColor: "rgba(52,211,153,0.07)"
+    },
+    {
+      id: "lumiere_tenebres",
+      name: "\xC9quilibre Sacr\xE9",
+      icon: "\u262F\uFE0F",
+      condition: (heroes) => heroes.some((d) => d.elem === "Lumi\xE8re") && heroes.some((d) => d.elem === "T\xE9n\xE8bres"),
+      desc: "+20% DPS, Lumi\xE8re & T\xE9n\xE8bres +35%",
+      dpsMult: 1.2,
+      color: "#a78bfa",
+      borderColor: "rgba(167,139,250,0.4)",
+      bgColor: "rgba(167,139,250,0.1)"
+    },
+    {
+      id: "contreattaque",
+      name: "Contreattaque",
+      icon: "\u{1F30A}",
+      condition: (heroes, leaderDef) => {
+        if (!leaderDef) return false;
+        const zoneElem = ZONE_THEMES[(G.zone - 1) % ZONE_THEMES.length].elem;
+        return G.isBoss && ELEMENT_ADVANTAGE[leaderDef.elem] === zoneElem;
+      },
+      desc: "Leader avantage vs boss \u2192 +75% DPS",
+      dpsMult: 1.75,
+      color: "#f97316",
+      borderColor: "rgba(249,115,22,0.4)",
+      bgColor: "rgba(249,115,22,0.1)"
+    }
+  ];
+
+  // src/globals.js
+  Object.assign(
+    window,
+    { _Dec, D, fmt, on, off, emit, createRng, rng },
+    affixes_exports,
+    balance_exports,
+    banners_exports,
+    biomes_exports,
+    heroes_exports,
+    liveops_exports,
+    monsters_exports,
+    skilltree_exports,
+    squad_exports
+  );
+  console.log("[globals] expos\xE9s : bignum/events/rng + couche data (affixes, balance, banners, biomes, heroes, liveops, monsters, skilltree, squad)");
+})();

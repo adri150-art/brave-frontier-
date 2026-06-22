@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Combat Tour par Tour — Final Frontier</title>
+<!-- MÊMES ressources que index.html (copie fidèle) -->
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=MedievalSharp&family=Pixelify+Sans:wght@400;700&family=Roboto+Condensed:wght@400;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/rpg-awesome@0.2.0/css/rpg-awesome.min.css" rel="stylesheet">
+<link rel="stylesheet" href="./css/tokens.css">
+<link rel="stylesheet" href="./css/styles.css">
+<style>
+  /* ===== AJOUTS tour par tour (préfixe cc-), n'écrase aucun style du jeu ===== */
+  /* Copie autonome : on laisse la page grandir/défiler pour ne rien tronquer */
+  html,body{overflow-y:auto !important}
+  #game-window{height:auto !important;min-height:100vh !important;overflow:visible !important}
+  #combat-arena{height:auto !important;min-height:100vh !important;overflow:visible !important;padding-bottom:16px !important}
+  /* Monstre : ancré en bas, seul le haut du corps visible (pas flottant) */
+  #monster-zone { min-height: 350px !important; overflow: hidden !important; position: relative !important; display: flex !important; flex-direction: column !important; justify-content: flex-end !important; }
+  #monster-zone .monster-container { justify-content: flex-end !important; flex: 1 !important; display: flex !important; flex-direction: column !important; }
+  #monster-zone #monster-emoji-container { margin-top: auto !important; margin-bottom: 0 !important; position: relative !important; display: flex !important; justify-content: center !important; }
+  #monster-zone #monster-emoji { height: auto !important; width: 90% !important; max-width: 400px !important; max-height: none !important; object-fit: contain !important; object-position: bottom center !important; display: block !important; margin: 0 auto !important; transform: translateY(15%) !important; }
+  #monster-zone #monster-emoji-container::after { display: none !important; }
+
+  #footer-bb-slots .footer-bb{cursor:pointer}
+
+  /* Héros visé : aura de la COULEUR DE L'ÉLÉMENT du monstre — les autres restent normaux */
+  #footer-bb-slots .footer-bb.cc-targeted{
+    overflow:visible !important;z-index:20;
+    box-shadow:0 0 0 2px var(--cc-col,#e74c3c), 0 0 24px 7px var(--cc-glow,rgba(231,76,60,.85)) !important;
+    animation:cc-pulse 1.15s ease-in-out infinite}
+  @keyframes cc-pulse{
+    0%,100%{box-shadow:0 0 0 2px var(--cc-col,#e74c3c), 0 0 16px 4px var(--cc-glow,rgba(231,76,60,.7))}
+    50%{box-shadow:0 0 0 3px var(--cc-col,#e74c3c), 0 0 34px 13px var(--cc-glow,rgba(231,76,60,1))}}
+  /* voile de la couleur de l'élément du monstre, par-dessus le héros visé */
+  .footer-bb .cc-flame{position:absolute;inset:0;z-index:6;pointer-events:none;border-radius:inherit;
+    background:radial-gradient(ellipse at 50% 58%, var(--cc-glow,rgba(231,76,60,.9)) 0%, transparent 72%);
+    mix-blend-mode:screen;animation:cc-flame 1.1s ease-in-out infinite}
+  @keyframes cc-flame{0%,100%{opacity:.5}50%{opacity:.95}}
+
+  /* État ATT/DEF (clic sur le panneau du héros ; défaut = DEF) */
+  .footer-bb .cc-state{
+    position:absolute; top:4px; right:4px; z-index:9;
+    padding: 2px 6px !important; font-size: 10px !important; font-weight: 800 !important; text-transform: uppercase !important;
+    font-family: 'Cinzel', serif !important; letter-spacing: 0.5px !important;
+    border-radius: 4px !important; border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #fff !important; text-shadow: 0 1px 2px #000 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5) !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    height: auto !important; width: auto !important; background-image: none !important;
+  }
+  .footer-bb .cc-state.att{ background: linear-gradient(180deg, rgba(231,76,60,0.8), rgba(192,57,43,0.95)) !important; border-color: #ff7a7a !important; }
+  .footer-bb .cc-state.def{ background: linear-gradient(180deg, rgba(52,152,219,0.8), rgba(41,128,185,0.95)) !important; border-color: #5aa9ff !important; }
+
+  /* Structure globale du Footer (Force l'ordre d'affichage vertical : Leader Panel en haut, Slots Héros au milieu) */
+  #combat-arena #footer {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: 0 10px !important;
+  }
+
+  /* Panneau Leader (Conteneur doré avec la barre de vie de l'équipe et le bouton GO) */
+  #footer .leader-panel {
+    width: 100% !important;
+    max-width: 600px !important;
+    background: linear-gradient(135deg, rgba(25, 20, 15, 0.95), rgba(13, 10, 8, 0.98)) !important;
+    border: 1px solid var(--gold-mid, #c8922e) !important;
+    border-radius: 8px !important;
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9), 0 10px 25px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(200, 146, 46, 0.15) !important;
+    margin: 8px auto !important;
+    padding: 12px 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    box-sizing: border-box !important;
+  }
+
+  #footer .squad-party-hp-bar {
+    flex: 1 !important;
+    position: relative !important;
+    height: 24px !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8) !important;
+    overflow: hidden !important;
+  }
+  #footer .squad-party-hp-bar::after {
+    display: none !important;
+    content: none !important;
+  }
+  #footer .squad-party-hp-fill-wrapper {
+    position: absolute !important;
+    left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+    z-index: 1 !important;
+  }
+  #footer #party-hp-bar-fill {
+    position: absolute !important;
+    left: 0 !important; top: 0 !important; height: 100% !important;
+    border-radius: 12px !important;
+    background: linear-gradient(90deg, #2ecc71, #5fce6b) !important;
+    box-shadow: 0 0 10px rgba(95, 206, 107, 0.5), inset 0 0 8px rgba(0,0,0,0.2) !important;
+    transition: width .25s ease-out !important;
+  }
+  #footer #party-hp-text {
+    position: absolute !important;
+    left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-family: 'Roboto Condensed', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    text-shadow: 0 1px 3px #000, 0 0 4px rgba(0,0,0,0.8) !important;
+    z-index: 6 !important;
+    letter-spacing: 1px !important;
+  }
+
+  /* Bouton Combattre (GO) */
+  #cc-fight {
+    position: relative !important;
+    min-width: 120px !important;
+    height: 40px !important;
+    background: linear-gradient(180deg, rgba(200, 146, 46, 0.2), rgba(0, 0, 0, 0.8)) !important;
+    border: 1px solid var(--gold-mid, #c8922e) !important;
+    border-radius: 6px !important;
+    color: var(--gold-hi, #ffe9ab) !important;
+    font-family: 'Cinzel', serif !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    cursor: pointer !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.6), inset 0 0 8px rgba(233,196,99,0.1) !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-shadow: 0 2px 4px #000 !important;
+    margin: 0 !important; padding: 0 16px !important;
+  }
+  #cc-fight:hover {
+    background: rgba(200, 146, 46, 0.3) !important;
+    border-color: var(--gold-hi, #ffe9ab) !important;
+    box-shadow: 0 4px 12px rgba(233,196,99,0.3) !important;
+  }
+  #cc-fight:active {
+    transform: translateY(2px) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.6) !important;
+  }
+  #cc-fight:disabled {
+    opacity: 0.5 !important;
+    filter: grayscale(1) !important;
+    cursor: not-allowed !important;
+  }
+  /* ===== Nouvelle Animation BRAVE BURST ===== */
+  #cc-bb-new {
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  #cc-bb-new.show {
+    display: flex;
+  }
+  #cc-bb-new .bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    opacity: 0;
+    animation: bbNewBg 1.8s forwards;
+  }
+  @keyframes bbNewBg {
+    0% { opacity: 0; }
+    15% { opacity: 1; }
+    85% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #cc-bb-new .img-container {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 1024 / 283;
+    z-index: 2;
+    animation: bbNewImgPop 1.8s forwards;
+  }
+  @keyframes bbNewImgPop {
+    0% { transform: scale(0.9); opacity: 0; }
+    15% { transform: scale(1); opacity: 1; }
+    85% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.05); opacity: 0; }
+  }
+  #cc-bb-new img {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    object-fit: contain;
+  }
+  #cc-bb-new .img-off {
+    opacity: 0;
+    animation: bbNewOff 1.8s forwards;
+    filter: grayscale(100%) !important;
+  }
+  @keyframes bbNewOff {
+    0%, 15% { opacity: 1; }
+    45% { opacity: 1; }
+    46%, 100% { opacity: 0; }
+  }
+  #cc-bb-new .img-on {
+    opacity: 0;
+    animation: bbNewOn 1.8s forwards;
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
+  }
+  @keyframes bbNewOn {
+    0%, 45% { opacity: 0; }
+    46%, 85% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #cc-bb-new .flash {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    z-index: 3;
+    opacity: 0;
+    animation: bbNewFlash 1.8s forwards;
+  }
+  @keyframes bbNewFlash {
+    0%, 40% { opacity: 0; }
+    46% { opacity: 0.9; }
+    60%, 100% { opacity: 0; }
+  }
+
+  /* bannière fin */
+  #cc-banner{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:var(--overlay);z-index:100}
+  #cc-banner.show{display:flex}
+  #cc-banner .card{background:var(--bg-1);border:1px solid var(--stroke);border-radius:var(--radius-m);padding:26px 30px;text-align:center}
+  #cc-banner h2{margin:0 0 14px;font-family:'Cinzel',serif;font-size:30px;letter-spacing:2px}
+  #cc-banner.win h2{color:var(--gold)} #cc-banner.lose h2{color:var(--hp)}
+  #cc-banner button{min-height:44px;padding:0 22px;font-family:'Cinzel',serif;font-weight:700;border:1px solid var(--gold);border-radius:8px;
+    background:linear-gradient(180deg,#ffe08a,var(--gold));color:#1a1404;cursor:pointer}
+
+  /* Masquer le logo BOSS */
+  #boss-label { display: none !important; }
+
+  /* Style personnalisé de la barre HP du monstre (en haut sous le header) */
+  #monster-zone .monster-hp-bar {
+    display: block !important;
+    position: absolute !important;
+    top: 15px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 320px !important;
+    max-width: 90vw !important;
+    height: 20px !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.8), inset 0 2px 6px rgba(0,0,0,0.6) !important;
+    overflow: hidden !important;
+    z-index: 10 !important;
+  }
+  #monster-zone .monster-hp-fill-wrapper {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    border-radius: 10px !important;
+    z-index: 1 !important;
+  }
+  #monster-zone #hp-bar-fill,
+  #monster-zone #hp-bar-delay {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    height: 100% !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+  }
+  #monster-zone #hp-bar-fill {
+    background: linear-gradient(90deg, #c0392b, #e74c3c) !important;
+    box-shadow: 0 0 12px rgba(231, 76, 60, 0.6), inset 0 0 6px rgba(0,0,0,0.3) !important;
+    z-index: 3 !important;
+    transition: width 0.2s ease-out !important;
+  }
+  #monster-zone #hp-bar-delay {
+    background: #f1c40f !important;
+    z-index: 2 !important;
+    transition: width 0.6s ease-out !important;
+  }
+  #monster-zone #hp-text {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-family: 'Roboto Condensed', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    text-shadow: 0 1px 3px #000, 0 0 6px rgba(0,0,0,0.9) !important;
+    z-index: 6 !important;
+    letter-spacing: 1px !important;
+  }
+  #monster-zone #monster-name {
+    position: absolute !important;
+    top: 40px !important;
+    bottom: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-family: 'Cinzel', serif !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--gold-hi, #ffe9ab) !important;
+    text-shadow: 0 2px 4px #000, 0 0 10px rgba(255, 233, 171, 0.4) !important;
+    text-transform: uppercase !important;
+    z-index: 8 !important;
+    white-space: nowrap !important;
+    letter-spacing: 1.5px !important;
+  }
+
+  /* ===== 1. OVERRIDES DU HEADER COMBAT (SANS PNG) ===== */
+  #combat-arena #header {
+    background: linear-gradient(135deg, rgba(20, 15, 10, 0.95), rgba(10, 8, 6, 0.98)) !important;
+    border: none !important;
+    border-bottom: 2px solid var(--gold-mid, #c8922e) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(200, 146, 46, 0.15) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    aspect-ratio: auto !important;
+    height: auto !important;
+    min-height: 70px !important;
+    padding: 10px 16px !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    margin: 0 auto 10px auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 6px !important;
+  }
+
+  #combat-arena #header .header-top {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    position: relative !important;
+  }
+
+  #combat-arena #header .zone-info {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    margin: 0 auto !important;
+  }
+
+  #combat-arena #header .zone-name {
+    font-family: 'Cinzel', serif !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--gold-hi, #ffe9ab) !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  #combat-arena #header .zone-progress {
+    font-family: 'Roboto Condensed', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  #combat-arena #header .currency-bar {
+    display: flex !important;
+    position: static !important;
+    transform: none !important;
+    gap: 8px !important;
+    align-items: center !important;
+    z-index: 5 !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #combat-arena #header .currency {
+    height: auto !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid rgba(200, 146, 46, 0.3) !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    font-family: 'Roboto Condensed', sans-serif !important;
+    font-size: 11px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    color: #fff !important;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.5) !important;
+    margin: 0 !important;
+  }
+
+  #combat-arena #header .currency i {
+    display: inline-block !important;
+    font-size: 12px !important;
+  }
+
+  #combat-arena #header .currency.gems i {
+    color: #3498db !important;
+  }
+  #combat-arena #header .currency.gold i {
+    color: #f1c40f !important;
+  }
+  #combat-arena #header .currency.honor i {
+    color: #e74c3c !important;
+  }
+
+  #combat-arena #header #hub-home-btn {
+    position: static !important;
+    transform: none !important;
+    width: 60px !important;
+    height: 28px !important;
+    font-family: 'Cinzel', serif !important;
+    font-size: 12px !important;
+    margin: 0 !important;
+    background: linear-gradient(180deg, rgba(200, 146, 46, 0.2), rgba(0, 0, 0, 0.8)) !important;
+    border: 1px solid var(--gold-mid, #c8922e) !important;
+    border-radius: 4px !important;
+    color: var(--gold-hi, #ffe9ab) !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  #combat-arena #header #hub-home-btn:hover {
+    background: rgba(200, 146, 46, 0.3) !important;
+    border-color: var(--gold-hi, #ffe9ab) !important;
+  }
+
+  #monster-zone #combat-auto-btn {
+    position: absolute !important;
+    width: 70px !important;
+    height: 28px !important;
+    top: 15px !important;
+    left: 15px !important;
+    right: auto !important;
+    background: linear-gradient(180deg, rgba(200, 146, 46, 0.2), rgba(0, 0, 0, 0.8)) !important;
+    border: 1px solid var(--gold-mid, #c8922e) !important;
+    border-radius: 4px !important;
+    color: var(--gold-hi, #ffe9ab) !important;
+    font-family: 'Roboto Condensed', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  #monster-zone #combat-auto-btn:hover {
+    background: rgba(200, 146, 46, 0.3) !important;
+    border-color: var(--gold-hi, #ffe9ab) !important;
+  }
+
+  #combat-arena #header .stats-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    border-top: 1px solid rgba(200, 146, 46, 0.15) !important;
+    padding-top: 6px !important;
+    margin-top: 4px !important;
+  }
+
+  #combat-arena #header .stats-row .tap-dmg-display {
+    font-family: 'Roboto Condensed', sans-serif !important;
+    font-size: 11px !important;
+    color: #60a5fa !important;
+    font-weight: 700 !important;
+  }
+
+  #combat-arena #header .stats-row .dps-display {
+    font-family: 'Cinzel', serif !important;
+    font-size: 13px !important;
+    color: var(--gold-hi, #ffe9ab) !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 5px rgba(233, 196, 99, 0.4) !important;
+  }
+
+  /* ===== 2. OVERRIDES DU CADRAN DES HÉROS (SANS PNG) ===== */
+  #footer-bb-slots .footer-bb::after {
+    content: none !important;
+    background: none !important;
+  }
+
+  #footer-bb-slots .footer-bb {
+    background: rgba(18, 13, 8, 0.82) !important;
+    border: 1px solid var(--gold-mid, #c8922e) !important;
+    border-radius: 6px !important;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 4px 10px rgba(0,0,0,0.5) !important;
+    transition: all 0.2s ease !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  #footer-bb-slots .footer-bb:hover {
+    background: rgba(28, 20, 12, 0.88) !important;
+    border-color: var(--gold-hi, #ffe9ab) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.8), 0 6px 14px rgba(0,0,0,0.6) !important;
+  }
+
+  #footer-bb-slots .footer-bb:active {
+    transform: translateY(0) !important;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.9), 0 2px 4px rgba(0,0,0,0.4) !important;
+  }
+
+  #footer-bb-slots .footer-bb.ready {
+    border-color: var(--gold-hi, #ffe9ab) !important;
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.7), inset 0 0 15px rgba(251, 191, 36, 0.2) !important;
+    animation: cc-bb-ready-glow 1.5s ease-in-out infinite alternate !important;
+  }
+
+  @keyframes cc-bb-ready-glow {
+    0% {
+      box-shadow: 0 0 8px rgba(251, 191, 36, 0.5), inset 0 0 10px rgba(251, 191, 36, 0.15);
+      border-color: var(--gold-mid, #c8922e);
+    }
+    100% {
+      box-shadow: 0 0 16px rgba(251, 191, 36, 0.95), inset 0 0 20px rgba(251, 191, 36, 0.35);
+      border-color: var(--gold-hi, #ffe9ab);
+    }
+  }
+
+  #footer-bb-slots .footer-bb.empty-slot {
+    background: rgba(10, 8, 6, 0.4) !important;
+    border: 1.5px dashed rgba(200, 146, 46, 0.25) !important;
+    box-shadow: none !important;
+    cursor: default !important;
+    opacity: 0.65 !important;
+  }
+
+  #footer-bb-slots .footer-bb.empty-slot:hover {
+    transform: none !important;
+    background: rgba(10, 8, 6, 0.4) !important;
+    border-color: rgba(200, 146, 46, 0.25) !important;
+    box-shadow: none !important;
+  }
+
+  #footer-bb-slots .fbb-portrait-wrap {
+    position: relative !important;
+    width: 32% !important;
+    height: 100% !important;
+    border-right: 1px solid rgba(200, 146, 46, 0.3) !important;
+  }
+
+  #footer-bb-slots .fbb-portrait-container {
+    background: #0d0905 !important;
+  }
+
+  #footer-bb-slots .fbb-portrait-container.empty {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: rgba(200, 146, 46, 0.3) !important;
+  }
+
+  #footer-bb-slots .fbb-portrait-container.empty .empty-slot-plus {
+    font-size: 20px !important;
+  }
+
+  #footer-bb-slots .fbb-elem-badge {
+    position: absolute !important;
+    left: 4px !important;
+    bottom: 4px !important;
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 50% !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #fff !important;
+    font-size: 11px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    z-index: 5 !important;
+    background-image: none !important;
+  }
+
+  #footer-bb-slots .fbb-elem-badge.elem-Feu { background: #e74c3c !important; box-shadow: 0 0 8px rgba(231,76,60,0.6) !important; }
+  #footer-bb-slots .fbb-elem-badge.elem-Eau { background: #3498db !important; box-shadow: 0 0 8px rgba(52,152,219,0.6) !important; }
+  #footer-bb-slots .fbb-elem-badge.elem-Terre { background: #2ecc71 !important; box-shadow: 0 0 8px rgba(46,204,113,0.6) !important; }
+  #footer-bb-slots .fbb-elem-badge.elem-Foudre { background: #f1c40f !important; box-shadow: 0 0 8px rgba(241,196,15,0.6) !important; }
+  #footer-bb-slots .fbb-elem-badge.elem-Lumière { background: #ffe27a !important; color: #333 !important; box-shadow: 0 0 8px rgba(255,226,122,0.6) !important; }
+  #footer-bb-slots .fbb-elem-badge.elem-Ténèbres { background: #9b59b6 !important; box-shadow: 0 0 8px rgba(155,89,182,0.6) !important; }
+
+  #footer-bb-slots .fbb-stats-container {
+    position: relative !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    flex: 1 !important;
+    padding: 8px 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    z-index: 4 !important;
+  }
+
+  #footer-bb-slots .fbb-bc-bar-track {
+    width: 95% !important;
+    height: 7px !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 4px !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.8) !important;
+    overflow: hidden !important;
+    background-image: none !important;
+  }
+
+  #footer-bb-slots .fbb-bc-bar-fill {
+    height: 100% !important;
+    background: linear-gradient(90deg, #06b6d4, #3b82f6) !important;
+    box-shadow: 0 0 8px rgba(59,130,246,0.6) !important;
+    border-radius: 3px !important;
+    background-image: none !important;
+  }
+
+  #footer-bb-slots .footer-bb.ready .fbb-bc-bar-fill {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
+    box-shadow: 0 0 10px rgba(251,191,36,0.8) !important;
+    background-image: none !important;
+  }
+
+  /* ===== 3. OVERRIDES DE LA BARRE D'OBJETS / POTIONS (SANS PNG) ===== */
+  #combat-items-bar::after {
+    content: none !important;
+    background: none !important;
+  }
+
+  #combat-items-bar {
+    background: linear-gradient(135deg, rgba(25, 20, 15, 0.95), rgba(13, 10, 8, 0.98)) !important;
+    border: 1px solid var(--gold-mid, #c8922e) !important;
+    border-radius: 8px !important;
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9), 0 6px 15px rgba(0, 0, 0, 0.6) !important;
+    margin: 8px auto 0 auto !important;
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 10px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 600px !important;
+    height: auto !important;
+    aspect-ratio: auto !important;
+  }
+
+  .combat-item-slot {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 6px 4px !important;
+    background: rgba(0, 0, 0, 0.45) !important;
+    border: 1px solid rgba(200, 146, 46, 0.2) !important;
+    border-radius: 6px !important;
+    position: relative !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+  }
+
+  .combat-item-slot:hover {
+    background: rgba(200, 146, 46, 0.15) !important;
+    border-color: var(--gold-hi, #ffe9ab) !important;
+    box-shadow: 0 0 8px rgba(233, 196, 99, 0.2) !important;
+  }
+
+  .combat-item-slot:active {
+    transform: scale(0.95) !important;
+  }
+
+  .combat-item-slot .item-icon {
+    font-size: 20px !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* Coloration thématique des potions */
+  .combat-item-slot .item-icon.cure { color: #52b788 !important; filter: drop-shadow(0 0 4px rgba(82,183,136,0.6)) !important; }
+  .combat-item-slot .item-icon.high-cure { color: #2d6a4f !important; filter: drop-shadow(0 0 4px rgba(45,106,79,0.6)) !important; }
+  .combat-item-slot .item-icon.atk-pot { color: #e63946 !important; filter: drop-shadow(0 0 4px rgba(230,57,70,0.6)) !important; }
+  .combat-item-slot .item-icon.holy-water { color: #a8dadc !important; filter: drop-shadow(0 0 4px rgba(168,218,220,0.6)) !important; }
+  .combat-item-slot .item-icon.stimulant { color: #f4a261 !important; filter: drop-shadow(0 0 4px rgba(244,162,97,0.6)) !important; }
+
+  .combat-item-slot .item-label {
+    display: block !important;
+    font-family: 'Roboto Condensed', sans-serif !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    text-shadow: 0 1px 2px #000 !important;
+    margin: 0 !important;
+  }
+
+  .combat-item-slot .item-count {
+    position: absolute !important;
+    top: -6px !important;
+    right: -6px !important;
+    background: linear-gradient(180deg, #c0392b, #962d22) !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    border-radius: 8px !important;
+    padding: 1px 5px !important;
+    font-family: 'Roboto Condensed', sans-serif !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5) !important;
+    bottom: auto !important;
+    left: auto !important;
+  }
+</style>
+</head>
+<body>
+<div id="game-window">
+  <div id="combat-arena" class="fantasy-panel">
+
+    <!-- HEADER (ressources) -->
+    <div id="header">
+      <div class="header-top">
+        <button id="hub-home-btn" title="Hub" onclick="location.href='index.html'">HUB</button>
+        <div class="zone-info">
+          <div class="zone-name">Cavernes d'Agni</div>
+          <div class="zone-progress">Monstre 10 / 10</div>
+        </div>
+        <div class="currency-bar">
+          <div class="currency gems"><i class="ra ra-gem"></i> 89</div>
+          <div class="currency gold"><i class="ra ra-gold-bar"></i> 646</div>
+          <div class="currency honor"><i class="ra ra-sword"></i> 990 PH</div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <span class="tap-dmg-display"><i class="ra ra-aura" style="color:#60a5fa"></i> Tour par tour</span>
+        <span class="dps-display" id="cc-turnlbl">Tour 1</span>
+        <span class="combo-display"></span>
+      </div>
+    </div>
+
+    <!-- MONSTER ZONE -->
+    <div id="monster-zone">
+      <div id="monster-bg"></div>
+      <button id="combat-auto-btn">AUTO</button>
+      <div class="monster-container">
+        <span class="boss-label visible" id="boss-label"><i class="ra ra-skull"></i> BOSS</span>
+        <div id="monster-name">BOSS OGRE</div>
+        <div class="hp-bar-container monster-hp-bar">
+          <div class="monster-hp-fill-wrapper">
+            <div id="hp-bar-delay" style="width:100%"></div>
+            <div id="hp-bar-fill" style="width:100%"></div>
+          </div>
+          <div id="hp-text">6000 / 6000</div>
+        </div>
+        <div id="monster-emoji-container">
+          <img id="monster-emoji" alt="Boss Ogre">
+        </div>
+      </div>
+      
+      <!-- Nouvelle Animation Brave Burst (centrée sur le monstre) -->
+      <div id="cc-bb-new">
+        <div class="bg"></div>
+        <div class="img-container">
+          <img id="cc-bb-new-off" class="img-off" src="assets/heroes/FINAL%20BURST/OFF/IGNIS-3.png" alt="OFF">
+          <img id="cc-bb-new-on" class="img-on" src="assets/heroes/FINAL%20BURST/ON/IGNIS-3.png" alt="ON">
+        </div>
+        <div class="flash"></div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div id="footer">
+      <!-- Panneau Leader (Vie + Bouton GO) -->
+      <div class="leader-panel">
+        <div class="hp-bar-container squad-party-hp-bar">
+          <div class="squad-party-hp-fill-wrapper">
+            <div id="party-hp-bar-fill" style="width:100%;"></div>
+          </div>
+          <div id="party-hp-text">5000 / 5000</div>
+        </div>
+        <button id="cc-fight">Combattre</button>
+      </div>
+
+      <!-- Slots de l'équipe (Héros) -->
+      <div class="footer-bb-slots" id="footer-bb-slots"></div>
+
+      <!-- Barre d'objets (markup réel du jeu) -->
+      <div id="combat-items-bar">
+        <div class="combat-item-slot"><span class="item-count">x10</span><i class="ra ra-potion item-icon cure"></i><span class="item-label">Cure</span></div>
+        <div class="combat-item-slot"><span class="item-count">x7</span><i class="ra ra-potion item-icon high-cure"></i><span class="item-label">High Cure</span></div>
+        <div class="combat-item-slot"><span class="item-count">x5</span><i class="ra ra-potion item-icon atk-pot"></i><span class="item-label">Atk Potion</span></div>
+        <div class="combat-item-slot"><span class="item-count">x10</span><i class="ra ra-glass-pot item-icon holy-water"></i><span class="item-label">Holy Water</span></div>
+        <div class="combat-item-slot"><span class="item-count">x10</span><i class="ra ra-glass-pot item-icon stimulant"></i><span class="item-label">Stimulant</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="cc-banner"><div class="card"><h2 id="cc-btitle"></h2><button onclick="location.reload()">Rejouer</button> <button onclick="location.href='index.html'">Retour au Hub</button></div></div>
+
+<script src="combat-turn-engine.js"></script>
+<script>
+const TC = window.TurnCombatEngine.TurnCombat;
+const refract = window.TurnCombatEngine.refraction;
+const ELEM_FR = { fire:'Feu', water:'Eau', earth:'Terre', thunder:'Foudre', light:'Lumière', dark:'Ténèbres' };
+const ELEM_HEX = { fire:'#e74c3c', water:'#3498db', earth:'#2ecc71', thunder:'#f1c40f', light:'#ffe27a', dark:'#9b59b6' };
+const ELEM_RGB = { fire:'231,76,60', water:'52,152,219', earth:'46,204,113', thunder:'241,196,15', light:'255,226,122', dark:'155,89,182' };
+const ELEM_RA_ICONS = { fire: 'ra ra-burning-embers', water: 'ra ra-water-drop', earth: 'ra ra-vine-whip', thunder: 'ra ra-lightning-bolt', light: 'ra ra-sun', dark: 'ra ra-skull' };
+const HERO_IMG = {
+  ignis:"assets/heroes/Squad img/IGNIS-3.png",
+  selena:"assets/heroes/Squad img/SELENA-3.png",
+  lance:"assets/heroes/Squad img/bc/Lance-trois-etoile.png", // legacy : ancienne image
+  sera:"assets/heroes/Squad img/SERA-3.png",
+};
+const MONSTER_IMG = "assets/img-combat/boss ogre.png";
+// Images "full" pour l'animation Brave Burst (portrait)
+const FULL_IMG = { ignis:"assets/heroes/full img/IGNIS-3.png" };
+// Héros disposant d'une illustration de Final Burst (assets/heroes/FINAL BURST/ON|OFF/NOM-3.png).
+// La clé = id du héros ; la valeur = nom EXACT du fichier (attention : magress -> MAGRUSS).
+const FB_BASENAME = { ignis:'IGNIS', selena:'SELENA', sera:'SERA', atro:'ATRO', karl:'KARL', magress:'MAGRUSS' };
+const ELEM_GRAD = { fire:['#ff7a2d','#ffd24d'], water:['#2e86ff','#9fd4ff'], earth:['#2ecc71','#bff5c8'],
+                    thunder:['#f1c40f','#fff3a8'], light:['#ffe27a','#fffbe0'], dark:['#9b59b6','#d9b3ff'] };
+const LAVA_BG = "assets/Biome/Biome FEU _ Les Cavernes d'Agni.png";
+
+const config = {
+  team:{ maxHp:5000 },
+  heroes:[
+    { id:'ignis',  name:'Ignis',  element:'fire',  atk:300, def:120 },
+    { id:'selena', name:'Selena', element:'water', atk:280, def:150 },
+    { id:'lance',  name:'Lance',  element:'earth', atk:260, def:90  },
+    { id:'sera',   name:'Sera',   element:'light', atk:320, def:80  },
+  ],
+  monster:{ name:'BOSS OGRE', element:'fire', hp:6000, atk:900, def:50 },
+};
+
+let C;
+function el(id){ return document.getElementById(id); }
+function pct(c,m){ return Math.max(0,Math.min(100,c/m*100)); }
+
+function start(){
+  // ── Contexte transmis par le hub (facultatif : sinon valeurs par défaut) ──
+  let bgPath = LAVA_BG;
+  window._ccReward = 0;
+  window._ccStage = null;
+  try {
+    const ctx = JSON.parse(localStorage.getItem('bf_turncombat_ctx') || 'null');
+    if (ctx) {
+      if (ctx.element)     config.monster.element = ctx.element;
+      if (ctx.monsterName) config.monster.name    = ctx.monsterName;
+      if (ctx.bg)          bgPath = ctx.bg;
+      if (ctx.heroes && ctx.heroes.length) {   // équipe = squad du joueur
+        config.heroes = ctx.heroes;
+        if (ctx.teamHp) config.team.maxHp = ctx.teamHp;
+      }
+      window._ccReward = Number(ctx.reward) || 0;
+      window._ccStage  = ctx.stage || null;   // {a,s,isBoss} → renvoyé au hub si victoire
+    }
+    localStorage.removeItem('bf_turncombat_ctx'); // consommé
+  } catch (e) {}
+
+  C = new TC(config, { onEvent:()=>{} });
+  const safeBg = encodeURI(bgPath).replace(/'/g, '%27');   // l'apostrophe casse url() sinon
+  el('monster-bg').style.backgroundImage = `url("${safeBg}")`;
+  el('monster-emoji').src = encodeURI(MONSTER_IMG);
+  renderAll();
+}
+
+function renderFooter(){
+  const box = el('footer-bb-slots'); let html='';
+  const mEl = C.monster.element;
+  const colStyle = `--cc-col:${ELEM_HEX[mEl]||'#e74c3c'};--cc-glow:rgba(${ELEM_RGB[mEl]||'231,76,60'},.9)`;
+  for(let i=0;i<6;i++){
+    const h = C.heroes[i];
+    if(!h){
+      html += `<div class="footer-bb empty-slot">
+        <div class="fbb-portrait-wrap"><div class="fbb-portrait-container empty"><span class="empty-slot-plus"><i class="ra ra-plus"></i></span></div></div>
+        <div class="fbb-stats-container"><div class="fbb-name-row"><span class="fbb-name" style="color:rgba(255,255,255,0.25)">Vide</span></div></div>
+      </div>`;
+      continue;
+    }
+    if(h.action==null) h.action='DEF';            // défaut : DEF si le joueur ne fait rien
+    const ready = h.bbGauge >= h.bbMax;
+    const targeted = h.id===C.targetId;
+    const elemFr = ELEM_FR[h.element];
+    const atk = h.action==='ATT';
+    html += `<div class="footer-bb ${ready?'ready':''} ${targeted?'cc-targeted':''}" data-id="${h.id}" ${targeted?`style="${colStyle}"`:''}>
+      ${targeted?'<div class="cc-flame"></div>':''}
+      <div class="cc-state ${atk?'att':'def'}">${atk?'ATT':'DEF'}</div>
+      <div class="fbb-portrait-wrap" data-port="${h.id}">
+        <div class="fbb-portrait-container"><img class="fbb-portrait-img" src="${encodeURI(h.img || HERO_IMG[h.id] || '')}" alt="${h.name}"></div>
+      </div>
+      <div class="fbb-elem-badge elem-${elemFr}"><i class="${ELEM_RA_ICONS[h.element] || ''}"></i></div>
+      <div class="fbb-stats-container">
+        <div class="fbb-name-row"><span class="fbb-name">${h.name}</span></div>
+        <div class="fbb-bb-label-row"><span class="fbb-bb-label-text">BRAVE BURST</span></div>
+        <div class="fbb-bc-bar-track"><div class="fbb-bc-bar-fill bb-gauge-fill-slot" style="width:${pct(h.bbGauge,h.bbMax)}%"></div></div>
+      </div>
+    </div>`;
+  }
+  box.innerHTML = html;
+  // Clic sur le panneau = bascule ATT/DEF ; clic sur l'image = Brave Burst
+  box.querySelectorAll('.footer-bb').forEach(card=> card.onclick=()=>toggleAction(card.dataset.id));
+  box.querySelectorAll('[data-port]').forEach(p=> p.onclick=(e)=>{ e.stopPropagation(); tapPortrait(p.dataset.port); });
+}
+
+function renderAll(){
+  el('cc-turnlbl').textContent = 'Tour '+C.turn;
+  el('monster-name').textContent = C.monster.name;
+  el('hp-bar-fill').style.width = pct(C.monster.hp,C.monster.maxHp)+'%';
+  el('hp-bar-delay').style.width = pct(C.monster.hp,C.monster.maxHp)+'%';
+  el('hp-text').textContent = `${C.monster.hp} / ${C.monster.maxHp}`;
+  el('party-hp-bar-fill').style.width = pct(C.team.hp,C.team.maxHp)+'%';
+  el('party-hp-text').textContent = `${C.team.hp} / ${C.team.maxHp}`;
+  renderFooter();
+}
+
+function toggleAction(id){
+  if(C.phase!=='HEROS' || !id) return;
+  const h=C.heroes.find(x=>x.id===id);
+  if(!h) return;                                    // slot VIDE : rien
+  h.action = (h.action==='ATT') ? 'DEF' : 'ATT';   // défaut DEF ; clic = ATT ; re-clic = DEF
+  renderFooter();
+}
+function hit(){ const m=el('monster-emoji'); m.style.transition='transform .1s'; m.style.transform='translateX(-7px)'; setTimeout(()=>{m.style.transform='translateX(7px)';},90); setTimeout(()=>{m.style.transform='';},200); }
+function tapPortrait(id){
+  if(C.phase!=='HEROS') return;
+  const h=C.hero(id);
+  if(h.bbGauge < h.bbMax) return;
+  
+  if (FB_BASENAME[h.id]) {
+    playBB(h,
+      ()=>{ C.useBraveBurst(id); hit(); },                                              // impact : dégâts
+      ()=>{ if(C.phase==='VICTOIRE'){ renderAll(); endGame(true); return; } renderAll(); } // fin
+    );
+  } else {
+    C.useBraveBurst(id); hit();
+    if(C.phase==='VICTOIRE'){ renderAll(); endGame(true); return; }
+    renderAll();
+  }
+}
+function playBB(h, onImpact, onEnd){
+  const ov=el('cc-bb-new');
+  // Nom de fichier exact via FB_BASENAME (gère magress -> MAGRUSS) ; fallback majuscule de l'id
+  const base = FB_BASENAME[h.id] || h.id.toUpperCase();
+  el('cc-bb-new-off').src = `assets/heroes/FINAL%20BURST/OFF/${base}-3.png`;
+  el('cc-bb-new-on').src = `assets/heroes/FINAL%20BURST/ON/${base}-3.png`;
+  
+  ov.classList.remove('show'); void ov.offsetWidth; ov.classList.add('show');  // relance les keyframes
+  setTimeout(()=>{ onImpact&&onImpact(); }, 900);
+  setTimeout(()=>{ ov.classList.remove('show'); onEnd&&onEnd(); }, 1800);
+}
+el('cc-fight').onclick = ()=>{
+  if(C.phase!=='HEROS') return;
+  C.resolveHeroPhase(); hit();
+  if(C.phase==='VICTOIRE'){ renderAll(); endGame(true); return; }
+  C.resolveMonsterPhase(); renderAll();
+  if(C.phase==='DEFAITE') endGame(false);
+};
+function endGame(win){ el('cc-banner').classList.add('show', win?'win':'lose'); el('cc-btitle').textContent = win?'VICTOIRE !':'DÉFAITE'; el('cc-fight').disabled=true;
+  try { localStorage.setItem('bf_turncombat_result', JSON.stringify({ win: !!win, gold: win ? (window._ccReward||0) : 0, stage: win ? (window._ccStage||null) : null, ts: Date.now() })); } catch (e) {}
+}
+
+start();
+</script>
+</body>
+</html>

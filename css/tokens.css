@@ -1,0 +1,69 @@
+/* =============================================================
+   AURORA FORGE — DESIGN TOKENS (source de vérité unique)
+   Chargé AVANT styles.css. Cf. REFONTE_VISUELLE_MOBILE.md §2.2
+   ============================================================= */
+:root {
+    /* Fonds — froids, mats, 3 niveaux max */
+    --bg-0: #0B0E14;        /* fond d'app */
+    --bg-1: #131826;        /* panneaux, cartes */
+    --bg-2: #1C2333;        /* éléments surélevés, sheets */
+    --stroke: #2A3349;      /* bordures 1px — remplace les box-shadows */
+
+    /* Overlays — fond plein, JAMAIS de backdrop-filter */
+    --overlay: rgba(11, 14, 20, 0.92);
+
+    /* Texte — contraste AA garanti sur bg-1 */
+    --txt-1: #EDF1FA;
+    --txt-2: #9AA6C0;
+    --txt-3: #5C6884;
+
+    /* Accents — réservés au sens, jamais à la déco */
+    --gold:   #F2C14E;
+    --gem:    #4EC9F2;
+    --hp:     #E5484D;
+    --energy: #57D9A3;
+    --arcane: #A78BFA;
+
+    /* Éléments — rim light, dégâts, badges */
+    --feu:      #FF4D29;
+    --eau:      #38C8FF;
+    --foudre:   #FFD93D;
+    --terre:    #3FBF6B;
+    --lumiere:  #FFE08A;
+    --tenebres: #B14CFF;
+
+    /* Raretés */
+    --r-common: #8A93A6;
+    --r-rare:   #4EC9F2;
+    --r-epic:   #A78BFA;
+    --r-myth:   #F2C14E;
+
+    /* Typographie — 2 familles, point final */
+    --font-display: 'Cinzel', serif;
+    --font-ui: 'Outfit', sans-serif;
+
+    /* Échelle de taille (minimum absolu : 12px) */
+    --fs-1: 12px;
+    --fs-2: 14px;
+    --fs-3: 16px;
+    --fs-4: 20px;
+    --fs-5: 26px;
+    --fs-6: 34px;
+
+    /* Rayons : 3 valeurs, rien d'autre */
+    --radius-s: 8px;
+    --radius-m: 16px;
+    --radius-pill: 999px;
+
+    /* Ombre : la SEULE autorisée (1 par écran, sheet actif) */
+    --shadow-sheet: 0 -8px 24px rgba(0, 0, 0, 0.45);
+
+    /* Mouvement — transform/opacity uniquement */
+    --dur-tap: 120ms;
+    --dur-sheet: 200ms;
+    --dur-screen: 350ms;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    /* Cibles tactiles */
+    --touch-min: 44px;
+}

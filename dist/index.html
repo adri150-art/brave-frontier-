@@ -1,0 +1,2988 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Final Frontier Clicker</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
+    <meta name="description" content="Final Frontier — Clicker RPG Idle. Cliquez, composez votre équipe active, affrontez des boss, gérez vos jauges BC/HC et faites évoluer physiquement vos héros !">
+    <!-- AURORA FORGE : 2 familles seulement (display + UI) — cf. REFONTE_VISUELLE_MOBILE.md §2.3 -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=MedievalSharp&family=Pixelify+Sans:wght@400;700&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/rpg-awesome@0.2.0/css/rpg-awesome.min.css" rel="stylesheet">
+<script src="./assets/grimoire-noir.js" defer></script>
+<!-- grimoire-sheet.js retiré : remplacé par js/ui-shell.js (P2), les deux se battaient sur la hauteur du tiroir -->
+<style id="units-screen-style">
+
+  :root{
+    --bg:#05070d; 
+    --panel-bg: rgba(18, 13, 8, 0.74); 
+    --panel-bg2: rgba(40, 27, 12, 0.74);
+    --line:#c8922e;
+    --txt:#fff6e0; 
+    --muted:#a89b88; 
+    --gold-hi: #ffe9ab;
+    --gold: #e9c463;
+    --gold-mid: #c8922e;
+    --gold-deep: #7d4f17;
+    --atk:#ff7a59; --def:#5aa9ff; --hp:#5fce6b;
+    --fire:#ff5a3c; --water:#3da5ff; --earth:#5fce6b;
+    --thunder:#f5d33a; --light:#ffe9a8; --dark:#b06bff;
+    --bb:#00d2ff; --sbb:#f1c40f; --ubb:#ff3366;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:"Roboto Condensed", system-ui, sans-serif;
+    padding: 0; margin: 0; padding-bottom: 80px;
+    background-image: radial-gradient(circle at 50% 0%, #151a2a 0%, #05070d 80%);
+    background-attachment: fixed;
+  }
+
+  /* HEADER BANNER */
+  header {
+    text-align: center;
+    padding: 24px 16px;
+    background: linear-gradient(180deg, rgba(20, 15, 10, 0.9) 0%, rgba(10, 8, 6, 0.95) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 2px solid var(--gold-mid);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 250px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-hi), transparent);
+    box-shadow: 0 0 10px var(--gold-hi);
+  }
+  h1 { font-family: 'Cinzel', serif; font-size: 26px; letter-spacing: 2px; color: var(--gold-hi); text-transform: uppercase; text-shadow: 0 2px 6px #000, 0 0 8px rgba(255, 233, 171, 0.2); }
+  h1 .sub { display:block; font-family:"Roboto Condensed", sans-serif; font-size: 11px; letter-spacing: 5px; color: var(--muted); margin-top: 6px; font-weight: 400; text-shadow: none; text-transform: uppercase; }
+
+  /* BARRE SQUAD */
+  .squad-bar {
+    max-width: 1180px; margin: 0 auto 30px;
+    background: linear-gradient(135deg, rgba(25, 20, 15, 0.85), rgba(13, 10, 8, 0.95));
+    border: 1px solid var(--gold-mid);
+    border-radius: 8px; padding: 20px;
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9), 0 10px 25px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(200, 146, 46, 0.15);
+  }
+  .squad-top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap; border-bottom: 1px dashed rgba(200, 146, 46, 0.2); padding-bottom: 12px; }
+  .squad-top-left { display:flex; align-items:center; gap:16px; }
+  .st-title { font-family: 'Cinzel', serif; font-size: 18px; letter-spacing: 2px; color: var(--gold-hi); text-transform: uppercase; font-weight: 700; display:flex; align-items:center; gap:10px; text-shadow: 0 2px 4px #000, 0 0 8px rgba(255, 233, 171, 0.2); }
+  .squad-leaderskill {
+    font-size: 13px; color: #e0d5c1; text-align:right; flex:1; min-width:180px; text-shadow: 0 1px 2px #000;
+    background: rgba(0, 0, 0, 0.4); padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(200, 146, 46, 0.15);
+    display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px;
+  }
+  .edit-squad-btn {
+    background: linear-gradient(180deg, rgba(200, 146, 46, 0.1), rgba(0, 0, 0, 0.6)); color: var(--gold-hi); border: 1px solid var(--gold-mid);
+    padding: 8px 18px; border-radius: 4px; cursor: pointer; font-size: 12.5px; font-weight: 700;
+    font-family: "Roboto Condensed", sans-serif; display: flex; align-items: center; gap: 8px;
+    transition: all 0.2s ease; text-transform: uppercase; box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+    letter-spacing: 0.5px;
+  }
+  .edit-squad-btn:hover { background: rgba(200, 146, 46, 0.25); border-color: var(--gold-hi); box-shadow: 0 4px 10px rgba(233,196,99,0.2); }
+  .edit-squad-btn.active { background: var(--gold-deep); color: #fff; border-color: var(--gold-hi); box-shadow: 0 0 15px rgba(233,196,99,0.5); }
+  
+  .squad-slots-container { display:flex; flex-direction: row; gap: 16px; flex-wrap: wrap; }
+  .squad-slots { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; flex: 2; min-width: 0; }
+  
+  .slot {
+    position:relative; aspect-ratio:1/1; border:1px solid var(--gold-deep); border-radius:6px; overflow:hidden;
+    background:rgba(5,5,5,0.7); cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:all 0.25s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: inset 0 0 12px rgba(0,0,0,0.9), 0 4px 8px rgba(0,0,0,0.5);
+    padding: 3px;
+  }
+  .slot:hover { border-color:var(--gold-hi); box-shadow:0 0 18px rgba(233,196,99,.35), inset 0 0 12px rgba(0,0,0,0.9); transform: translateY(-3px); }
+  .slot.empty { color:rgba(200,146,46,0.25); font-size:24px; border: 1.5px dashed rgba(200,146,46,0.35); background:rgba(0,0,0,0.35); transition:all 0.25s ease; padding: 0; }
+  .slot.empty i { animation: pulseEmptyIcon 3s infinite ease-in-out; }
+  @keyframes pulseEmptyIcon {
+    0%, 100% { transform: scale(1); opacity: 0.6; color: rgba(200, 146, 46, 0.25); }
+    50% { transform: scale(1.1); opacity: 1; color: var(--gold-hi); text-shadow: 0 0 8px rgba(233,196,99,0.4); }
+  }
+  .slot.empty:hover { color:var(--gold-hi); border-color: var(--gold-hi); border-style:solid; background:rgba(200,146,46,0.08); }
+  .slot.leader { border: 2px solid var(--gold-hi); box-shadow: 0 0 20px rgba(241,199,91,.4), inset 0 0 12px rgba(0,0,0,0.8); }
+  .slot img { position:absolute; inset:3px; width:calc(100% - 6px); height:calc(100% - 6px); border-radius: 4px; }
+  .slot .s-portrait { object-fit:cover; object-position:top; z-index:2; }
+  .slot .s-frame { object-fit:fill; z-index:3; pointer-events:none; opacity:0.85; }
+  .slot .s-name {
+    position:absolute; bottom:3px; left:3px; right:3px; z-index:4; font-size:10px; text-align:center;
+    background:linear-gradient(0deg,rgba(0,0,0,.95) 0%, rgba(0,0,0,0.65) 70%, transparent 100%); padding:12px 2px 4px; font-weight:700; color: #fff; text-shadow: 0 1px 2px #000; letter-spacing: 0.2px;
+    border-radius: 0 0 4px 4px;
+  }
+  .slot .s-crown {
+    position:absolute; top:4px; left:4px; z-index:5; background:rgba(26,21,0,0.85); border:1px solid var(--gold-hi); border-radius:3px;
+    padding:2px 6px; font-size:8.5px; font-weight:800; text-transform:uppercase; color:var(--gold-hi); box-shadow:0 2px 4px rgba(0,0,0,0.5);
+    display:flex; align-items:center; gap:3px; letter-spacing:0.5px;
+  }
+  .slot .s-remove {
+    position:absolute; top:4px; right:4px; z-index:5; width:22px; height:22px; border-radius:4px;
+    background:rgba(20,10,10,.9); color:#ff7a7a; border:1px solid #ff7a7a; cursor:pointer; font-size:12px;
+    display:flex; align-items:center; justify-content:center; opacity:0; transition:all 0.2s ease;
+  }
+  .slot:hover .s-remove { opacity:1; }
+  .slot .s-remove:hover { background:#ff3366; color:#fff; border-color:#fff; box-shadow:0 0 8px #ff3366; }
+  
+  .squad-totals {
+    display:flex; flex-direction:column; gap:12px; flex: 1; min-width: 180px; justify-content: center;
+    background: rgba(0,0,0,0.45); padding: 16px; border-radius: 6px; border: 1px solid rgba(200,146,46,0.15);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+  }
+  .st-stat { display:flex; flex-direction:column; gap:4px; border-bottom: none; padding-bottom: 0; }
+  .st-stat-top { display:flex; justify-content:space-between; align-items:center; gap: 12px; }
+  .st-stat .l { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-family: 'Cinzel', serif; font-weight: 700; }
+  .st-stat .v { font-size:15px; font-weight:700; text-shadow: 0 1px 2px #000;}
+  .st-stat.atk .v { color:var(--atk); } .st-stat.def .v { color:var(--def); } .st-stat.hp .v { color:var(--hp); }
+  
+  .st-progress-bg { width:100%; height:4px; background:rgba(0,0,0,0.5); border-radius:2px; overflow:hidden; }
+  .st-progress-fill { height:100%; border-radius:2px; transition:width 0.4s ease-out; }
+  .st-stat.atk .st-progress-fill { background:var(--atk); box-shadow:0 0 6px var(--atk); }
+  .st-stat.def .st-progress-fill { background:var(--def); box-shadow:0 0 6px var(--def); }
+  .st-stat.hp .st-progress-fill { background:var(--hp); box-shadow:0 0 6px var(--hp); }
+  
+  .squad-hint { font-size:11.5px; color:var(--muted); text-align:center; margin-top:14px; font-style: italic; }
+
+  /* SECTION UNITÉS */
+  .units-container { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  .units-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom: 20px; border-bottom: 1px solid var(--gold-mid); padding-bottom: 12px;}
+  .uh-title { font-family: 'Cinzel', serif; font-size: 18px; letter-spacing: 2px; color: var(--gold-hi); text-transform: uppercase; font-weight: 700; display:flex; align-items:center; gap:8px; text-shadow: 0 2px 4px #000; }
+  .uh-count { font-family: "Roboto Condensed", sans-serif; font-size: 12px; color: var(--muted); }
+  
+  .filters-group { display:flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: flex-end; flex: 1; }
+  .filters { display:flex; gap:8px; flex-wrap:wrap; }
+  .filters .filter-btn, .sort-select { 
+    background: linear-gradient(180deg, rgba(13, 10, 8, 0.8), rgba(0, 0, 0, 0.9)); color:var(--muted); border:1px solid var(--gold-deep); 
+    padding:8px 14px; border-radius:4px; cursor:pointer; font-size:12.5px; transition:all 0.2s ease; 
+    font-family: "Roboto Condensed", sans-serif; outline: none; display: flex; align-items: center; gap: 6px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+  }
+  .filters .filter-btn:hover, .sort-select:hover { color:var(--gold-hi); border-color: var(--gold-mid); box-shadow: 0 4px 10px rgba(233,196,99,0.15); }
+  
+  /* Custom Dropdown Styling */
+  .custom-dropdown {
+    position: relative;
+    display: inline-block;
+  }
+  #sortDropdownBtn {
+    min-width: 170px;
+    justify-content: space-between;
+  }
+  .dropdown-content {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    background: linear-gradient(180deg, rgba(20, 15, 12, 0.95), rgba(5, 3, 2, 0.98));
+    border: 2px solid var(--gold-deep);
+    border-radius: 6px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.75), inset 0 0 15px rgba(233,196,99,0.15);
+    z-index: 1000;
+    min-width: 170px;
+    padding: 6px 0;
+    transform-origin: top right;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .dropdown-content.hidden {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+    pointer-events: none;
+  }
+  .dropdown-item {
+    color: var(--muted);
+    padding: 10px 16px;
+    font-family: "Roboto Condensed", sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dropdown-item i {
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+  }
+  .dropdown-item:hover {
+    background: rgba(233, 196, 99, 0.15);
+    color: var(--gold-hi);
+    padding-left: 20px;
+  }
+  .dropdown-item.active {
+    color: var(--gold-hi);
+    font-weight: bold;
+    background: rgba(233, 196, 99, 0.08);
+  }
+  
+  
+  /* Gems actives spécifiques à l'élément */
+  .filters .filter-btn.active { color: #fff; font-weight: 700; border-color: var(--gold-hi); }
+  .filters .filter-btn.active.el-all { background: linear-gradient(180deg, #555, #111); box-shadow: 0 0 10px rgba(255,255,255,0.3); border-color: #fff; }
+  .filters .filter-btn.active.el-fire { background: linear-gradient(180deg, rgba(255,90,60,0.3), rgba(0,0,0,0.8)); box-shadow: 0 0 12px rgba(255,90,60,0.4); border-color: var(--fire); color: var(--fire); }
+  .filters .filter-btn.active.el-water { background: linear-gradient(180deg, rgba(61,165,255,0.3), rgba(0,0,0,0.8)); box-shadow: 0 0 12px rgba(61,165,255,0.4); border-color: var(--water); color: var(--water); }
+  .filters .filter-btn.active.el-earth { background: linear-gradient(180deg, rgba(95,206,107,0.3), rgba(0,0,0,0.8)); box-shadow: 0 0 12px rgba(95,206,107,0.4); border-color: var(--earth); color: var(--earth); }
+  .filters .filter-btn.active.el-thunder { background: linear-gradient(180deg, rgba(245,211,58,0.3), rgba(0,0,0,0.8)); box-shadow: 0 0 12px rgba(245,211,58,0.4); border-color: var(--thunder); color: var(--thunder); }
+  .filters .filter-btn.active.el-light { background: linear-gradient(180deg, rgba(255,233,168,0.3), rgba(0,0,0,0.8)); box-shadow: 0 0 12px rgba(255,233,168,0.4); border-color: var(--light); color: var(--light); }
+  .filters .filter-btn.active.el-dark { background: linear-gradient(180deg, rgba(176,107,255,0.3), rgba(0,0,0,0.8)); box-shadow: 0 0 12px rgba(176,107,255,0.4); border-color: var(--dark); color: var(--dark); }
+
+  /* GRID */
+  .grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:18px; }
+  @media(max-width: 1024px) {
+    .grid { gap:12px; }
+  }
+  @media(max-width: 768px) {
+    .grid { gap:8px; }
+    .tile .info { padding: 6px; gap: 4px; }
+    .tile .tname { font-size: 11px; }
+    .tile .tstats { font-size: 9px; padding-top: 4px; }
+    .tile .ttype { font-size: 8px; padding: 1px 4px; bottom: 4px; left: 4px; }
+    .tile-floating-el { width: 18px; height: 18px; font-size: 8px; top: 4px; left: 4px; }
+    .tile-stars-bar { font-size: 8.5px; padding: 4px 0 1px; letter-spacing: 1px; }
+    .tile .insquad-badge { font-size: 8px; padding: 2px 4px; }
+    .squad-bar { padding: 12px; }
+    .squad-slots { gap: 8px; }
+  }
+  @media(max-width: 480px) {
+    .grid { gap: 6px; }
+    .tile .info { padding: 4px; }
+    .tile .tname { font-size: 9.5px; }
+    .tile .tstats { font-size: 8px; }
+    .tile-stars-bar { font-size: 7.5px; }
+    .squad-bar { padding: 10px; }
+    .squad-slots { gap: 6px; }
+  }
+  }
+
+  /* TILE JRPG / CARTES TCG */
+  .tile {
+    background: linear-gradient(180deg, rgba(18, 13, 8, 0.85) 0%, rgba(8, 6, 4, 0.95) 100%);
+    border: 1px solid rgba(200, 146, 46, 0.2); border-radius: 8px; overflow:hidden; cursor:pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); position:relative; display:flex; flex-direction:column;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 6px 12px rgba(0,0,0,0.5);
+    padding: 4px;
+  }
+  .tile:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0,0,0,.7), 0 0 15px rgba(233,196,99,0.25);
+    border-color: var(--gold-mid); z-index: 2;
+  }
+  .tile.in-squad {
+    border: 1px solid var(--gold-mid);
+    box-shadow: inset 0 0 15px rgba(233,196,99,0.15), 0 0 12px rgba(233,196,99,0.2), 0 6px 12px rgba(0,0,0,0.5);
+  }
+  .tile.in-squad.lead-card {
+    border: 1px solid var(--gold-hi);
+    box-shadow: inset 0 0 15px rgba(233,196,99,0.3), 0 0 18px rgba(241,199,91,0.35), 0 6px 12px rgba(0,0,0,0.5);
+  }
+  .tile .imgwrap { aspect-ratio: 4/5; position:relative; overflow:hidden; background: #000; border: 1px solid rgba(200, 146, 46, 0.15); border-radius: 6px; }
+  .tile .bg-energy { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; opacity: 0.55; }
+  .tile .portrait { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:top; z-index:2; transition: transform 0.4s ease; }
+  .tile:hover .portrait { transform: scale(1.06); }
+  .tile .frame { position:absolute; inset:0; width:100%; height:100%; object-fit:fill; pointer-events:none; z-index:3; opacity: 0.75; }
+  
+  /* Badges flottants sur la carte */
+  .tile-floating-el {
+    position: absolute; top: 6px; left: 6px; z-index: 4;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(0,0,0,0.75); border: 1px solid rgba(255,255,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+  .tile.elem-fire .tile-floating-el { border-color: var(--fire); color: var(--fire); box-shadow: 0 0 6px rgba(255,90,60,0.4); }
+  .tile.elem-water .tile-floating-el { border-color: var(--water); color: var(--water); box-shadow: 0 0 6px rgba(61,165,255,0.4); }
+  .tile.elem-earth .tile-floating-el { border-color: var(--earth); color: var(--earth); box-shadow: 0 0 6px rgba(95,206,107,0.4); }
+  .tile.elem-thunder .tile-floating-el { border-color: var(--thunder); color: var(--thunder); box-shadow: 0 0 6px rgba(245,211,58,0.4); }
+  .tile.elem-light .tile-floating-el { border-color: var(--light); color: var(--light); box-shadow: 0 0 6px rgba(255,233,168,0.4); }
+  .tile.elem-dark .tile-floating-el { border-color: var(--dark); color: var(--dark); box-shadow: 0 0 6px rgba(176,107,255,0.4); }
+  
+  .tile-stars-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px 0 2px;
+    font-size: 11px;
+    color: #ffd700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 4px #ffae00, 0 0 8px #ff7700;
+    letter-spacing: 2px;
+    z-index: 4;
+  }
+  
+  .tile .ttype { position:absolute; bottom:6px; left:6px; font-size:9.5px; padding:2px 6px; border-radius:3px; background:rgba(0,0,0,.75); border: 1px solid rgba(200, 146, 46, 0.2); color:var(--muted); text-transform:uppercase; z-index:4; box-shadow: 0 2px 4px rgba(0,0,0,0.5); font-weight: 700;}
+  
+  .tile .insquad-badge {
+    position:absolute; inset: 0; z-index:5;
+    background: linear-gradient(135deg, rgba(233, 196, 99, 0.15), rgba(26, 21, 0, 0.7) 60%);
+    border: 1px solid var(--gold-hi); border-radius: 6px;
+    pointer-events: none; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: var(--gold-hi); text-transform: uppercase;
+    letter-spacing: 1px; text-shadow: 0 2px 4px #000, 0 0 6px var(--gold-hi);
+  }
+  .tile .insquad-badge.lead-badge {
+    background: linear-gradient(135deg, rgba(241, 199, 91, 0.25), rgba(26, 21, 0, 0.85) 60%);
+    border-color: var(--gold-hi);
+  }
+  
+  .tile .info { padding: 10px; background: linear-gradient(180deg, rgba(16,12,8,0.95), rgba(6,4,2,0.98)); flex: 1; display:flex; flex-direction:column; justify-content:space-between; gap: 6px; }
+  .tile .tname { text-align:center; font-family: 'Cinzel', serif; font-weight:700; font-size:14px; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .tstats { display: flex; justify-content: space-between; font-size:10.5px; color:var(--muted); border-top: 1px solid rgba(200,146,46,0.15); padding-top: 6px;}
+  .tile .tstats span { display:flex; align-items: center; gap:4px; }
+  .tile .tstats .a { color:var(--atk); } .tile .tstats .d { color:var(--def); }
+
+  /* ---- PAGE PLEIN ÉCRAN DE LA FICHE DU HÉROS (JRPG) ---- */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 7, 13, 0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .overlay.open {
+    display: flex;
+    opacity: 1;
+  }
+  
+  .page { 
+    width: 100%;
+    height: 100vh;
+    overflow-y: auto; /* Permet le défilement global sur mobile */
+    background: #0d0b09;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transform: translateY(30px);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 0 50px rgba(0,0,0,0.9);
+  }
+  .overlay.open .page {
+    transform: translateY(0);
+  }
+  
+  /* Scrollbars customisées */
+  .page::-webkit-scrollbar,
+  .hero-details-container::-webkit-scrollbar {
+    width: 6px;
+  }
+  .page::-webkit-scrollbar-track,
+  .hero-details-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  .page::-webkit-scrollbar-thumb,
+  .hero-details-container::-webkit-scrollbar-thumb {
+    background: var(--gold-deep);
+    border-radius: 3px;
+  }
+  .page::-webkit-scrollbar-thumb:hover,
+  .hero-details-container::-webkit-scrollbar-thumb:hover {
+    background: var(--gold-mid);
+  }
+
+  .hero-photo { 
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/5;
+    flex-shrink: 0; /* Empêche l'illustration de rétrécir sur mobile */
+    background: radial-gradient(circle at 50% 30%, #1a2030, #05070d); 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .hero-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    transition: transform 0.5s ease;
+  }
+  .hero-photo:hover img {
+    transform: scale(1.03);
+  }
+  .hero-photo .ph {
+    font-size: 140px;
+    color: rgba(200, 146, 46, 0.1);
+  }
+  .hero-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 50%, rgba(13, 11, 9, 0.3) 70%, rgba(13, 11, 9, 0.7) 85%, #0d0b09 100%);
+    pointer-events: none;
+    z-index: 3; /* Placé au-dessus de l'image (z-index 2) pour un fondu parfait */
+  }
+
+  .hero-details-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .hero-head-container {
+    background: #0d0b09;
+    padding: 16px 20px 8px;
+    border-bottom: 1px solid rgba(200, 146, 46, 0.15);
+  }
+  .hero-head {
+    position: relative;
+    z-index: 2;
+    text-align: left;
+  }
+  .hero-head .rarity {
+    color: var(--gold-hi);
+    font-size: 20px;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 4px #000;
+    margin-bottom: 2px;
+  }
+  .hero-head h2 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(28px, 4vw, 36px);
+    font-weight: 800;
+    line-height: 1.1;
+    text-shadow: 0 3px 10px #000;
+    margin-bottom: 8px;
+  }
+  .hero-head .meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .hero-head .badge {
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(200, 146, 46, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--txt);
+    letter-spacing: 0.5px;
+  }
+  .hero-head .badge.el-fire { border-color: var(--fire); background: rgba(255, 90, 60, 0.1); color: #ff7a59; }
+  .hero-head .badge.el-water { border-color: var(--water); background: rgba(61, 165, 255, 0.1); color: #5aa9ff; }
+  .hero-head .badge.el-earth { border-color: var(--earth); background: rgba(95, 206, 107, 0.1); color: #5fce6b; }
+  .hero-head .badge.el-thunder { border-color: var(--thunder); background: rgba(245, 211, 58, 0.1); color: #f5d33a; }
+  .hero-head .badge.el-light { border-color: var(--light); background: rgba(255, 233, 168, 0.1); color: #ffe9a8; }
+  .hero-head .badge.el-dark { border-color: var(--dark); background: rgba(176, 107, 255, 0.1); color: #b06bff; }
+
+  .pg-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: #0d0b09;
+  }
+
+  /* actions squad dans la fiche */
+  .pg-actions {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  .pg-actions button {
+    flex: 1;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .pg-actions .remove {
+    background: rgba(60, 20, 20, 0.7);
+    border: 1px solid #ff7a7a;
+    color: #ff7a7a;
+  }
+  .pg-actions .remove:hover {
+    background: #8a2020;
+    color: #fff;
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(255,122,122,0.3);
+  }
+  .pg-actions .add {
+    background: var(--gold-deep);
+    border: 1px solid var(--gold-mid);
+    color: var(--gold-hi);
+  }
+  .pg-actions .add:hover {
+    background: var(--gold-mid);
+    color: #1a1500;
+    border-color: var(--gold-hi);
+    box-shadow: 0 0 12px rgba(233,196,99,0.3);
+  }
+  .pg-actions .add:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: rgba(22, 26, 38, 0.5);
+    border-color: rgba(42, 49, 68, 0.3);
+    color: var(--muted);
+    box-shadow: none;
+  }
+  .pg-actions .lead {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--gold-mid);
+    color: var(--gold-hi);
+  }
+  .pg-actions .lead:hover {
+    background: rgba(200, 146, 46, 0.2);
+    border-color: var(--gold-hi);
+  }
+  .pg-actions .lead.active {
+    background: var(--gold-mid);
+    color: #1a1500;
+    border-color: var(--gold-hi);
+    box-shadow: 0 0 12px rgba(233,196,99,0.5);
+  }
+
+  .pg-lore {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #e0d5c1;
+    font-style: italic;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 14px 18px;
+    border-left: 3px solid var(--gold-mid);
+    border-radius: 4px;
+    margin: 0;
+  }
+  
+  .sec-title {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    color: var(--gold-hi);
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(200, 146, 46, 0.3);
+    padding-bottom: 8px;
+    margin-top: 10px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .lvl-control-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(200, 146, 46, 0.25);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+  }
+  .lvl-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .lvl-header .lvl-val {
+    color: var(--gold);
+    font-size: 16px;
+    text-shadow: 0 0 6px rgba(233,196,99,0.3);
+  }
+  .xp-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    border-top: 1px dashed rgba(200, 146, 46, 0.15);
+    padding-top: 8px;
+    margin-top: 4px;
+  }
+  .xp-bar-wrapper {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+    box-shadow: 0 0 8px #00d2ff;
+    transition: width 0.2s ease-out;
+  }
+  .xp-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .xp-text span {
+    color: var(--txt);
+  }
+  
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .stat-big {
+    background: linear-gradient(135deg, rgba(20, 15, 10, 0.7), rgba(5, 5, 5, 0.9));
+    border: 1px solid rgba(200, 146, 46, 0.2);
+    border-radius: 6px;
+    padding: 12px 6px;
+    text-align: center;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 4px 6px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .stat-big:hover {
+    transform: translateY(-2px);
+    border-color: var(--gold-mid);
+  }
+  .stat-big.atk { border-bottom: 3px solid var(--atk); }
+  .stat-big.def { border-bottom: 3px solid var(--def); }
+  .stat-big.hp { border-bottom: 3px solid var(--hp); }
+  .stat-big .l {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .stat-big .v {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: 'Cinzel', serif;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  }
+  .stat-big.atk .v { color: var(--atk); text-shadow: 0 0 8px rgba(255, 122, 89, 0.3); }
+  .stat-big.def .v { color: var(--def); text-shadow: 0 0 8px rgba(90, 169, 255, 0.3); }
+  .stat-big.hp .v { color: var(--hp); text-shadow: 0 0 8px rgba(95, 206, 107, 0.3); }
+  
+  .mini-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .mini {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(200, 146, 46, 0.15);
+    border-radius: 6px;
+    padding: 10px 6px;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .mini .l { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; } 
+  .mini .v { font-weight: 700; color: var(--gold-hi); font-family: 'Cinzel', serif; }
+  
+  .skill-box {
+    background: linear-gradient(180deg, rgba(18, 13, 8, 0.8), rgba(8, 6, 4, 0.95));
+    border: 1px solid var(--gold-deep);
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  }
+  .skill-box.burst.BB { border-left: 4px solid var(--bb); }
+  .skill-box.burst.SBB { border-left: 4px solid var(--sbb); }
+  .skill-box.burst.UBB { border-left: 4px solid var(--ubb); }
+  .skill-box.leader { border-left: 4px solid var(--gold-mid); }
+
+  .skill-box .sname {
+    font-weight: 700;
+    font-size: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--gold-hi);
+    font-family: 'Cinzel', serif;
+    border-bottom: 1px solid rgba(200, 146, 46, 0.15);
+    padding-bottom: 6px;
+  }
+  .skill-box .sname .tag {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 400;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(200, 146, 46, 0.2);
+    font-family: "Roboto Condensed", sans-serif;
+  }
+  .skill-box .sdesc {
+    font-size: 13.5px;
+    color: var(--txt);
+    line-height: 1.5;
+  }
+  .skill-box.leader .sdesc {
+    color: var(--gold-hi);
+  }
+  .skill-box.leader .sdesc span {
+    color: var(--gold-hi) !important;
+  }
+  
+  .burst-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+  .burst-cell {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(200, 146, 46, 0.1);
+    border-radius: 4px;
+    padding: 8px 4px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .burst-cell .l {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+  }
+  .burst-cell .v {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'Cinzel', serif;
+  }
+  .burst-cell.up .v { color: var(--atk); }
+  .burst-cell.up-def .v { color: var(--def); }
+  
+  /* Évolutions chronologiques */
+  .evo-chain {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(200, 146, 46, 0.15);
+  }
+  .evo-tag {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--gold-deep);
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    transition: all 0.3s ease;
+  }
+  .evo-tag.current {
+    background: var(--gold-deep);
+    color: var(--gold-hi);
+    border-color: var(--gold-hi);
+    font-weight: 700;
+    box-shadow: 0 0 10px rgba(200, 146, 46, 0.3);
+  }
+  .evo-arrow {
+    color: var(--gold-mid);
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  .closeBtn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(13, 11, 9, 0.85);
+    border: 1px solid var(--gold-mid);
+    color: var(--gold-hi);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+  }
+  .closeBtn:hover {
+    background: var(--gold-hi);
+    color: #1a1500;
+    border-color: var(--gold-hi);
+    transform: rotate(90deg) scale(1.05);
+  }
+
+  /* Version Grille Responsive Desktop pour la fiche */
+  @media(min-width: 850px) {
+    .overlay {
+      background: rgba(5, 7, 13, 0.85);
+    }
+    .page {
+      width: 90%;
+      max-width: 960px;
+      height: 85vh;
+      max-height: 780px;
+      border-radius: 12px;
+      border: 2px solid var(--gold-mid);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.95), 0 0 0 1px rgba(200, 146, 46, 0.2), inset 0 0 30px rgba(0,0,0,0.8);
+      display: grid;
+      grid-template-columns: 42% 58%;
+      grid-template-rows: 100%;
+      overflow: hidden;
+      transform: scale(0.96) translateY(20px);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+    }
+    .overlay.open .page {
+      transform: scale(1) translateY(0);
+    }
+    .hero-photo {
+      height: 100%;
+      width: 100%;
+      aspect-ratio: unset;
+      border-right: 2px solid rgba(200, 146, 46, 0.2);
+    }
+    .hero-photo::after {
+      background: linear-gradient(180deg, transparent 60%, rgba(13, 11, 9, 0.2) 80%, rgba(13, 11, 9, 0.6) 95%, rgba(13, 11, 9, 0.8) 100%);
+    }
+    .hero-details-container {
+      height: 100%;
+      overflow-y: auto;
+      background: #0d0b09;
+    }
+    .closeBtn {
+      top: 20px;
+      right: 20px;
+    }
+  }
+
+  /* Mobile Responsive Squad Bar */
+  @media(max-width: 850px) {
+    .squad-top { flex-direction: column; align-items: flex-start; }
+    .squad-leaderskill { text-align: left; }
+    .squad-slots-container { flex-direction: column; }
+    .squad-slots { width: 100%; }
+    .squad-totals { width: 100%; flex-direction: row; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
+    .st-stat { flex: 1; min-width: 120px; border-bottom: none; border-right: 1px solid rgba(200,146,46,0.2); padding-right: 12px; padding-bottom: 0; }
+    .st-stat:last-child { border-right: none; padding-right: 0; }
+  }
+
+  .el-fire{color:var(--fire)} .el-water{color:var(--water)} .el-earth{color:var(--earth)}
+  .el-thunder{color:var(--thunder)} .el-light{color:var(--light)} .el-dark{color:var(--dark)}
+  
+  /* toast */
+  .toast { position:fixed; bottom:40px; left:50%; transform:translateX(-50%); background:rgba(10,8,5,.95); border:1px solid var(--gold-mid); color:var(--gold-hi); padding:12px 24px; border-radius:4px; font-size:14px; font-family: 'Cinzel', serif; z-index:999; opacity:0; transition:.3s; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,.8); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(-10px); }
+
+  /* Fullscreen Artwork Overlay */
+  #artwork-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 7, 13, 0.98);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  #artwork-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .art-img-wrap {
+    position: relative;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    max-width: 90%;
+    max-height: 75vh;
+    filter: drop-shadow(0 0 30px rgba(0,0,0,0.9));
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: scale(0.95);
+    z-index: 2;
+  }
+  #artwork-overlay.open .art-img-wrap {
+    transform: scale(1);
+  }
+  .art-img-wrap img {
+    display: block;
+    max-width: 100%;
+    max-height: 75vh;
+    object-fit: contain;
+  }
+  #artwork-overlay .art-info {
+    position: absolute;
+    bottom: 40px;
+    text-align: center;
+    width: 100%;
+    padding: 0 20px;
+    z-index: 10;
+  }
+  #artwork-overlay .art-name {
+    font-family: 'Cinzel', serif;
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-shadow: 0 4px 12px #000;
+    margin-bottom: 6px;
+    text-transform: capitalize;
+  }
+  #artwork-overlay .art-rarity {
+    color: var(--gold-hi);
+    font-size: 22px;
+    letter-spacing: 3px;
+    text-shadow: 0 2px 8px #000;
+  }
+  #artwork-overlay .art-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    opacity: 0.7;
+    font-family: 'Roboto Condensed', sans-serif;
+  }
+
+  /* Artwork overlay element specific variables & animations */
+  #artwork-overlay.elem-fire    { --fx-glow: rgba(255, 90, 40, 0.55);  --fx-p: #ff7a2a; }
+  #artwork-overlay.elem-water   { --fx-glow: rgba(40, 140, 255, 0.50); --fx-p: #54b6ff; }
+  #artwork-overlay.elem-earth   { --fx-glow: rgba(70, 200, 110, 0.45); --fx-p: #7fe39a; }
+  #artwork-overlay.elem-thunder { --fx-glow: rgba(255, 215, 40, 0.50); --fx-p: #ffd21e; }
+  #artwork-overlay.elem-light   { --fx-glow: rgba(255, 240, 200, 0.55);--fx-p: #fff2c0; }
+  #artwork-overlay.elem-dark    { --fx-glow: rgba(150, 80, 220, 0.50); --fx-p: #a86bff; }
+
+  #artwork-overlay .home-fx-p {
+      animation-name: homeFxRiseFullscreen;
+  }
+  #artwork-overlay.elem-water .home-fx-p {
+      animation-name: homeFxFallFullscreen;
+      bottom: auto; top: -12px;
+  }
+  #artwork-overlay.elem-thunder .home-fx::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 210, 1);
+      mix-blend-mode: screen;
+      opacity: 0;
+      animation: homeFxFlash 5.5s steps(1, end) infinite;
+  }
+
+  @keyframes homeFxRiseFullscreen {
+      0%   { transform: translateY(0) scale(0.5); opacity: 0; }
+      12%  { opacity: 0.9; }
+      88%  { opacity: 0.5; }
+      100% { transform: translateY(-100vh) scale(1); opacity: 0; }
+  }
+  @keyframes homeFxFallFullscreen {
+      0%   { transform: translateY(0) scale(0.5); opacity: 0; }
+      12%  { opacity: 0.85; }
+      100% { transform: translateY(100vh) scale(1); opacity: 0; }
+  }
+
+  /* Holographic Card Effect for Nv Max and inventory hover */
+  .holographic {
+      position: relative;
+      overflow: hidden;
+  }
+  .holographic::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      background: linear-gradient(
+          115deg,
+          transparent 20%,
+          rgba(255, 255, 255, 0.15) 30%,
+          rgba(0, 220, 255, 0.25) 40%,
+          rgba(255, 0, 128, 0.2) 50%,
+          rgba(255, 230, 0, 0.15) 60%,
+          transparent 70%
+      );
+      background-size: 200% 200%;
+      background-position: 0% 0%;
+      mix-blend-mode: color-dodge;
+      pointer-events: none;
+      animation: holoShimmer 5s ease infinite;
+      opacity: 0.8;
+  }
+
+  .tile {
+      position: relative;
+      overflow: hidden;
+  }
+  .tile:hover::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      background: linear-gradient(
+          115deg,
+          transparent 30%,
+          rgba(255, 255, 255, 0.1) 40%,
+          rgba(0, 220, 255, 0.15) 50%,
+          rgba(255, 0, 128, 0.1) 60%,
+          transparent 70%
+      );
+      background-size: 200% 200%;
+      background-position: 0% 0%;
+      mix-blend-mode: color-dodge;
+      pointer-events: none;
+      animation: holoShimmer 3s ease infinite;
+      opacity: 0.6;
+  }
+
+  @keyframes holoShimmer {
+      0% { background-position: 0% 0%; }
+      50% { background-position: 100% 100%; }
+      100% { background-position: 0% 0%; }
+  }
+
+  /* Couche d'effets élémentaires (au-dessus du fond, sous le personnage) */
+  .hero-photo img, .hero-photo .fallback {
+      z-index: 2;
+      position: relative;
+  }
+  .home-fx {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      overflow: hidden;
+  }
+  .home-fx::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 36%, var(--fx-glow, transparent) 0%, transparent 58%);
+      mix-blend-mode: screen;
+      opacity: 0;
+      animation: homeFxGlow 6s ease-in-out infinite;
+  }
+  @keyframes homeFxGlow {
+      0%, 100% { opacity: 0.16; }
+      50%      { opacity: 0.42; }
+  }
+
+  .home-fx-p {
+      position: absolute;
+      bottom: -12px;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--fx-p, #fff);
+      box-shadow: 0 0 8px var(--fx-p, #fff);
+      opacity: 0;
+      animation: homeFxRise linear infinite;
+  }
+  @keyframes homeFxRise {
+      0%   { transform: translateY(0) scale(0.5); opacity: 0; }
+      12%  { opacity: 0.9; }
+      88%  { opacity: 0.5; }
+      100% { transform: translateY(-380px) scale(1); opacity: 0; }
+  }
+
+  /* Couleurs par élément */
+  .hero-photo.elem-fire    { --fx-glow: rgba(255, 90, 40, 0.55);  --fx-p: #ff7a2a; }
+  .hero-photo.elem-water   { --fx-glow: rgba(40, 140, 255, 0.50); --fx-p: #54b6ff; }
+  .hero-photo.elem-earth   { --fx-glow: rgba(70, 200, 110, 0.45); --fx-p: #7fe39a; }
+  .hero-photo.elem-thunder { --fx-glow: rgba(255, 215, 40, 0.50); --fx-p: #ffd21e; }
+  .hero-photo.elem-light   { --fx-glow: rgba(255, 240, 200, 0.55);--fx-p: #fff2c0; }
+  .hero-photo.elem-dark    { --fx-glow: rgba(150, 80, 220, 0.50); --fx-p: #a86bff; }
+
+  /* Eau : les particules tombent au lieu de monter */
+  .hero-photo.elem-water .home-fx-p {
+      animation-name: homeFxFall;
+      bottom: auto; top: -12px;
+  }
+  @keyframes homeFxFall {
+      0%   { transform: translateY(0) scale(0.5); opacity: 0; }
+      12%  { opacity: 0.85; }
+      100% { transform: translateY(380px) scale(1); opacity: 0; }
+  }
+
+  /* Foudre : flash lumineux occasionnel */
+  .hero-photo.elem-thunder .home-fx::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 210, 1);
+      mix-blend-mode: screen;
+      opacity: 0;
+      animation: homeFxFlash 5.5s steps(1, end) infinite;
+  }
+  @keyframes homeFxFlash {
+      0%, 100% { opacity: 0; }
+      71%      { opacity: 0; }
+      72%      { opacity: 0.45; }
+      73%      { opacity: 0; }
+      75%      { opacity: 0.30; }
+      76%      { opacity: 0; }
+  }
+
+</style>
+  <link rel="stylesheet" crossorigin href="/assets/index.css">
+</head>
+<body>
+    <!-- Chargement synchrone des composants du hub (styles + templates HTML en JS) pour éviter les erreurs CORS file:// -->
+    <script src="./hub-components.js"></script>
+
+    <!-- ===== ÉCRAN DE MENU DE DÉMARRAGE ===== -->
+    <div id="start-menu" onclick="startMenuContinue()" style="cursor: pointer;">
+        <div id="sm-black-screen"></div>
+        <div id="sm-ambient-glow"></div>
+        <div id="sm-logo-container">
+            <img id="sm-logo-only" src="/assets/logo.png" alt="Genotia Logo">
+            <div id="sm-logo-halo-ambient"></div>
+            <div id="sm-logo-halo"></div>
+            <div id="sm-logo-flare-h"></div>
+            <div id="sm-logo-flare-v"></div>
+        </div>
+        <div id="sm-press-to-start">Appuyer pour commencer</div>
+    </div>
+    <!-- ===== FIN MENU ===== -->
+    <!-- Danger vignette overlay -->
+    <div id="danger-vignette"></div>
+
+    <!-- Dynamic PC background -->
+    <div id="dynamic-pc-bg"></div>
+
+    <!-- Ambient particle canvas (behind everything) -->
+    <canvas id="ambient-particles" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.45;"></canvas>
+
+    <!-- ══ PILIER 3 — OVERLAYS PARTAGEABLES ══════════════════════ -->
+
+    <!-- Particles container (behind boss victory) -->
+    <div id="bv-particles"></div>
+
+    <!-- Boss Victory Overlay -->
+    <div id="boss-victory-overlay" class="hidden">
+        <div class="boss-victory-content">
+            <div class="boss-victory-title"><i class="ra ra-crossed-swords"></i> BOSS VAINCU !</div>
+            <div id="bv-zone" class="boss-victory-boss-name" style="font-size:13px;color:rgba(255,255,255,0.5)">Zone —</div>
+            <div id="bv-boss-name" class="boss-victory-boss-name">—</div>
+            <div class="boss-victory-stats">
+                <div class="boss-victory-stat">
+                    <span class="boss-victory-stat-val" id="bv-time">—</span>
+                    <span class="boss-victory-stat-lbl">Temps</span>
+                </div>
+                <div class="boss-victory-stat">
+                    <span class="boss-victory-stat-val" id="bv-dmg">—</span>
+                    <span class="boss-victory-stat-lbl">Dégâts</span>
+                </div>
+            </div>
+            <div id="bv-canvas-wrap" style="width:100%;text-align:center;min-height:40px">
+                <span style="font-size:11px;color:#666">Génération de la carte…</span>
+            </div>
+            <div class="boss-victory-actions">
+                <button class="bv-btn share" onclick="shareBossVictory()">↗ Partager</button>
+                <button class="bv-btn continue" onclick="closeBossVictory()">▶ Continuer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievement Share Modal -->
+    <div id="achievement-share-modal" class="hidden">
+        <div class="ach-share-box">
+            <div class="ach-share-title" id="ach-share-title"><i class="ra ra-trophy"></i> Achievement !</div>
+            <div id="ach-share-canvas-wrap" style="width:100%;text-align:center;min-height:40px"></div>
+            <div class="ach-share-actions">
+                <button class="ach-btn share" id="ach-share-share-btn">↗ Partager</button>
+                <button class="ach-btn close" onclick="closeAchShare()">✕ Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Squad Share Modal -->
+    <div id="squad-share-modal" class="hidden">
+        <div class="squad-share-box">
+            <div class="squad-share-title"><i class="ra ra-crossed-swords"></i> MA SQUAD</div>
+            <div id="squad-share-canvas-wrap" style="width:100%;text-align:center;min-height:40px"></div>
+            <div class="squad-share-actions">
+                <button class="ss-btn share" id="squad-share-share-btn">↗ Partager</button>
+                <button class="ss-btn close" onclick="document.getElementById('squad-share-modal').classList.add('hidden')">✕ Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Team Builder Modal ── -->
+    <div id="team-builder-modal" class="hidden">
+        <div class="tb-header">
+            <span class="tb-title"><i class="ra ra-crossed-swords"></i> Team</span>
+            <div style="display: flex; gap: 8px;">
+                <button class="tb-share-btn" onclick="openSquadShareModal()">↗ Partager ma Squad</button>
+                <button class="tb-close" onclick="closeTeamBuilder()">✕ Fermer</button>
+            </div>
+        </div>
+
+        <!-- Squad slots -->
+        <div class="tb-squad-row" id="tb-squad-row"></div>
+
+        <div class="tb-divider">
+            <div class="tb-divider-line"></div>
+            <span class="tb-divider-label">HÉROS DISPONIBLES — clique pour ajouter</span>
+            <div class="tb-divider-line"></div>
+        </div>
+
+        <!-- Element filter -->
+        <div class="tb-filter-bar" id="tb-filter-bar">
+            <div class="tb-filter-chip active" data-elem="all" onclick="tbSetFilter('all')">Tous</div>
+            <div class="tb-filter-chip" data-elem="Feu"      onclick="tbSetFilter('Feu')">🔥 Feu</div>
+            <div class="tb-filter-chip" data-elem="Eau"      onclick="tbSetFilter('Eau')">💧 Eau</div>
+            <div class="tb-filter-chip" data-elem="Terre"    onclick="tbSetFilter('Terre')">🌿 Terre</div>
+            <div class="tb-filter-chip" data-elem="Foudre"   onclick="tbSetFilter('Foudre')">⚡ Foudre</div>
+            <div class="tb-filter-chip" data-elem="Lumière"  onclick="tbSetFilter('Lumière')">✨ Lumière</div>
+            <div class="tb-filter-chip" data-elem="Ténèbres" onclick="tbSetFilter('Ténèbres')">🌑 Ténèbres</div>
+        </div>
+
+        <!-- Hero roster -->
+        <div class="tb-roster" id="tb-roster"></div>
+    </div>
+
+    <!-- ── Prestige Choice Modal ── -->
+    <div id="prestige-choice-modal" class="hidden">
+        <div class="prestige-choice-box">
+            <div class="prestige-choice-title"><i class="ra ra-crystal-ball"></i> REBIRTH</div>
+            <div class="prestige-choice-sub">
+                Tu gagnes <span class="prestige-choice-gain" id="pres-gain-display">?</span> Cristaux.<br>
+                Choisis ton avantage permanent :
+            </div>
+            <div class="prestige-option" onclick="doPrestigeChoice('dps')">
+                <div class="prestige-option-icon"><i class="ra ra-sword"></i></div>
+                <div class="prestige-option-info">
+                    <div class="prestige-option-name">Puissance Brute</div>
+                    <div class="prestige-option-desc">+15% DPS global permanent · Cumulable</div>
+                </div>
+                <div class="prestige-option-badge">+15% DPS</div>
+            </div>
+            <div class="prestige-option" onclick="doPrestigeChoice('gold')">
+                <div class="prestige-option-icon"><i class="ra ra-gold-bar"></i></div>
+                <div class="prestige-option-info">
+                    <div class="prestige-option-name">Fortune du Conquérant</div>
+                    <div class="prestige-option-desc">+25% or par kill permanent · Cumulable</div>
+                </div>
+                <div class="prestige-option-badge">+25% Or</div>
+            </div>
+            <div class="prestige-option" id="pres-opt-slot" onclick="doPrestigeChoice('slot')" style="display: none !important;">
+                <div class="prestige-option-icon"><i class="ra ra-shield"></i></div>
+                <div class="prestige-option-info">
+                    <div class="prestige-option-name">Grand Rassemblement</div>
+                    <div class="prestige-option-desc" id="pres-slot-desc">Débloque un 5e slot de Squad permanent</div>
+                </div>
+                <div class="prestige-option-badge" id="pres-slot-badge">Slot +1</div>
+            </div>
+            <button class="prestige-cancel-btn" onclick="document.getElementById('prestige-choice-modal').classList.add('hidden')">Annuler</button>
+        </div>
+    </div>
+
+    <!-- ── Sélecteur de difficulté ── -->
+    <div id="difficulty-modal" class="hidden">
+        <div class="diff-box">
+            <div class="diff-title"><i class="ra ra-crossed-swords"></i> Choisir la Difficulté</div>
+            <div class="diff-option easy"    onclick="selectDifficulty('easy')"   id="diff-opt-easy">
+                <div class="diff-option-icon"><span class="diff-dot easy">●</span></div>
+                <div class="diff-option-info">
+                    <div class="diff-option-name" style="color:#34d399">Facile</div>
+                    <div class="diff-option-desc">Monstres ×0.5 PV · Or ×0.5<br>Pour explorer sans pression</div>
+                </div>
+                <div class="diff-option-tag" style="color:#34d399">Or÷2</div>
+            </div>
+            <div class="diff-option normal"  onclick="selectDifficulty('normal')" id="diff-opt-normal">
+                <div class="diff-option-icon"><span class="diff-dot normal">●</span></div>
+                <div class="diff-option-info">
+                    <div class="diff-option-name" style="color:#94a3b8">Normal</div>
+                    <div class="diff-option-desc">L'expérience standard<br>Équilibre parfait</div>
+                </div>
+                <div class="diff-option-tag" style="color:#94a3b8">×1</div>
+            </div>
+            <div class="diff-option hard"    onclick="selectDifficulty('hard')"   id="diff-opt-hard">
+                <div class="diff-option-icon"><span class="diff-dot hard">●</span></div>
+                <div class="diff-option-info">
+                    <div class="diff-option-name" style="color:#fbbf24">Difficile</div>
+                    <div class="diff-option-desc">Monstres ×2 PV · Or ×1.5<br>Pour les aventuriers aguerris</div>
+                </div>
+                <div class="diff-option-tag" style="color:#fbbf24">Or×1.5</div>
+            </div>
+            <div class="diff-option extreme" onclick="selectDifficulty('extreme')" id="diff-opt-extreme">
+                <div class="diff-option-icon"><span class="diff-dot extreme">●</span></div>
+                <div class="diff-option-info">
+                    <div class="diff-option-name" style="color:#ef4444">Extrême</div>
+                    <div class="diff-option-desc">Monstres ×5 PV · Or ×3<br>Boss ont ×8 PV — Défie le!</div>
+                </div>
+                <div class="diff-option-tag" style="color:#ef4444">Or×3</div>
+            </div>
+            <button class="diff-close-btn" onclick="closeDifficultyModal()">Fermer</button>
+        </div>
+    </div>
+
+    <!-- ═════════════════════════════════════════════════════════ -->
+
+    <div id="game-window">
+        
+        <!-- AILE GAUCHE (PC uniquement) -->
+        <div id="left-wing" class="fantasy-panel">
+        </div>
+
+        <!-- ARÈNE DE COMBAT (Centrée sur PC, Plein écran sur Mobile) -->
+        <div id="combat-arena" class="fantasy-panel">
+        <!-- OBJECTIF CLAIR -->
+        <div id="objective-bar" style="display:none">
+            <span class="obj-label">◎ OBJECTIF</span>
+            <span class="obj-text" id="obj-text">Atteindre la Zone 5</span>
+            <div class="obj-bar-track"><div class="obj-bar-fill" id="obj-bar-fill" style="width:0%"></div></div>
+            <span class="obj-pct" id="obj-pct">0%</span>
+        </div>
+
+        <!-- HEADER -->
+        <div id="header">
+            <div class="header-top">
+                <button id="hub-home-btn" onclick="openHub()" title="Retour au Hub" aria-label="Retour au Hub">HUB</button>
+                <div class="zone-info">
+                    <div class="zone-name" id="zone-name">Chargement…</div>
+                    <div class="zone-progress" id="zone-progress">Monstre 1 / 10</div>
+                    <div class="zone-elem-badge" id="zone-elem-badge"></div>
+                    <div id="difficulty-badge" class="normal" onclick="openDifficultyModal()" title="Changer la difficulté"><span class="diff-dot normal">●</span> Normal</div>
+                </div>
+                <div class="currency-bar">
+                    <div class="currency gems" id="gems-display"><i class="ra ra-gem"></i> 0</div>
+                    <div class="currency gold" id="gold-display"><i class="ra ra-gold-bar"></i> 0</div>
+                    <div class="currency honor" id="honor-display" title="Points d'Honneur"><i class="ra ra-sword"></i> 0 PH</div>
+                </div>
+            </div>
+            <div class="stats-row">
+                <span class="tap-dmg-display"><i class="ra ra-aura" style="color:#60a5fa"></i> Soutien : <b id="tap-dmg-val" style="color:#60a5fa">+3 BC</b></span>
+                <span class="dps-display" id="dps-display">⚔ DPS : 0/s</span>
+                <span class="combo-display" id="combo-display"></span>
+            </div>
+        </div>
+
+        <!-- MONSTER ZONE -->
+        <div id="monster-zone">
+            <div id="monster-bg"></div>
+            <canvas id="particle-canvas"></canvas>
+            <div id="skill-active-overlay" class="skill-active-overlay">⚡ FRENZY ACTIVE (x3 DPS + x3 BC/tap) ⚡</div>
+            
+            <button id="combat-auto-btn" onclick="toggleCombatAuto()">AUTO OFF</button>
+
+            <div class="monster-container">
+                <span class="boss-label" id="boss-label"><i class="ra ra-skull"></i> BOSS</span>
+                <div id="boss-timer">⏱ 30s</div>
+                <div id="monster-name">…</div>
+                
+                <!-- Monster HP Bar -->
+                <div class="hp-bar-container">
+                    <div class="hp-bar-track-wrapper">
+                        <div id="hp-bar-delay" style="width:100%"></div>
+                        <div id="hp-bar-fill" style="width:100%"></div>
+                    </div>
+                    <div id="hp-text">10 / 10</div>
+                </div>
+                
+                <div id="monster-emoji-container">
+                    <img id="monster-emoji" src="/assets/slime-de-lave-1.png" alt="Monster">
+                </div>
+            </div>
+
+
+        </div>
+
+        <!-- FOOTER (Brave Bursts & Vie de l'équipe) -->
+        <div id="footer">
+            <div class="squad-party-hp-wrap">
+                <div class="hp-bar-container squad-party-hp-bar">
+                    <div id="party-hp-bar-fill" style="width:100%;"></div>
+                    <div id="party-hp-text">100 / 100</div>
+                </div>
+            </div>
+            <div class="footer-bb-slots" id="footer-bb-slots"></div>
+            
+            <!-- Items Bar -->
+            <div id="combat-items-bar">
+                <div class="combat-item-slot">
+                    <span class="item-count">x10</span>
+                    <i class="ra ra-potion item-icon cure"></i>
+                    <span class="item-label">Cure</span>
+                </div>
+                <div class="combat-item-slot">
+                    <span class="item-count">x7</span>
+                    <i class="ra ra-potion item-icon high-cure"></i>
+                    <span class="item-label">High Cure</span>
+                </div>
+                <div class="combat-item-slot">
+                    <span class="item-count">x5</span>
+                    <i class="ra ra-potion item-icon atk-pot"></i>
+                    <span class="item-label">Atk Potion</span>
+                </div>
+                <div class="combat-item-slot">
+                    <span class="item-count">x10</span>
+                    <i class="ra ra-glass-pot item-icon holy-water"></i>
+                    <span class="item-label">Holy Water</span>
+                </div>
+                <div class="combat-item-slot">
+                    <span class="item-count">x10</span>
+                    <i class="ra ra-glass-pot item-icon stimulant"></i>
+                    <span class="item-label">Stimulant</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="bb-overlay">
+            <video id="bb-video" playsinline></video>
+            <canvas id="bb-canvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none;"></canvas>
+            <div class="bb-bg"></div>
+            <div class="bb-stripe"></div>
+            <img class="bb-portrait" id="bb-portrait-img" alt="">
+            <div class="bb-text"></div>
+            <div class="bb-dmg-text"></div>
+            <div id="bb-hero-label"></div>
+            <div id="bb-burst-label">BRAVE BURST</div>
+        </div>
+
+        <!-- ── Tutorial banner (slides up from bottom of arena) ── -->
+        <div id="tutorial-banner"></div>
+
+        <!-- ── Hors stage : l'arène est vide (un seul jeu, le Hub est l'écran central) ── -->
+        <div id="no-stage-placeholder">
+            <div class="nsp-icon">🏰</div>
+            <div class="nsp-text">Aucune quête en cours</div>
+            <div class="nsp-sub">Lance un stage depuis la Quête Principale</div>
+            <button class="nsp-btn" onclick="openHub()">🏠 Retour au Hub</button>
+        </div>
+    </div>
+
+    <!-- TAB CONTENT (Le Tiroir à droite sur PC, Tiroir coulissant sur Mobile) -->
+    <div id="tab-content" class="collapsed">
+        <!-- En-tête du tiroir (mobile uniquement) -->
+        <div class="drawer-header">
+            <span class="drawer-title" id="drawer-title-lbl">UNITÉS</span>
+            <button class="drawer-close-btn" onclick="closeDrawer()" title="Réduire">Réduire ✕</button>
+        </div>
+
+            <!-- §2.3 — Carte du monde -->
+            <div class="tab-panel" id="panel-worldmap">
+                <div id="wm-afk-info" class="wm-afk-banner" style="display:none">
+                    ⚡ Mode AFK actif — farming sur <span id="wm-afk-stage">—</span>
+                </div>
+                <div id="wm-biomes-container"></div>
+            </div>
+
+            <div class="tab-panel active" id="panel-heroes">
+                <div id="legacy-heroes-host" style="display:none" aria-hidden="true">
+                <!-- Active Squad Section -->
+                <div class="squad-section">
+                    <div class="squad-title-row">
+                        <span>SQUAD ACTIVE (Max 5)</span>
+                        <span id="squad-ls-badge">Leader Skill: Aucun</span>
+                    </div>
+                    <div id="squad-grid"></div>
+                </div>
+
+                <button class="manage-team-btn" onclick="openTeamBuilder()">
+                    <i class="ra ra-crossed-swords"></i> Gérer la Team
+                </button>
+
+                <div class="squad-hint">
+                    Avantage Élémentaire sur la zone → <b>+50% DPS</b> au héros !
+                </div>
+
+
+
+                <!-- ── Synergies actives ── -->
+                <div class="synergy-section">
+                    <div class="synergy-section-title"><i class="ra ra-lightning-bolt"></i> Synergies</div>
+                    <div id="synergy-list"><div class="synergy-empty">Combine tes héros pour activer des synergies</div></div>
+                </div>
+
+                <!-- ── Formations ── -->
+                <div class="formation-section">
+                    <div class="formation-section-title">◈ Formation</div>
+                    <div class="formation-grid" id="formation-grid"></div>
+                </div>
+
+                <!-- Tap Upgrade -->
+                <div class="tap-upgrade-card" style="flex-direction: column; gap: 10px; align-items: stretch;">
+                    <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                        <div class="tap-upgrade-icon"><i class="ra ra-aura" style="color:#60a5fa"></i></div>
+                        <div class="tap-upgrade-info">
+                            <div class="tap-upgrade-title" style="color:#a78bfa">Soutien Actif</div>
+                            <div id="tap-desc">Niv. 0 — BC/tap : +3</div>
+                            <div id="tap-next-ms">Prochain cap: x2 au Niv.10</div>
+                        </div>
+                    </div>
+                    
+                    <div class="hm-lvlup-row" style="margin-bottom: 0; width: 100%; display: flex; gap: 6px;">
+                        <button class="hm-lvlup-btn x1" id="tap-btn-1" style="flex: 1; padding: 10px 2px;" onclick="upgradeTap(1)">+1</button>
+                        <button class="hm-lvlup-btn x10" id="tap-btn-10" style="flex: 1; padding: 10px 2px;" onclick="upgradeTap(10)">×10</button>
+                        <button class="hm-lvlup-btn xmax" id="tap-btn-max" style="flex: 1; padding: 10px 2px;" onclick="upgradeTap('max')">MAX</button>
+                    </div>
+                </div>
+
+                <div class="heroes-grid" id="heroes-grid"></div>
+                
+                <!-- Materials display -->
+                <div id="materials-container">
+                    <div class="materials-title">COMPOSANTS D'ÉVOLUTION</div>
+                    <div id="materials-list"></div>
+                </div>
+                </div><!-- /legacy-heroes-host -->
+
+                <!-- ====== NOUVEL ÉCRAN UNITÉS (squad + unités) ====== -->
+<div id="units-screen">
+<div class="units-container">
+  <!-- ===== MA SQUAD ===== -->
+  <section class="squad-bar">
+    <div class="squad-top">
+      <div class="squad-top-left">
+        <div class="st-title"><i class="ra ra-crossed-swords"></i> Ma Squad</div>
+        <button id="editSquadBtn" class="edit-squad-btn"><i class="ra ra-gear"></i> Modifier</button>
+      </div>
+      <div class="squad-leaderskill" id="squadLeaderSkill">Aucun leader</div>
+    </div>
+    
+    <div class="squad-slots-container">
+      <div class="squad-slots" id="squadSlots"></div>
+      <div class="squad-totals">
+        <div class="st-stat atk">
+          <div class="st-stat-top">
+            <div class="l">ATT totale</div>
+            <div class="v" id="sumAtk">0</div>
+          </div>
+          <div class="st-progress-bg"><div class="st-progress-fill" id="sumAtkBar" style="width: 0%"></div></div>
+        </div>
+        <div class="st-stat def">
+          <div class="st-stat-top">
+            <div class="l">DEF totale</div>
+            <div class="v" id="sumDef">0</div>
+          </div>
+          <div class="st-progress-bg"><div class="st-progress-fill" id="sumDefBar" style="width: 0%"></div></div>
+        </div>
+        <div class="st-stat hp">
+          <div class="st-stat-top">
+            <div class="l">HP totale</div>
+            <div class="v" id="sumHp">0</div>
+          </div>
+          <div class="st-progress-bg"><div class="st-progress-fill" id="sumHpBar" style="width: 0%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== UNITÉS ===== -->
+  <div class="units-head">
+    <div class="uh-title"><i class="ra ra-helmet"></i> Inventaire des Unités <span class="uh-count" id="unitCount"></span></div>
+    <div class="filters-group">
+      <div class="filters" id="filters"></div>
+      <div class="custom-dropdown" id="customSortDropdown">
+        <button class="sort-select" id="sortDropdownBtn">
+          <span>Trier par: Rareté (↓)</span>
+          <span style="font-size: 10px; margin-left: 4px;">▼</span>
+        </button>
+        <div class="dropdown-content hidden" id="sortDropdownContent">
+          <div class="dropdown-item active" data-value="rarity"><i class="ra ra-crown"></i> Rareté (↓)</div>
+          <div class="dropdown-item" data-value="atk"><i class="ra ra-sword"></i> ATT (↓)</div>
+          <div class="dropdown-item" data-value="def"><i class="ra ra-shield"></i> DEF (↓)</div>
+          <div class="dropdown-item" data-value="hp"><i class="ra ra-health"></i> HP (↓)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="page" id="page"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="artwork-overlay"></div>
+</div>
+
+            </div>
+            
+            <div class="tab-panel" id="panel-gacha" style="flex-direction:column; gap:10px;">
+                <!-- §ÉCO v2 — Gacha retiré : héros créés à l'Atelier (or + matériaux) -->
+                <!-- Bannière Rare Summon (masquée) -->
+            <div class="summon-banner" style="display:none;">
+                <div class="summon-rare-bg"></div>
+                <div class="summon-vortex"></div>
+                <div class="summon-banner-content">
+                    <div class="summon-banner-tag">✦ RARE SUMMON ✦</div>
+                    <div class="summon-banner-title">Héros Rares & Reliques</div>
+                    <div class="summon-banner-stars">Tier S 5% · Tier A 20%</div>
+                    <div class="summon-banner-desc">Héros S/A (25%) · Sphères (35%) · Matériaux (40%) · Pity S en 40</div>
+                </div>
+                <button class="summon-cost-btn gems" id="rare-summon-btn" onclick="summonRare()">
+                    <i class="ra ra-gem"></i> 5
+                </button>
+            </div>
+            <!-- Pity counter + ×10 (masqués — plus de gacha) -->
+            <div class="pity-row" id="pity-display-rare" style="display:none;">
+                <span><i class="ra ra-crystal-ball"></i> <span id="pity-rare-text">Invocations sans rare : 0</span></span>
+                <span class="pity-progress" id="pity-rare-progress">Pity dans 10</span>
+            </div>
+            <button class="summon-x10-btn" id="rare-summon-10-btn" onclick="summonRare10()" style="display:none;">
+                <span>✦ Invocation ×10</span>
+                <span><span class="pity-guaranteed">1 héros garanti</span> &nbsp; <i class="ra ra-gem"></i> 45 <span class="summon-x10-discount">(−10%)</span></span>
+            </button>
+
+            <!-- Bannière Honor Summon (masquée — remplacée par le Comptoir/Atelier) -->
+            <div class="summon-banner" style="display:none;">
+                <div class="summon-honor-bg"></div>
+                <div class="summon-banner-content">
+                    <div class="summon-banner-tag" style="color:rgba(167,139,250,0.8);">✦ HONOR SUMMON ✦</div>
+                    <div class="summon-banner-title">Matériaux d'Évolution</div>
+                    <div class="summon-banner-stars" style="color:#a78bfa;">Cristaux · Idoles · Totems · Mimics</div>
+                    <div class="summon-banner-desc"><i class="ra ra-sword"></i> +1 PH/kill · +10 PH/boss · 500 PH = 1 invocation</div>
+                </div>
+                <button class="summon-cost-btn" id="honor-summon-btn" onclick="summonHonor()" style="background:linear-gradient(135deg,#4f1d96,#7c3aed); border:1px solid #a78bfa; color:#e9d5ff;">
+                    <i class="ra ra-sword"></i> 500 PH
+                </button>
+            </div>
+
+            <!-- §ÉCO — Boutique Points de Maître (échange des doublons) -->
+            <div style="margin:6px 0 2px;">
+                <button onclick="openMasterShop()" id="master-shop-btn"
+                    style="width:100%;background:linear-gradient(135deg,#1f7a52,#2bbe7e);border:1px solid #8af0c0;
+                    color:#06160f;font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;
+                    padding:12px 16px;border-radius:8px;cursor:pointer;display:flex;align-items:center;
+                    justify-content:center;gap:8px;box-shadow:0 3px 10px rgba(43,190,126,0.4);">
+                    🛠 Atelier d'Invocation — crée tes héros avec tes matériaux
+                </button>
+            </div>
+
+            <!-- §4.2 — Invocation gratuite pub (masquée — jeu offline) -->
+            <div id="ad-free-summon-row" style="margin: 6px 0 2px;display:none;">
+                <button onclick="adFreeSummon()" id="ad-free-summon-btn"
+                    style="width:100%;background:linear-gradient(135deg,#7c3aed,#4f1d96);border:1px solid #a78bfa;
+                    color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;
+                    padding:10px 16px;border-radius:8px;cursor:pointer;display:flex;align-items:center;
+                    justify-content:center;gap:8px;box-shadow:0 3px 10px rgba(124,58,237,0.4);">
+                    🛠 Atelier d'Invocation
+                </button>
+            </div>
+
+            <div class="gacha-note">Équipez vos héros avec des Sphères pour démultiplier leur puissance !</div>
+            
+            <div class="desktop-spheres-inventory">
+                <div class="desktop-spheres-title">🎒 Vos Reliques et Sphères en Stock</div>
+                <div class="desktop-spheres-grid" id="global-spheres-stock">
+                </div>
+            </div>
+        </div>
+        
+        <!-- §4.3 — Boutique -->
+        <div class="tab-panel" id="panel-shop" style="flex-direction:column;gap:10px;overflow-y:auto;padding:4px 0;"></div>
+
+        <div class="tab-panel" id="panel-skills">
+            <div style="font-family:'Outfit', sans-serif; font-size:14px; color:#f1c40f; margin-bottom:6px;">Sorts d'Invocateur</div>
+            <div id="player-skills-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px;"></div>
+            <div style="font-family:'Outfit', sans-serif; font-size:14px; color:#c084fc; margin-bottom:6px; margin-top:10px;">Brave Bursts (Squad)</div>
+            <div id="hero-skills-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+        
+        <div class="tab-panel" id="panel-achievements">
+            <div style="font-family:'Outfit', sans-serif; font-size:14px; color:#fff; margin-bottom:10px; text-align:center;">Récupérez des Gemmes !</div>
+            <div id="achievements-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+            <!-- ══ QUÊTES JOURNALIÈRES ══ -->
+            <div class="section-divider">
+                📅 Quêtes Journalières
+                <span class="section-divider-timer" id="dq-reset-timer">—</span>
+            </div>
+            <div id="daily-quests-container"></div>
+
+            <!-- ══ BOSS HEBDOMADAIRE ══ -->
+            <div class="wb-header">
+                <i class="ra ra-crossed-swords"></i> Boss de la Semaine
+                <span style="font-size: 11px;color:#3a3030;font-family:'Outfit',sans-serif;" id="wb-week-tag">—</span>
+            </div>
+            <div class="wb-card" id="weekly-boss-container">
+                <div style="color:#5a4a4a;font-size:12px;">Chargement…</div>
+            </div>
+        </div>
+        
+        <div class="tab-panel" id="panel-prestige"></div>
+
+        <!-- PARAMÈTRES -->
+        <div class="tab-panel" id="panel-settings">
+                <!-- Pseudo de l'Invocateur -->
+                <div class="settings-section" id="player-name-section">
+                    <div class="settings-section-title">👤 Nom d'Invocateur</div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <input id="settings-name-input" type="text" maxlength="16" placeholder="Invocateur" autocomplete="off"
+                            style="flex:1;min-height:38px;padding:6px 12px;border-radius:8px;border:1px solid var(--stroke,#2A3349);
+                            background:rgba(11,14,20,0.7);color:var(--txt-1,#EDF1FA);font-family:'Outfit',sans-serif;font-size:13px;">
+                        <button onclick="savePlayerName()" class="toggle-btn on" style="min-height:38px;padding:6px 14px;cursor:pointer;">OK</button>
+                    </div>
+                </div>
+                <!-- §3.4 — Mode Performance -->
+                <div id="perf-toggle-container"></div>
+
+            <!-- §ÉCO v2 — Boosts gratuits (plus de pub) -->
+            <div class="settings-section" id="ad-boosts-section">
+                <div class="settings-section-title">✨ Boosts Gratuits</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <button id="ad-gold-buff-btn" onclick="adGoldBuff()"
+                        style="background:linear-gradient(135deg,#7c3aed,#4f1d96);border:1px solid #a78bfa;
+                        color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;
+                        padding:11px 16px;border-radius:8px;cursor:pointer;
+                        box-shadow:0 3px 10px rgba(124,58,237,0.4);text-align:left;">
+                        ✨ ×2 Or pendant 30 min &nbsp;<span style="opacity:.7;font-size:11px;">(3/jour)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Audio -->
+            <div class="settings-section">
+                <div class="settings-section-title">🔊 Audio</div>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Musique de fond</div>
+                        <div class="settings-row-sub">Thèmes combat, boss, menu…</div>
+                    </div>
+                    <button class="toggle-btn off" id="settings-bgm-toggle" onclick="toggleSettingsBGM()">OFF</button>
+                </div>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Bruitages (SFX)</div>
+                        <div class="settings-row-sub">Coups, level up, invocations…</div>
+                    </div>
+                    <button class="toggle-btn on" id="settings-sfx-toggle" onclick="toggleSettingsSFX()">ON</button>
+                </div>
+            </div>
+
+            <!-- Sauvegarde -->
+            <div class="settings-section">
+                <div class="settings-section-title"><i class="ra ra-save"></i> Sauvegarde</div>
+                <div class="settings-actions-row">
+                    <button class="settings-action-btn save" onclick="(markSaveDirty(), saveGame()); showNotif('✅ Partie sauvegardée !')"><i class="ra ra-save"></i> Sauvegarder</button>
+                    <button class="settings-action-btn danger" onclick="confirmReset()">✕ Supprimer</button>
+                </div>
+                <div class="settings-row-sub" style="text-align:center; color:#4a5a6a;">
+                    La suppression efface toute progression de façon permanente.
+                </div>
+            </div>
+
+            <!-- Export / Import -->
+            <div class="settings-section">
+                <div class="settings-section-title">↗ Export / Import</div>
+                <div class="settings-actions-row">
+                    <button class="settings-action-btn save" id="btn-export-save" onclick="exportSave()">📋 Exporter</button>
+                    <button class="settings-action-btn" id="btn-import-save" onclick="importSavePrompt()" style="background:linear-gradient(135deg,#1a6b4a,#0f4d35);border-color:#0d3d2a;">📥 Importer</button>
+                </div>
+                <div class="settings-row-sub" style="text-align:center; color:#4a5a6a;">
+                    Export copie dans le presse-papier. Import lit depuis le presse-papier.
+                </div>
+            </div>
+
+            <!-- Outils de Développement / Triche -->
+            <div class="settings-section">
+                <div class="settings-section-title" style="color: #e74c3c; text-shadow: 0 0 5px rgba(231, 76, 60, 0.3);">🛠 Outils de Dev (Triche)</div>
+                <div class="settings-actions-row">
+                    <button class="settings-action-btn" onclick="devUnlockEverything()" style="background:linear-gradient(135deg, #c0392b, #962d22); border-color: #7f241a; color: white;">🔓 Tout Débloquer</button>
+                </div>
+                <div class="settings-row-sub" style="text-align:center; color:#e74c3c;">
+                    Débloque instantanément tous les héros (Lvl 100/7★), les ressources infinies, et tous les biomes.
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="settings-section" id="stats-section">
+                <div class="settings-section-title">📊 Statistiques</div>
+                <div id="stats-content"></div>
+            </div>
+
+            <!-- Infos -->
+            <div class="settings-credits">Final Frontier Clicker · Sauvegarde locale (localStorage)</div>
+        </div>
+    </div>
+
+    <!-- AILE DROITE (PC uniquement) -->
+    <div id="right-wing" class="fantasy-panel">
+        <div id="right-wing-tab-bar"></div>
+        <div id="right-wing-tab-content"></div>
+
+        <!-- HERO FULL CARD MODAL -->
+        <div id="hero-modal">
+            <!-- Left panel (60% width on PC, containing only the hero illustration) -->
+            <div class="hm-left-panel" onclick="closeHeroModal()" title="Cliquer pour fermer" style="cursor: pointer;">
+                <img id="hm-image" class="hm-image" alt="Hero">
+            </div>
+            
+            <!-- Right panel (40% width on PC, containing stats and actions) -->
+            <div class="hm-right-panel">
+                <div class="hm-header">
+                    <div class="hm-header-badge-row">
+                        <span class="hm-stars-badge" id="hm-stars">★★★</span>
+                        <span class="hm-elem-badge" id="hm-elem">🔥</span>
+                        <span class="hm-lvl-badge" id="hm-header-lvl">Lv.1</span>
+                    </div>
+                    <div class="hm-title-row">
+                        <div class="hm-title" id="hm-title">Ignis l'Épéiste</div>
+                        <button class="hm-close" onclick="closeHeroModal()">×</button>
+                    </div>
+                </div>
+                
+                <div class="hm-content">
+                    <div class="hm-info">
+                        <div class="hm-lore" id="hm-lore">"Une description épique..."</div>
+                        
+                        <!-- Circular slots for spheres/equipment/skills -->
+                        <div class="hm-slots-container">
+                            <div class="hm-slot-circle" id="hm-slot-sphere" onclick="toggleSphereSelect()">
+                                <span id="hm-slot-sphere-icon"><i class="ra ra-plus"></i></span>
+                            </div>
+                            <div class="hm-slot-circle locked" title="Emplacement verrouillé">
+                                <span><i class="ra ra-sword"></i></span>
+                            </div>
+                            <div class="hm-slot-circle locked" title="Emplacement verrouillé">
+                                <span><i class="ra ra-shield"></i></span>
+                            </div>
+                            <div class="hm-slot-circle locked" title="Emplacement verrouillé">
+                                <span><i class="ra ra-fairy-wand"></i></span>
+                            </div>
+                        </div>
+                        
+                        <div class="hm-stats">
+                            <div class="hm-stat-row"><span>Type (Nature)</span><span id="hm-type" style="color:#f1c40f">Lord</span></div>
+                            <div class="hm-stat-row"><span>Niveau</span><span id="hm-lvl">1 / 50</span></div>
+                            <div class="hm-stat-row"><span>DPS total</span><span id="hm-dps">10</span></div>
+                            <div class="hm-stat-row"><span>HP / DEF Héros</span><span id="hm-hp-def">10 / 5</span></div>
+                            <div class="hm-stat-row" style="color:#f1c40f"><span>Bonus Doublons (Limit Break)</span><span id="hm-lb">+0%</span></div>
+                            
+                            <!-- Sphere selection row -->
+                            <div class="hm-stat-row" id="hm-sphere-row" style="color:#00d2ff; font-size:11px; margin-top:2px; display:none; flex-direction:column; gap:4px; width:100%;">
+                                <span>Sélectionner une Sphère</span>
+                                <select id="hm-sphere-select" onchange="equipSphere(this.value)" style="background:#1a2035; color:#fff; border:1px solid #2a3560; border-radius:4px; padding:4px 6px; font-size:11px; width: 100%;">
+                                </select>
+                            </div>
+                            
+                            <div class="hm-stat-row" style="color:#00d2ff; font-size:10px; margin-top:2px;"><span>Leader Skill</span><span id="hm-ls" style="color:#e0e6f0">Aucun</span></div>
+                            <div class="hm-stat-row" style="color:#a0b0c0; font-size:10px; margin-top:2px;"><span>Prochain palier</span><span id="hm-next-cap" style="color:#00d2ff"></span></div>
+                            <div class="hm-stat-row" id="hm-evo-mats-row" style="color:#e74c3c; font-size:10px; display:none; flex-direction:column; gap:2px; margin-top:4px;">
+                                <span>Matériaux Requis pour Évoluer :</span>
+                                <span id="hm-evo-mats-list" style="color:#a0b0c0"></span>
+                            </div>
+                            <!-- Barre de progression d'évolution -->
+                            <div class="evo-progress-section" id="hm-evo-progress" style="display:none">
+                                <div class="evo-progress-title">⭐ Prochaine Évolution — <span id="hm-evo-target-stars">4★</span></div>
+                                <div class="evo-req-row">
+                                    <span class="evo-req-label">Niveau</span>
+                                    <div class="evo-bar-wrap"><div class="evo-bar-inner" id="hm-evo-lvl-bar" style="width:0%;background:#00d2ff"></div></div>
+                                    <span class="evo-req-val" id="hm-evo-lvl-val"></span>
+                                </div>
+                                <div class="evo-req-row">
+                                    <span class="evo-req-label">Zone requise</span>
+                                    <span class="evo-req-val" id="hm-evo-zone-val"></span>
+                                </div>
+                                <div class="evo-req-row" id="hm-evo-mats-prog-row">
+                                    <span class="evo-req-label">Matériaux</span>
+                                    <span class="evo-req-val" id="hm-evo-mats-prog-val"></span>
+                                </div>
+                                <div class="evo-req-row">
+                                    <span class="evo-req-label">Or requis</span>
+                                    <span class="evo-req-val" id="hm-evo-gold-val"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="hm-actions" id="hm-actions-owned">
+                            <!-- Rangée 1 : niveau ×1 / ×10 / MAX -->
+                            <div class="hm-lvlup-row" id="hm-levelup-row">
+                                <button class="hm-lvlup-btn x1"   id="hm-btn-lvlup"    onclick="levelUpCurrentHero(1)">
+                                    <span class="lvl-label">+1</span>
+                                    <span class="lvl-cost"  id="hm-cost-1"></span>
+                                </button>
+                                <button class="hm-lvlup-btn x10"  id="hm-btn-lvlup10"  onclick="levelUpCurrentHero(10)">
+                                    <span class="lvl-label">×10</span>
+                                    <span class="lvl-cost"  id="hm-cost-10"></span>
+                                </button>
+                                <button class="hm-lvlup-btn xmax" id="hm-btn-lvlupmax" onclick="levelUpCurrentHero('max')">
+                                    <span class="lvl-label">MAX</span>
+                                    <span class="lvl-cost"  id="hm-cost-max"></span>
+                                </button>
+                            </div>
+                            <!-- Rangée 2 : évoluer + squad -->
+                            <div class="hm-actions-row2">
+                                <button class="hm-btn evolve" id="hm-btn-evolve" onclick="evolveCurrentHero()" style="flex:1;">Évoluer</button>
+                                <button class="hm-btn" id="hm-btn-squad" onclick="toggleSquadCurrentHero()" style="flex:1;">Squad</button>
+                            </div>
+                        </div>
+                        <div class="hm-actions" id="hm-actions-buy" style="display:none; padding-top: 10px;">
+                            <button class="hm-btn xmax" id="hm-btn-buy" onclick="buyCurrentHero()" style="width:100%;">
+                                <span style="font-size: 14px;">Acheter Héros</span><br>
+                                <span id="hm-cost-buy" style="font-size: 11px; opacity: 0.8;"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENEUR DES ONGLETS MOBILES (Initialement hébergé ici) -->
+    <div id="mobile-tab-bar-container">
+        <div id="tab-bar">
+            <button class="tab-btn" data-tab="hub" id="tab-hub-btn"><span class="tab-icon">🏠</span> HUB</button>
+            <button class="tab-btn active" data-tab="heroes"><span class="tab-icon"><img src="/assets/bouton_unite.png" class="hub-bb-img-icon" alt="Unités"></span> UNITÉS</button>
+            <button class="tab-btn" data-tab="shop"><span class="tab-icon">🛒</span> BOUTIQUE</button>
+            <button class="tab-btn" data-tab="gacha"><span class="tab-icon"><i class="ra ra-crystal-ball"></i></span> INVOC</button>
+            <button class="tab-btn" data-tab="skills"><span class="tab-icon"><i class="ra ra-fairy-wand"></i></span> SKILLS</button>
+            <button class="tab-btn" data-tab="achievements"><span class="tab-icon"><i class="ra ra-trophy"></i></span> SUCCÈS</button>
+            <button class="tab-btn" data-tab="prestige"><span class="tab-icon"><i class="ra ra-crown"></i></span> PRESTIGE</button>
+            <button class="tab-btn" data-tab="settings"><span class="tab-icon"><i class="ra ra-cog"></i></span> PARAM</button>
+            <!-- P2 §3.3 — bouton "Plus" (mobile uniquement) : regroupe skills/succès/prestige/param -->
+            <button class="tab-btn" id="tab-more-btn" type="button"><span class="tab-icon">⋯</span> PLUS</button>
+        </div>
+    </div>
+
+    <!-- P2 §3.3 — mini-sheet "Plus" (mobile) -->
+    <div id="more-sheet-scrim" class="hidden">
+        <div id="more-sheet">
+            <div class="more-sheet-grip"></div>
+            <button class="more-sheet-item" data-tab="skills"><span class="tab-icon"><i class="ra ra-fairy-wand"></i></span> Skills</button>
+            <button class="more-sheet-item" data-tab="achievements"><span class="tab-icon"><i class="ra ra-trophy"></i></span> Succès &amp; Quêtes</button>
+            <button class="more-sheet-item" data-tab="prestige"><span class="tab-icon"><i class="ra ra-crown"></i></span> Prestige</button>
+            <button class="more-sheet-item" data-tab="settings"><span class="tab-icon"><i class="ra ra-cog"></i></span> Paramètres</button>
+        </div>
+    </div>
+
+</div> <!-- Fin de #game-window -->
+
+    <!-- ══ HUB MENU — façon Brave Frontier ══ -->
+    <div id="hub-menu" class="hidden">
+
+        <!-- Bandeau supérieur : joueur · logo · devises (Split style Brave Frontier) -->
+        <div class="hub-topbar"></div>
+
+        <!-- Hôte de section : les panneaux (Unités, Boutique…) s'ouvrent ICI,
+             entre le header et la barre du bas du hub -->
+        <div id="hub-panel-host" class="hidden">
+            <div class="hub-panel-header">
+                <div class="hub-panel-title" id="hub-panel-title">Section</div>
+                <button class="hub-panel-close" onclick="closeHubPanelToHome()" aria-label="Fermer">✕</button>
+            </div>
+            <div id="hub-panel-content"></div>
+        </div>
+
+        <!-- ====== NOUVELLE INTERFACE HOME ====== -->
+        <!-- Libellés dérivés automatiquement du nom de fichier de chaque image
+             par initHomeMenuLabels() (cf. js/game/10_hub_iap.js). -->
+        <div id="new-home-screen">
+            <!-- Fond dynamique = leader de la squad + fondu noir pour la lisibilité -->
+            <div class="home-dynamic-bg">
+                <img id="home-leader-bg" src="" alt="">
+                <div class="home-bg-gradient"></div>
+            </div>
+            <!-- Ambiance élémentaire (halo + particules selon l'élément du leader) -->
+            <div id="home-element-fx" class="home-fx" aria-hidden="true"></div>
+
+            <!-- Header premium : identité du joueur + ressources (HUD JRPG Unifié) -->
+            <div class="home-top-header">
+                <!-- Première ligne : Profil de l'Invocateur & Bouton Paramètres -->
+                <div class="home-header-row home-header-row--top">
+                    <div class="home-profile-card home-stat home-stat--player" title="Profil de l'Invocateur" onclick="hubNavigate('settings')">
+                        <span class="home-player-lv-badge" id="home-player-lv">Niv. 1</span>
+                        <span class="home-player-name-text" id="home-player-name">Invocateur</span>
+                    </div>
+                    <button class="home-settings-btn" title="Paramètres" onclick="hubNavigate('settings')">
+                        <img src="/assets/parametre.png" alt="Paramètres">
+                    </button>
+                </div>
+                
+                <!-- Barre de progression XP décorative style JRPG -->
+                <div class="home-xp-divider">
+                    <div class="home-xp-progress" style="width: 35%;"></div>
+                </div>
+                
+                <!-- Deuxième ligne : Ressources Or et Grade/Étoiles côte à côte -->
+                <div class="home-header-row home-header-row--bottom">
+                    <div class="home-res-slot home-stat home-res-slot--gold" title="Or">
+                        <img class="home-res-icon" src="/assets/OR.png" alt="Or">
+                        <div class="home-res-info">
+                            <span class="home-res-title">OR</span>
+                            <span class="home-res-value" id="home-gold-val">0</span>
+                        </div>
+                    </div>
+                    <div class="home-res-slot home-stat home-res-slot--grade" title="Grade de la squad" onclick="hubNavigate('heroes')" style="cursor: pointer;">
+                        <img class="home-res-icon" id="home-grade-img" src="/assets/G1.png" alt="Grade">
+                        <div class="home-res-info">
+                            <span class="home-res-title">GRADE</span>
+                            <span class="home-res-value" id="home-squad-stars">0 ★</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Double boutons centraux (Aventure + Vortex) -->
+            <div class="home-center-actions">
+                <button class="home-center-btn home-center-btn--adventure" data-home-label="Aventure" onclick="hubNavigate('main')">
+                    <div class="home-center-img-wrap">
+                        <img src="/assets/avanture.png" alt="Aventure">
+                    </div>
+                    <span class="home-btn-label"></span>
+                </button>
+                <button class="home-center-btn home-center-btn--vortex" data-home-label="Vortex" onclick="hubNavigate('combat_test')">
+                    <div class="home-center-img-wrap">
+                        <img src="/assets/VORTEX.png" alt="Vortex">
+                    </div>
+                    <span class="home-btn-label"></span>
+                </button>
+            </div>
+
+            <!-- Rangée principale de 4 losanges, sur un socle flouté -->
+            <div class="home-menu-row">
+                <button class="home-v-btn pos-1" data-home-label="Unités" onclick="hubNavigate('heroes')">
+                    <div class="home-v-btn-icon-wrap">
+                        <img src="/assets/UNITE%CC%81.png" alt="">
+                    </div>
+                    <span class="home-btn-label"></span>
+                </button>
+                <button class="home-v-btn pos-2" data-home-label="Village" onclick="hubNavigate('town')">
+                    <div class="home-v-btn-icon-wrap">
+                        <img src="/assets/HOME.png" alt="">
+                    </div>
+                    <span class="home-btn-label"></span>
+                </button>
+                <button class="home-v-btn pos-3" data-home-label="Quêtes" onclick="hubNavigate('achievements')">
+                    <div class="home-v-btn-icon-wrap">
+                        <img src="/assets/mission.png" alt="">
+                    </div>
+                    <span class="home-btn-label"></span>
+                </button>
+                <button class="home-v-btn pos-4" data-home-label="Invocations" onclick="hubNavigate('gacha')">
+                    <div class="home-v-btn-icon-wrap">
+                        <img src="/assets/invocation.png" alt="">
+                    </div>
+                    <span class="home-btn-label"></span>
+                </button>
+            </div>
+        </div>
+        <!-- ===================================== -->
+
+        <!-- Barre d'icônes du bas (Ajustée aux 5 options JRPG) -->
+        <div class="hub-bottombar"></div>
+    </div>
+
+    <!-- ══ CARTE DES QUÊTES — sélection de zone façon BF ══ -->
+    <div id="quest-map-view" class="hidden">
+        <div class="qm-scroll" id="qm-scroll">
+            <div class="qm-map-wrap">
+                <img class="qm-map-img" src="/assets/map%201%20.png" alt="Carte du monde" draggable="false">
+                <svg id="qm-paths-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;"></svg>
+                <div id="qm-areas" style="position:absolute;inset:0;z-index:3;"></div>
+            </div>
+        </div>
+        <button class="qm-back-btn" onclick="closeQuestMap()">◀ Back</button>
+        <div class="qm-map-name-banner">✦ <span id="qm-map-name">Mistral</span> ✦</div>
+    </div>
+
+    <!-- Panneau des stages d'une zone -->
+    <div id="area-stages-panel" class="hidden">
+        <div class="asp-scrim" onclick="closeAreaPanel()"></div>
+        <div class="asp-sheet">
+            <div class="asp-header">
+                <div class="asp-title" id="asp-title">Zone</div>
+                <div class="asp-stars" id="asp-stars">★ 0 / 15</div>
+                <button class="asp-close" onclick="closeAreaPanel()" aria-label="Fermer">✕</button>
+            </div>
+            <div class="asp-stages" id="asp-stages"></div>
+        </div>
+    </div>
+
+    <!-- ══ RÉSULTAT DE STAGE — victoire / défaite (Phase 3) ══ -->
+    <div id="stage-result-overlay" class="hidden">
+        <div class="sr-box victory" id="sr-box">
+            <div class="sr-title" id="sr-title">VICTOIRE !</div>
+            <div class="sr-stage" id="sr-stage">Zone 1-1</div>
+            <div class="sr-stars" id="sr-stars"></div>
+            <div class="sr-details" id="sr-details"></div>
+            <div class="sr-buttons" id="sr-buttons"></div>
+        </div>
+    </div>
+
+    <!-- ══ LA VILLE — Récolte de composants ══ -->
+    <div id="town-view" class="hidden">
+        <div class="town-inner">
+            <div class="town-header">
+                <button class="town-back-btn" onclick="closeTown()">◀ Retour au Hub</button>
+                <div class="town-title">🏘️ La Ville</div>
+                <div class="town-regen-info" id="town-regen-info">+1 charge / 10 min</div>
+            </div>
+            <div class="town-nodes">
+                <button class="town-node" id="town-node-crystals" onclick="harvestTownNode('crystals')">
+                    <span class="town-node-icon"><i class="ra ra-gem-stone"></i></span>
+                    <span class="town-node-name">Gisement de Cristaux</span>
+                    <span class="town-node-desc">Cristaux d'évolution (3★)</span>
+                    <span class="town-node-charges" id="town-charges-crystals">5 / 5</span>
+                    <span class="town-node-gauge"><span class="town-node-gauge-fill" id="town-gauge-crystals"></span></span>
+                </button>
+                <button class="town-node" id="town-node-idols" onclick="harvestTownNode('idols')">
+                    <span class="town-node-icon"><i class="ra ra-crystal-ball"></i></span>
+                    <span class="town-node-name">Rivière de Vie</span>
+                    <span class="town-node-desc">Idoles d'évolution (4★)</span>
+                    <span class="town-node-charges" id="town-charges-idols">5 / 5</span>
+                    <span class="town-node-gauge"><span class="town-node-gauge-fill" id="town-gauge-idols"></span></span>
+                </button>
+                <button class="town-node" id="town-node-totems" onclick="harvestTownNode('totems')">
+                    <span class="town-node-icon"><i class="ra ra-sprout"></i></span>
+                    <span class="town-node-name">Arbre des Esprits</span>
+                    <span class="town-node-desc">Totems d'évolution (5★)</span>
+                    <span class="town-node-charges" id="town-charges-totems">5 / 5</span>
+                    <span class="town-node-gauge"><span class="town-node-gauge-fill" id="town-gauge-totems"></span></span>
+                </button>
+                <button class="town-node" id="town-node-mimics" onclick="harvestTownNode('mimics')">
+                    <span class="town-node-icon"><i class="ra ra-ghost"></i></span>
+                    <span class="town-node-name">Manoir Hanté</span>
+                    <span class="town-node-desc">Mimics, Or &amp; Points d'Honneur</span>
+                    <span class="town-node-charges" id="town-charges-mimics">5 / 5</span>
+                    <span class="town-node-gauge"><span class="town-node-gauge-fill" id="town-gauge-mimics"></span></span>
+                </button>
+            </div>
+            <button class="town-ad-reset-btn" id="town-ad-reset-btn" onclick="adResetTown()">
+                ✨ Recharger tous les gisements — gratuit
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ LOGIN BONUS OVERLAY ══ -->
+    <div id="login-bonus-overlay" class="hidden">
+        <div class="login-modal">
+            <div class="login-modal-title"><i class="ra ra-trophy"></i> Bonus Quotidien</div>
+            <div class="login-modal-subtitle">Connectez-vous chaque jour pour des récompenses !</div>
+            <div class="login-streak-badge" id="login-streak-text">🔥 Série : 0 jour</div>
+            <div class="login-days-grid" id="login-days-grid"></div>
+            <button class="login-claim-btn" id="login-claim-btn" onclick="claimLoginBonus()">
+                ✦ Réclamer la récompense du jour
+            </button>
+        </div>
+    </div>
+
+    <!-- OVERLAYS -->
+    <div id="summon-overlay"></div>
+    <div id="screen-flash"></div>
+    <div id="notif-toast"></div>
+
+    <!-- SUMMON GATE ANIMATION -->
+    <div id="summon-gate-overlay">
+        <div class="sg-vortex"></div>
+        <div class="sg-glow" id="sg-glow"></div>
+        <div class="sg-gate"></div>
+    </div>
+
+    <!-- HERO / MATERIAL REVEAL -->
+    <div id="summon-reveal">
+        <div id="reveal-bg"></div>
+        <div id="reveal-portrait-wrap">
+            <img id="reveal-portrait" alt="" style="display:none;">
+            <div id="reveal-material-emoji" style="display:none;"></div>
+        </div>
+        <div id="reveal-stars-container"></div>
+        <div id="reveal-hero-name"></div>
+        <div id="reveal-hero-info"></div>
+        <button id="reveal-continue-btn" onclick="closeReveal()">Continuer ▶</button>
+    </div>
+</div>
+
+<!-- §ÉCO — Modale Boutique Points de Maître -->
+<div id="master-shop-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(4,8,20,0.82);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div style="width:min(560px,92vw);max-height:86vh;overflow-y:auto;background:linear-gradient(180deg,#12182b,#0b1020);border:1px solid #2a3550;border-radius:14px;padding:18px 16px 22px;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">
+            <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:18px;color:#8af0c0;">🛠 Atelier d'Invocation</div>
+            <button onclick="closeMasterShop()" style="background:none;border:none;color:#9fb0cc;font-size:22px;cursor:pointer;line-height:1;">✕</button>
+        </div>
+        <div style="font-size:12px;color:#9fb3aa;margin-bottom:12px;">Réunis l'or et les matériaux de l'élément d'un héros pour l'invoquer. Aucun hasard : ce que tu farmes, tu l'obtiens.</div>
+        <div id="master-shop-list"></div>
+    </div>
+</div>
+
+<!-- Injecter les templates et libérer les écouteurs DOMContentLoaded -->
+<script>
+  (function() {
+    try {
+      const components = window.hubComponents;
+      if (!components) throw new Error("hubComponents definition not found");
+      
+      // 1. Extraire et injecter les styles CSS dans le head
+      const styleEl = document.createElement('style');
+      styleEl.textContent = components.css;
+      document.head.appendChild(styleEl);
+      
+      // 2. Extraire et injecter le header
+      document.querySelector('.hub-topbar').innerHTML = components.header;
+      
+      // 3. Extraire et injecter le footer
+      document.querySelector('.hub-bottombar').innerHTML = components.footer;
+    } catch (err) {
+      console.error("Failed to inject hub components:", err);
+    }
+  })();
+</script>
+<script src="./assets/globals.bundle.js"></script> <!-- §1.7 câblage : globals (window._Dec/D/fmt) chargés AVANT le jeu -->
+<!-- ===== JEU : game.js découpé en 11 modules thématiques, chargés DANS L'ORDRE ===== -->
+<!-- (concaténés = strictement identiques à l'ancien js/game.js ; sauvegarde : js/game.ORIGINAL.bak.js) -->
+<script src="./js/game/01_state_config.js"></script>   <!-- Config, état, carte des biomes, loot, compétences, prestige -->
+<script src="./js/game/02_audio_fx.js"></script>       <!-- Audio (BGM/SFX), paramètres, particules -->
+<script src="./js/game/03_save_init.js"></script>      <!-- Initialisation, sauvegarde / chargement -->
+<script src="./js/game/04_economy.js"></script>        <!-- Stats & équilibrage économique -->
+<script src="./js/game/05_bb_teambuilder.js"></script> <!-- Brave Burst FX, Team Builder, stratégie -->
+<script src="./js/game/06_battle_loop.js"></script>    <!-- Combat & timers, DPS, clic, simulation -->
+<script src="./js/game/07_ui_displays.js"></script>    <!-- Affichages UI & grilles -->
+<script src="./js/game/08_summon_skills.js"></script>  <!-- Invocation, compétences, succès, prestige -->
+<script src="./js/game/09_tabs_stages.js"></script>    <!-- Onglets/tiroir, pubs, système de stages -->
+<script src="./js/game/10_hub_iap.js"></script>        <!-- Hub, Ville, pont combat, IAP, export/import -->
+<script src="./js/game/11_retention_share.js"></script><!-- Rétention, login, quêtes, boss hebdo, partage -->
+<script src="./js/ui-shell.js"></script> <!-- P2 : tab bar 5 onglets + gestes bottom sheet -->
+
+<script src="./js/ambient-particles.js"></script>
+
+<script src="./js/touch-zoom-block.js"></script>
+
+<!-- ===== LOGIQUE DU MENU DE DÉMARRAGE ===== -->
+<script src="./js/start-menu.js"></script>
+    <!-- §3.4 — Performance mode badge -->
+    <div id="perf-mode-badge">⚡ PERF MODE</div>
+<!-- ===== ÉCRAN UNITÉS : logique (isolée) ===== -->
+<script>
+(function(){
+/* ===== ÉCRAN UNITÉS (porté de heroes.html, isolé) ===== */
+/* MOTEUR DE STATS (inliné pour heroes.html) */
+const ELEMENT_BEATS={fire:'earth',earth:'thunder',thunder:'water',water:'fire',light:'dark',dark:'light'};
+const RARITY_TUNING={
+  1:{levelCap:30,statMult:1.00,growthPerLevel:0.040},
+  2:{levelCap:40,statMult:1.55,growthPerLevel:0.045},
+  3:{levelCap:60,statMult:2.40,growthPerLevel:0.050},
+  4:{levelCap:80,statMult:3.70,growthPerLevel:0.055},
+  5:{levelCap:100,statMult:5.60,growthPerLevel:0.060},
+  6:{levelCap:120,statMult:8.50,growthPerLevel:0.065},
+};
+const TYPE_STAT_MODS={
+  Lord:{atk:1.00,def:1.00,hp:1.00}, Anima:{atk:1.00,def:0.85,hp:1.25},
+  Breaker:{atk:1.25,def:0.85,hp:0.90}, Guardian:{atk:0.85,def:1.25,hp:1.00},
+  Oracle:{atk:0.95,def:0.90,hp:0.95},
+};
+const ROLE_PROFILE={
+  mage:{atk:1.30,def:0.80,hp:0.85}, tank:{atk:0.75,def:1.45,hp:1.30}, support:{atk:0.90,def:1.05,hp:1.10},
+};
+const LEADER_SKILLS={
+  brasier_ardent:{name:'Brasier Ardent',target:'element',targetDetail:'fire',stat:'atk',value:0.45},
+  maree_glaciale:{name:'Marée Glaciale',target:'element',targetDetail:'water',stat:'atk',value:0.45},
+  fureur_sauvage:{name:'Fureur Sauvage',target:'element',targetDetail:'earth',stat:'atk',value:0.45},
+  orage_dechaine:{name:'Orage Déchaîné',target:'element',targetDetail:'thunder',stat:'atk',value:0.45},
+  jugement_sacre:{name:'Jugement Sacré',target:'element',targetDetail:'light',stat:'atk',value:0.45},
+  malediction:{name:'Malédiction',target:'element',targetDetail:'dark',stat:'atk',value:0.45},
+  rage_des_mages:{name:'Rage des Mages',target:'role',targetDetail:'mage',stat:'atk',value:0.50},
+  assaut_total:{name:'Assaut Total',target:'all',targetDetail:'',stat:'atk',value:0.30},
+  rempart_de_gaia:{name:'Rempart de Gaïa',target:'all',targetDetail:'',stat:'def',value:0.35},
+  garde_des_ombres:{name:'Garde des Ombres',target:'element',targetDetail:'dark',stat:'def',value:0.45},
+  mur_de_fer:{name:'Mur de Fer',target:'role',targetDetail:'tank',stat:'def',value:0.55},
+  benediction_vie:{name:'Bénédiction de Vie',target:'all',targetDetail:'',stat:'hp',value:0.25},
+  coeur_aquatique:{name:'Cœur Aquatique',target:'element',targetDetail:'water',stat:'hp',value:0.40},
+  flux_de_brave:{name:'Flux de Brave',target:'all',targetDetail:'',stat:'bb_rate',value:0.30},
+  economie_brave:{name:'Économie Brave',target:'all',targetDetail:'',stat:'bb_cost',value:-0.20},
+};
+const BURST_TIERS={
+  BB:{key:'BB',label:'Brave Burst',gaugeCost:100,atkBuff:0.50,defBuff:0.25,dmgMult:1.8,duration:1,color:'#00d2ff'},
+  SBB:{key:'SBB',label:'Super BB',gaugeCost:100,atkBuff:1.00,defBuff:0.50,dmgMult:2.6,duration:2,color:'#f1c40f'},
+  UBB:{key:'UBB',label:'⚡ Ultimate BB',gaugeCost:100,atkBuff:2.50,defBuff:1.50,dmgMult:4.5,duration:3,color:'#ff3366'},
+};
+const HERO_BUDGET=100;
+function buildBaseStats(budget,role){
+  const P=ROLE_PROFILE[role]||ROLE_PROFILE.mage;
+  return {atk:Math.round(budget*0.10*P.atk),def:Math.round(budget*0.07*P.def),hp:Math.round(budget*1.00*P.hp)};
+}
+function computeStats(base,{stars=1,level=1,type='Lord'}={}){
+  const R=RARITY_TUNING[stars]||RARITY_TUNING[1];
+  const T=TYPE_STAT_MODS[type]||TYPE_STAT_MODS.Lord;
+  const lvl=Math.min(level,R.levelCap);
+  const f=1+R.growthPerLevel*(lvl-1);
+  const s=(b,t)=>Math.round(b*R.statMult*f*t);
+  return {atk:s(base.atk,T.atk),def:s(base.def,T.def),hp:s(base.hp,T.hp),level:lvl,levelCap:R.levelCap};
+}
+function applyBurst(stats,tierKey){
+  const t=BURST_TIERS[tierKey]||BURST_TIERS.BB;
+  return {burstAtk:Math.round(stats.atk*(1+t.atkBuff)),burstDef:Math.round(stats.def*(1+t.defBuff)),tier:t};
+}
+
+function getHeroImage(id, context = 'full') {
+  const mapping = {
+    ignis: { squad: 'Squad img/IGNIS-3.png', full: 'full img/IGNIS-3.png' },
+    selena: { squad: 'Squad img/SELENA-3.png', full: 'full img/SELENA-3.png' },
+    sera: { squad: 'Squad img/SERA-3.png', full: 'full img/SERA-3.png' },
+    atro: { squad: 'Squad img/ATRO-3.png', full: 'full img/ATRO-3.png' },
+    karl: { squad: 'Squad img/KARL-3.png', full: 'full img/KARL-3.png' },
+    magress: { squad: 'Squad img/MAGRUSS-3.png', full: 'full img/MAGRUSS-3.png' },
+    
+    vargas: { squad: 'Squad img/bc/vargas-trois-etoile (1).png', full: 'bc/Unité/vargas-trois-etoile (1).png' },
+    margonia: { squad: 'Squad img/bc/margonia-trois-etoile.png', full: 'bc/Unité/Margonia-trois-etoile (1).png' },
+    lance: { squad: 'Squad img/bc/Lance-trois-etoile.png', full: 'bc/Unité/Lance-trois-etoile (1).png' },
+    zeln: { squad: 'Squad img/bc/Zeln_trois_etoile.png', full: 'bc/Unité/Zeln_trois_etoile (1).png' },
+    eze: { squad: 'Squad img/bc/Eza-trois-etoile.png', full: 'bc/Unité/Eze-trois-etoile.png' },
+    kikuri: { squad: 'Squad img/bc/Kikuri-trois-etoile.png', full: 'bc/Unité/Kikuri-trois-etoile (1).png' },
+    
+    unit_10012: { squad: 'Squad img/bc/vargas-trois-etoile (1).png', full: 'bc/image.png' },
+    unit_10013: { squad: 'Squad img/bc/Selena-trois-etoile.png', full: 'bc/Gemini_Generated_Image_xk3pdfxk3pdfxk3p.png' },
+    unit_ignis_frame: { squad: 'Squad img/IGNIS-3.png', full: 'full img/IGNIS-3.png' }
+  };
+  
+  const hero = mapping[id];
+  if (hero) {
+    const path = hero[context] || hero.squad || hero.full;
+    if (path) {
+      // Normalize to NFD to match exactly the combining character format on filesystem (prevents issues over file:// protocol on macOS)
+      const normalizedPath = path.normalize('NFD');
+      return 'assets/heroes/' + normalizedPath.split('/').map(s => encodeURIComponent(s)).join('/');
+    }
+  }
+  return 'assets/heroes/' + id + '.png';
+}
+const ELEMS={fire:"Feu",water:"Eau",earth:"Terre",thunder:"Foudre",light:"Lumière",dark:"Ténèbres"};
+const EICON={fire:"ra-fire",water:"ra-droplet",earth:"ra-leaf",thunder:"ra-lightning-bolt",light:"ra-sun",dark:"ra-skull"};
+const ROLES={mage:"Mage",support:"Soutien",tank:"Tank"};
+const SQUAD_MAX=5;
+
+const HERO_DEFS=[
+ {id:'ignis',name:'Ignis',role:'mage',element:'fire',rarity:3,type:'Breaker',leader:'brasier_ardent',burstTier:'SBB',titles:['Épéiste Ignis','Chevalier Ignis','Général Ignis','Dieu du Feu Ignis'],lore:"Un guerrier impulsif maniant une épée enveloppée de flammes célestes."},
+ {id:'vargas',name:'Vargas',role:'support',element:'fire',rarity:3,type:'Oracle',leader:'flux_de_brave',burstTier:'BB',titles:['Soldat Vargas','Vétéran Vargas','Commandant Vargas','Légendaire Vargas'],lore:"Un ancien commandant qui galvanise ses alliés en surchargeant leur jauge de BC."},
+ {id:'selena',name:'Selena',role:'support',element:'water',rarity:3,type:'Oracle',leader:'coeur_aquatique',burstTier:'BB',titles:['Mage Selena','Sirène Selena','Reine Selena','Déesse de Glace Selena'],lore:"Héritière légendaire d'une ancienne lignée capable de soigner et de doubler la fortune."},
+ {id:'margonia',name:'Margonia',role:'mage',element:'water',rarity:3,type:'Breaker',leader:'maree_glaciale',burstTier:'SBB',titles:['Mage Margonia','Cryomage Margonia','Archimage Margonia','Maîtresse du Givre Margonia'],lore:"Une enchanteresse qui lance des pics de givre pour figer et geler complètement les cibles."},
+ {id:'lance',name:'Lance',role:'tank',element:'earth',rarity:3,type:'Guardian',leader:'rempart_de_gaia',burstTier:'BB',titles:['Garde Lance','Lancier Lance','Protecteur Lance','Gaïa Lance'],lore:"Un guerrier lié à l'Arbre Monde protégeant l'équipe derrière un rempart végétal."},
+ {id:'zeln',name:'Zeln',role:'mage',element:'earth',rarity:3,type:'Breaker',leader:'rage_des_mages',burstTier:'SBB',titles:['Chasseur Zeln','Traqueur Zeln','Maître des Bois Zeln','Esprit de la Forêt Zeln'],lore:"Un chasseur furtif exécutant de triples frappes rapides d'une violence inouïe."},
+ {id:'karl',name:'Karl',role:'support',element:'thunder',rarity:3,type:'Anima',leader:'economie_brave',burstTier:'BB',titles:['Dragon Karl','Cavalier Karl','Dragon Foudroyant Karl','Démon Karl'],lore:"Mi-humain, mi-dragon, déclenchant des souffles électriques foudroyants."},
+ {id:'eze',name:'Eze',role:'mage',element:'thunder',rarity:3,type:'Breaker',leader:'orage_dechaine',burstTier:'SBB',titles:['Sauvage Eze','Guerrier Eze','Berserker Eze','Dieu Foudre Eze'],lore:"Un gladiateur redoutable qui tire sa force brute de la foudre pour des coups critiques massifs."},
+ {id:'sera',name:'Sera',role:'support',element:'light',rarity:3,type:'Oracle',leader:'benediction_vie',burstTier:'BB',titles:['Sainte Sera','Valkyrie Sera','Archange Sera','Déesse Créatrice Sera'],lore:"La paladine sacrée descendue des cieux pour restaurer intégralement la vie de la squad."},
+ {id:'atro',name:'Atro',role:'mage',element:'light',rarity:3,type:'Lord',leader:'jugement_sacre',burstTier:'SBB',titles:['Paladin Atro','Seigneur Atro','Champion Céleste Atro','Dieu Solaire Atro'],lore:"Un paladin d'élite alliant frappe sacrée offensive et soins légers de soutien."},
+ {id:'magress',name:'Magress',role:'tank',element:'dark',rarity:3,type:'Guardian',leader:'garde_des_ombres',burstTier:'BB',titles:['Guerrier Magress','Chevalier Noir Magress','Seigneur des Ombres Magress','Démon Absolu Magress'],lore:"Un ancien général corrompu dont l'épée dévore les âmes pour infliger le plus haut multiplicateur."},
+ {id:'kikuri',name:'Kikuri',role:'support',element:'dark',rarity:3,type:'Oracle',leader:'malediction',burstTier:'BB',titles:['Apprentie Kikuri','Prêtresse Kikuri','Grande Prêtresse Kikuri','Déesse des Malédictions Kikuri'],lore:"Une prêtresse spectrale qui maudit les ennemis pour affaiblir définitivement leur puissance."},
+ {id:'unit_10012',name:'Vargas Céleste',role:'mage',element:'light',rarity:5,type:'Lord',leader:'assaut_total',burstTier:'UBB',titles:['Invocateur 10012','Guerrier Céleste 10012','Dieu Suprême 10012'],lore:"Héros expérimental issu d'une faille temporelle, programmé pour terrasser les cibles de test."},
+ {id:'unit_10013',name:'Selena Sombre',role:'mage',element:'dark',rarity:5,type:'Breaker',leader:'assaut_total',burstTier:'UBB',titles:['Apprentie 10013','Guerrier Ombre 10013','Impératrice 10013'],lore:"Une manifestation de l'ombre invoquée spécifiquement pour analyser la force de frappe des équipes."},
+ {id:'unit_ignis_frame',name:'Ignis Divin',role:'mage',element:'fire',rarity:6,type:'Breaker',leader:'assaut_total',burstTier:'UBB',titles:['Dieu Flamboyant Ignis','Seigneur Embrasé Ignis','Ignis Divin'],lore:"Le guerrier de feu originel revêtu d'une armure d'orbe divin, doté d'animations d'impact dévastatrices."}
+];
+
+const HEROES=HERO_DEFS.map(h=>{
+  const base=buildBaseStats(HERO_BUDGET,h.role);
+  const cap=RARITY_TUNING[h.rarity].levelCap;
+  return {...h,base,
+    statsLv1:computeStats(base,{stars:h.rarity,level:1,type:h.type}),
+    statsMax:computeStats(base,{stars:h.rarity,level:cap,type:h.type}),
+    leaderSkill:LEADER_SKILLS[h.leader], burst:BURST_TIERS[h.burstTier], levelCap:cap};
+});
+const HERO_BY_ID=Object.fromEntries(HEROES.map(h=>[h.id,h]));
+
+function leaderText(ls){
+  const stat={atk:"ATT",def:"DEF",hp:"HP",bb_rate:"gain BC",bb_cost:"coût BB"}[ls.stat]||ls.stat;
+  const sign=ls.value>0?"+":"";
+  const pct=sign+Math.round(ls.value*100)+"%";
+  let cible="toute la squad";
+  if(ls.target==="element") cible=ELEMS[ls.targetDetail]||ls.targetDetail;
+  else if(ls.target==="role") cible=ROLES[ls.targetDetail]||ls.targetDetail;
+  return `<span style="color:var(--gold-hi)">${ls.name}</span> — ${pct} ${stat} · ${cible}`;
+}
+function rarityStars(n){return '★'.repeat(n);}
+function fmt(n){return n.toLocaleString('fr-FR');}
+function heroImg(h){
+  const src = getHeroImage(h.id, 'squad');
+  return src ? `<img class="portrait" src="${src}" alt="${h.name}" onerror="this.style.display='none'">` : '';
+}
+function heroEnergy(element){
+  const energies={fire:'assets/heroes/Squad img/Fire.png',water:'assets/heroes/Squad img/Water.png',earth:'assets/heroes/Squad img/TREE.png',thunder:'assets/heroes/Squad img/Lightning.png',light:'assets/heroes/Squad img/light-.png',dark:'assets/heroes/Squad img/Darkness.png'};
+  return energies[element]||energies.fire;
+}
+
+const SquadStore={
+  _norm(arr){ arr=(arr||[]).slice(0,SQUAD_MAX); while(arr.length<SQUAD_MAX) arr.push(null); return arr; },
+  get(){
+    if(window.G && Array.isArray(window.G.squad)) return this._norm(window.G.squad.slice());
+    try{ return this._norm(JSON.parse(localStorage.getItem('ff_squad')||'[]')); }catch(e){ return this._norm([]); }
+  },
+  set(arr){
+    arr=this._norm(arr);
+    if(window.G && Array.isArray(window.G.squad)){
+      window.G.squad=arr; window.G.leaderId=arr[0]||null;
+      try{ if(typeof window.saveGame==='function') window.saveGame(); }catch(e){}
+      try{ if(typeof window.renderHubSquad==='function') window.renderHubSquad(); }catch(e){}
+    }else{
+      try{ localStorage.setItem('ff_squad',JSON.stringify(arr)); }catch(e){}
+    }
+  }
+};
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+function squadAdd(id){
+  const sq=SquadStore.get();
+  if(sq.includes(id)){ toast('Déjà dans la squad'); return false; }
+  const i=sq.indexOf(null);
+  if(i<0){ toast('Squad pleine (5 max)'); return false; }
+  sq[i]=id; SquadStore.set(sq); refreshAll();
+  toast(HERO_BY_ID[id].name+' ajouté'+(i===0?' (leader)':'')); return true;
+}
+function squadRemove(id){
+  const sq=SquadStore.get(); const i=sq.indexOf(id); if(i<0) return false;
+  sq[i]=null; SquadStore.set(sq); refreshAll();
+  toast(HERO_BY_ID[id].name+' retiré'); return true;
+}
+function squadSetLeader(id){
+  const sq=SquadStore.get(); let i=sq.indexOf(id);
+  if(i<0){ const e=sq.indexOf(null); if(e<0){ toast('Squad pleine'); return false; } sq[e]=id; i=e; }
+  const tmp=sq[0]; sq[0]=sq[i]; sq[i]=tmp; SquadStore.set(sq); refreshAll();
+  toast(HERO_BY_ID[id].name+' est leader'); return true;
+}
+
+const grid=document.getElementById('grid');
+const filters=document.getElementById('filters');
+const sortDropdownBtn=document.getElementById('sortDropdownBtn');
+const sortDropdownContent=document.getElementById('sortDropdownContent');
+const overlay=document.getElementById('overlay');
+const pageEl=document.getElementById('page');
+const slotsEl=document.getElementById('squadSlots');
+let currentHero=null;
+let currentFilter='all';
+let currentSort='rarity';
+let currentLvl=1;
+let isEditMode = false;
+
+function squadSlot(id,idx){
+  if(!id) return `<div class="slot empty" data-empty="1"><i class="ra ra-plus"></i></div>`;
+  const h=HERO_BY_ID[id];
+  if(!h) return `<div class="slot empty">?</div>`;
+  const leader=idx===0;
+  return `<div class="slot elem-${h.element} ${leader?'leader':''}" data-id="${h.id}">
+    ${heroImg(h)}
+    ${isEditMode ? `<button class="s-remove" data-remove="${h.id}" title="Retirer">✕</button>` : ''}
+    <span class="s-name">${h.name}</span>
+  </div>`;
+}
+
+function renderSquadBar(){
+  const sq=SquadStore.get();
+  slotsEl.innerHTML=sq.map((id,i)=>squadSlot(id,i)).join('');
+  let atk=0,def=0,hp=0;
+  sq.filter(Boolean).forEach(id=>{ const h=HERO_BY_ID[id]; if(h){ atk+=h.statsMax.atk; def+=h.statsMax.def; hp+=h.statsMax.hp; } });
+  document.getElementById('sumAtk').textContent=fmt(atk);
+  document.getElementById('sumDef').textContent=fmt(def);
+  document.getElementById('sumHp').textContent=fmt(hp);
+  
+  // Mise à jour des barres de progression dynamiques (valeurs max pour mise à l'échelle)
+  const maxAtk = 6000;
+  const maxDef = 2500;
+  const maxHp = 30000;
+  document.getElementById('sumAtkBar').style.width = Math.min(100, (atk / maxAtk) * 100) + '%';
+  document.getElementById('sumDefBar').style.width = Math.min(100, (def / maxDef) * 100) + '%';
+  document.getElementById('sumHpBar').style.width = Math.min(100, (hp / maxHp) * 100) + '%';
+  
+  const lead=sq[0]?HERO_BY_ID[sq[0]]:null;
+  document.getElementById('squadLeaderSkill').innerHTML = lead
+    ? `<i class="ra ra-queen-crown"></i> ${leaderText(lead.leaderSkill)}`
+    : 'Aucun leader — touche une unité pour définir le leader';
+}
+
+function tile(h){
+  const s=h.statsMax;
+  const sq=SquadStore.get();
+  const inSquad=sq.includes(h.id);
+  const isLeader=sq[0]===h.id;
+  
+  let borderClass = '';
+  let badge = '';
+  if (isEditMode && inSquad) {
+    borderClass = 'in-squad';
+    if (isLeader) {
+      borderClass += ' lead-card';
+      badge = `<span class="insquad-badge lead-badge"><i class="ra ra-queen-crown"></i> Leader</span>`;
+    } else {
+      badge = `<span class="insquad-badge"><i class="ra ra-check"></i> En Squad</span>`;
+    }
+  }
+  
+  const stars = '★'.repeat(h.rarity);
+  
+  return `
+  <div class="tile elem-${h.element} ${borderClass}" data-id="${h.id}">
+    <div class="imgwrap">
+      <img class="bg-energy" src="${heroEnergy(h.element)}" alt="">
+      ${heroImg(h)}
+      ${badge}
+      <span class="ttype">${h.type}</span>
+    </div>
+    <div class="tile-stars-bar">
+      ${stars}
+    </div>
+  </div>`;
+}
+
+function render(el){
+  currentFilter=el;
+  let list = el==='all'?HEROES.slice():HEROES.filter(h=>h.element===el);
+  
+  // Appliquer le tri
+  list.sort((a,b)=>{
+    if(currentSort==='rarity') return b.rarity - a.rarity || b.statsMax.atk - a.statsMax.atk;
+    if(currentSort==='atk') return b.statsMax.atk - a.statsMax.atk;
+    if(currentSort==='def') return b.statsMax.def - a.statsMax.def;
+    if(currentSort==='hp') return b.statsMax.hp - a.statsMax.hp;
+    return 0;
+  });
+  
+  grid.innerHTML=list.map(tile).join('');
+  document.getElementById('unitCount').textContent=`· ${list.length}/${HEROES.length}`;
+}
+
+function refreshAll(){ renderSquadBar(); render(currentFilter); }
+window.renderHeroesGrid = refreshAll;
+window.renderHubSquad = refreshAll;
+
+const origUpdatePartyStats = window.updatePartyStats;
+window.updatePartyStats = function() {
+  if (typeof origUpdatePartyStats === 'function') origUpdatePartyStats();
+  refreshAll();
+};
+
+function getCumulativeXp(lvl, rarity) {
+  let total = 0;
+  for (let i = 1; i < lvl; i++) {
+    total += Math.round(15 * Math.pow(i, 1.7) + 50 * i * rarity);
+  }
+  return total;
+}
+
+function getHeroState(id) {
+  if (window.G && window.G.heroes && window.G.heroes[id]) {
+    const gh = window.G.heroes[id];
+    return {
+      level: gh.level || 1,
+      xp: gh.xp || 0
+    };
+  }
+  try {
+    const saved = JSON.parse(localStorage.getItem('ff_hero_states') || '{}');
+    if (saved[id]) {
+      return {
+        level: saved[id].level || 1,
+        xp: saved[id].xp || 0
+      };
+    }
+  } catch (e) {}
+  return { level: 1, xp: 0 };
+}
+
+function page(h){
+  const sq=SquadStore.get();
+  const inSquad=sq.includes(h.id);
+  const isLeader=sq[0]===h.id;
+  const full=sq.indexOf(null)<0 && !inSquad;
+  
+  let actions = '';
+  if (isEditMode) {
+    actions = `
+      <div class="pg-actions">
+        ${inSquad
+          ? `<button class="remove" data-act="remove">&minus; Retirer de la squad</button>`
+          : `<button class="add" data-act="add" ${full?'disabled':''}>&plus; Ajouter à la squad</button>`}
+        <button class="lead ${isLeader?'active':''}" data-act="lead">👑 Leader</button>
+      </div>`;
+  }
+
+  const state = getHeroState(h.id);
+  const lvl = state.level;
+  const xp = state.xp;
+
+  const s = computeStats(h.base, {stars: h.rarity, level: lvl, type: h.type});
+  const burst=applyBurst(s,h.burstTier);
+  const bt=h.burst;
+  
+  const holoClass = lvl===h.levelCap ? 'holographic' : '';
+
+  const imgUrl = getHeroImage(h.id, 'full');
+  const big = imgUrl
+    ? `<img src="${imgUrl}" alt="${h.name}" onerror="if(this.nextElementSibling) this.nextElementSibling.style.display='block'; this.remove();">`
+    : '';
+  const fb = `<i class="ra ${EICON[h.element]} ph fallback" style="display:${imgUrl?'none':'block'}"></i>`;
+
+  const evoChain = h.titles.map(t => {
+    const isCurrent = t === h.name;
+    return `<span class="evo-tag ${isCurrent ? 'current' : ''}">${t}</span>`;
+  }).join('<span class="evo-arrow">&rarr;</span>');
+
+  const nextXp = lvl === h.levelCap ? 0 : Math.round(15 * Math.pow(lvl, 1.7) + 50 * lvl * h.rarity);
+  const xpPercent = lvl === h.levelCap ? 100 : Math.round((xp / nextXp) * 100) || 0;
+  const cumulativeXp = getCumulativeXp(lvl, h.rarity) + xp;
+
+  return `
+  <button class="closeBtn" id="closeBtn" title="Fermer">✕</button>
+  <div class="hero-photo ${holoClass}">
+    <div class="home-fx" aria-hidden="true"></div>
+    ${big}${fb}
+  </div>
+  <div class="hero-details-container">
+    <div class="hero-head-container">
+      <div class="hero-head">
+        <div class="rarity">${rarityStars(h.rarity)}</div>
+        <h2 class="el-${h.element}">${h.name}</h2>
+        <div class="meta">
+          <span class="badge el-${h.element}"><i class="ra ${EICON[h.element]}"></i>${ELEMS[h.element]}</span>
+          <span class="badge">${ROLES[h.role]}</span>
+          <span class="badge">${h.type}</span>
+        </div>
+      </div>
+    </div>
+    <div class="pg-body">
+      ${actions}
+      <div class="pg-lore">${h.lore}</div>
+
+      <!-- LEVEL & XP CONTAINER (READ-ONLY) -->
+      <div class="lvl-control-container">
+        <div class="lvl-header">
+          <span>Niveau</span>
+          <span class="lvl-val">${lvl} / ${h.levelCap}</span>
+        </div>
+        <div class="xp-container">
+          <div class="xp-bar-wrapper">
+            <div class="xp-bar-fill" style="width: ${xpPercent}%"></div>
+          </div>
+          <div class="xp-text">
+            <span>XP du niveau</span>
+            <span>${lvl === h.levelCap ? 'MAX' : fmt(xp) + ' / ' + fmt(nextXp)}</span>
+          </div>
+          <div class="xp-text">
+            <span>XP Cumulé</span>
+            <span>${fmt(cumulativeXp)} XP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-title"><span>Statistiques</span></div>
+      <div class="stat-row">
+        <div class="stat-big atk"><div class="l">ATT</div><div class="v">${fmt(s.atk)}</div></div>
+        <div class="stat-big def"><div class="l">DEF</div><div class="v">${fmt(s.def)}</div></div>
+        <div class="stat-big hp"><div class="l">HP</div><div class="v">${fmt(s.hp)}</div></div>
+      </div>
+      <div class="mini-row">
+        <div class="mini"><span class="l">Rareté</span><span class="v">${h.rarity}★</span></div>
+        <div class="mini"><span class="l">Type</span><span class="v">${h.type}</span></div>
+        <div class="mini"><span class="l">Rôle</span><span class="v">${ROLES[h.role]}</span></div>
+      </div>
+
+      <div class="sec-title"><span>Brave Burst — Power-up</span></div>
+      <div class="skill-box burst ${bt.key}">
+        <div class="sname">${bt.label} <span class="tag">jauge ${bt.gaugeCost} BC · ${bt.duration} tour${bt.duration>1?'s':''}</span></div>
+        <div class="sdesc">Boost ATT +${Math.round(bt.atkBuff*100)}% · DEF +${Math.round(bt.defBuff*100)}% · dégâts ×${bt.dmgMult}</div>
+        <div class="burst-grid">
+          <div class="burst-cell up"><div class="l">ATT Burst</div><div class="v">${fmt(burst.burstAtk)}</div></div>
+          <div class="burst-cell up-def"><div class="l">DEF Burst</div><div class="v">${fmt(burst.burstDef)}</div></div>
+          <div class="burst-cell"><div class="l">Dégât BB*</div><div class="v">${fmt(Math.round(burst.burstAtk*bt.dmgMult))}</div></div>
+        </div>
+      </div>
+
+      <div class="sec-title"><span>Leader Skill</span></div>
+      <div class="skill-box leader">
+        <div class="sdesc">${leaderText(h.leaderSkill)}</div>
+      </div>
+
+      <div class="sec-title"><span>Évolutions</span></div>
+      <div class="evo-chain">${evoChain}</div>
+
+      <p style="font-size:11px;color:var(--muted);margin-top:10px;text-align:center;">*Dégât BB avant DEF de la cible et avantage élémentaire.</p>
+    </div>
+  </div>`;
+}
+
+function refreshHeroVisual(h) {
+  const photoEl = pageEl.querySelector('.hero-photo');
+  if (photoEl) {
+    photoEl.className = 'hero-photo elem-' + h.element;
+    if (currentLvl === h.levelCap) photoEl.classList.add('holographic');
+    const fx = photoEl.querySelector('.home-fx');
+    if (fx && !fx.childElementCount) {
+      for (let i = 0; i < 16; i++) {
+        const p = document.createElement('span');
+        p.className = 'home-fx-p';
+        const size = (3 + Math.random() * 5).toFixed(1);
+        p.style.left = (Math.random() * 100).toFixed(1) + '%';
+        p.style.width = p.style.height = size + 'px';
+        p.style.animationDuration = (4 + Math.random() * 5).toFixed(1) + 's';
+        p.style.animationDelay = (-Math.random() * 8).toFixed(1) + 's';
+        fx.appendChild(p);
+      }
+    }
+  }
+}
+
+function openHero(h,lvlMode='max'){
+  if(!h) return;
+  currentHero=h;
+  const state = getHeroState(h.id);
+  currentLvl = state.level;
+  pageEl.innerHTML = page(h);
+  refreshHeroVisual(h);
+  
+  const detailScroll = pageEl.querySelector('.hero-details-container');
+  if (detailScroll) detailScroll.scrollTop = 0;
+  pageEl.scrollTop=0;
+  
+  overlay.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeModal(){ overlay.classList.remove('open'); document.body.style.overflow=''; currentHero=null; }
+
+/* ---- Évènements ---- */
+
+/* Artwork Overlay & Long-Press Handlers */
+let longPressTimer = null;
+let longPressActive = false;
+const LONG_PRESS_DELAY = 500; // ms
+
+function openArtwork(heroId, lvlMode = 'max') {
+  const h = HERO_BY_ID[heroId];
+  if (!h) return;
+  
+  const artOverlay = document.getElementById('artwork-overlay');
+  artOverlay.className = ''; // Clear previous classes
+  artOverlay.classList.add('elem-' + h.element);
+
+  const imgUrl = getHeroImage(h.id, 'full');
+  const holoClass = lvlMode === 'max' ? 'holographic' : '';
+  
+  artOverlay.innerHTML = `
+    <div class="home-fx" aria-hidden="true"></div>
+    <div class="art-img-wrap ${holoClass}">
+      <img src="${imgUrl}" alt="${h.name}">
+    </div>
+    <div class="art-info">
+      <div class="art-name el-${h.element}">${h.name}</div>
+      <div class="art-rarity">${rarityStars(h.rarity)}</div>
+      <div class="art-hint">Appuyez n'importe où pour fermer</div>
+    </div>
+  `;
+
+  // Spawn particles
+  const fx = artOverlay.querySelector('.home-fx');
+  if (fx) {
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('span');
+      p.className = 'home-fx-p';
+      const size = (3 + Math.random() * 6).toFixed(1);
+      p.style.left = (Math.random() * 100).toFixed(1) + '%';
+      p.style.width = p.style.height = size + 'px';
+      p.style.animationDuration = (5 + Math.random() * 6).toFixed(1) + 's';
+      p.style.animationDelay = (-Math.random() * 10).toFixed(1) + 's';
+      fx.appendChild(p);
+    }
+  }
+  
+  artOverlay.classList.add('open');
+}
+
+function closeArtwork() {
+  document.getElementById('artwork-overlay').classList.remove('open');
+}
+
+document.getElementById('artwork-overlay').addEventListener('click', closeArtwork);
+
+function handleStartPress(e, targetSelector, getHeroId, getLvlMode) {
+  if (e.target.closest('#closeBtn') || e.target.closest('[data-remove]')) return;
+  const target = e.target.closest(targetSelector);
+  if (!target) return;
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  
+  const heroId = getHeroId(target);
+  if (!heroId) return;
+
+  const lvlMode = getLvlMode ? getLvlMode(target) : 'max';
+
+  longPressActive = false;
+  longPressTimer = setTimeout(() => {
+    longPressActive = true;
+    openArtwork(heroId, lvlMode);
+  }, LONG_PRESS_DELAY);
+}
+
+function handleEndPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+}
+
+// Global press-cancel events
+window.addEventListener('mouseup', handleEndPress);
+window.addEventListener('touchend', handleEndPress);
+window.addEventListener('touchmove', handleEndPress);
+window.addEventListener('mouseleave', handleEndPress);
+
+// Event attachments
+grid.addEventListener('mousedown', e => handleStartPress(e, '.tile', t => t.dataset.id, () => 'max'));
+grid.addEventListener('touchstart', e => handleStartPress(e, '.tile', t => t.dataset.id, () => 'max'), { passive: true });
+
+pageEl.addEventListener('mousedown', e => handleStartPress(e, '.hero-photo', () => currentHero ? currentHero.id : null, () => currentLvl));
+pageEl.addEventListener('touchstart', e => handleStartPress(e, '.hero-photo', () => currentHero ? currentHero.id : null, () => currentLvl), { passive: true });
+
+slotsEl.addEventListener('mousedown', e => handleStartPress(e, '.slot[data-id]', t => t.dataset.id, () => 'max'));
+slotsEl.addEventListener('touchstart', e => handleStartPress(e, '.slot[data-id]', t => t.dataset.id, () => 'max'), { passive: true });
+
+grid.addEventListener('click',e=>{
+  if (longPressActive) {
+    longPressActive = false;
+    return;
+  }
+  const t=e.target.closest('.tile'); if(!t) return;
+  const heroId = t.dataset.id;
+  
+  if (isEditMode) {
+    // Mode composition rapide : ajout/retrait instantané
+    const sq = SquadStore.get();
+    if (sq.includes(heroId)) {
+      squadRemove(heroId);
+    } else {
+      squadAdd(heroId);
+    }
+  } else {
+    // Mode standard : ouvre la fiche de détails
+    openHero(HERO_BY_ID[heroId],'max');
+  }
+});
+
+slotsEl.addEventListener('click',e=>{
+  if (longPressActive) {
+    longPressActive = false;
+    return;
+  }
+  const rm=e.target.closest('[data-remove]');
+  if(rm){ 
+    e.stopPropagation(); 
+    if (isEditMode) {
+      squadRemove(rm.dataset.remove);
+    }
+    return; 
+  }
+  const filled=e.target.closest('.slot[data-id]');
+  if(filled){
+    if (isEditMode) {
+      // Mode composition rapide : définir comme leader
+      squadSetLeader(filled.dataset.id);
+    } else {
+      // Mode standard : ouvre la fiche de détails
+      openHero(HERO_BY_ID[filled.dataset.id],'max');
+    }
+    return;
+  }
+  const empty=e.target.closest('.slot.empty');
+  if(empty){ toast('Choisis une unité dans la liste du bas'); }
+});
+
+pageEl.addEventListener('click',e=>{
+  if (longPressActive) {
+    longPressActive = false;
+    return;
+  }
+  const act=e.target.closest('[data-act]');
+  if(act && currentHero){
+    const a=act.dataset.act;
+    if(a==='add') squadAdd(currentHero.id);
+    else if(a==='remove') squadRemove(currentHero.id);
+    else if(a==='lead') squadSetLeader(currentHero.id);
+    pageEl.innerHTML = page(currentHero); // re-render
+    refreshHeroVisual(currentHero);
+    return;
+  }
+});
+
+overlay.addEventListener('click', e => {
+  if (e.target.closest('#closeBtn') || e.target === overlay) {
+    closeModal();
+  }
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+
+document.getElementById('editSquadBtn').addEventListener('click', () => {
+  isEditMode = !isEditMode;
+  const btn = document.getElementById('editSquadBtn');
+  if (isEditMode) {
+    btn.classList.add('active');
+    btn.innerHTML = `<i class="ra ra-check"></i> Terminer`;
+  } else {
+    btn.classList.remove('active');
+    btn.innerHTML = `<i class="ra ra-gear"></i> Modifier`;
+  }
+  refreshAll();
+});
+
+const fopts = [['all', 'Tous', 'ra-crossed-swords']].concat(
+  Object.entries(ELEMS).map(([k, v]) => [k, v, EICON[k]])
+);
+filters.innerHTML = fopts.map(([k, v, icon], i) => `
+  <button data-el="${k}" class="filter-btn el-${k} ${i === 0 ? 'active' : ''}" title="${v}">
+    <i class="ra ${icon}"></i>
+    <span>${v}</span>
+  </button>
+`).join('');
+
+filters.addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  filters.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render(btn.dataset.el);
+});
+
+sortDropdownBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  sortDropdownContent.classList.toggle('hidden');
+});
+
+document.addEventListener('click', () => {
+  sortDropdownContent.classList.add('hidden');
+});
+
+sortDropdownContent.querySelectorAll('.dropdown-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const val = item.dataset.value;
+    currentSort = val;
+    sortDropdownBtn.querySelector('span').textContent = 'Trier par: ' + item.textContent.trim();
+    sortDropdownContent.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    render(currentFilter);
+  });
+});
+
+/* ---- Init ---- */
+renderSquadBar();
+render('all');
+  })();
+</script>
+</body>
+</html>
